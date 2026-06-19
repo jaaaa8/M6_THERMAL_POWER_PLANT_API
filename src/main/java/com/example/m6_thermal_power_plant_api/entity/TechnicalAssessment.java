@@ -1,5 +1,6 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -53,4 +54,7 @@ public class TechnicalAssessment {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(columnDefinition = "TEXT")
+    private TechnicalAssessmentStatus status = TechnicalAssessmentStatus.PENDING;
 }
