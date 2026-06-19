@@ -1,5 +1,6 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -40,6 +41,9 @@ public class SparePart {
 
     @Column(length = 100)
     private String manufacturer;
+
+    @Column(columnDefinition = "TEXT")
+    private PartStatus status = PartStatus.ACTIVE;
 
     /** Đường dẫn file ảnh đính kèm */
     @Column(name = "img_path", columnDefinition = "TEXT")
