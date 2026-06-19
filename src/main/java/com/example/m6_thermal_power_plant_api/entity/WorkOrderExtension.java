@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -34,7 +35,8 @@ public class WorkOrderExtension {
     private LocalDateTime extendedUntil;
 
     /** Người phê duyệt gia hạn (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "approved_by")
     private Account approvedBy;
 }

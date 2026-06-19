@@ -44,7 +44,8 @@ public class Employee {
     @Column(length = 12)
     private String phone;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "department_id")
     private Department department;
 

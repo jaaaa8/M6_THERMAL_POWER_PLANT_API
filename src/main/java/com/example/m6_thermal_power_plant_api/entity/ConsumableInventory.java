@@ -4,6 +4,7 @@ import com.example.m6_thermal_power_plant_api.entity.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,7 +27,8 @@ public class ConsumableInventory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "consumable_id")
     private Consumable consumable;
 
@@ -34,7 +36,8 @@ public class ConsumableInventory {
     private String supplier;
 
     /** Nhân viên thực hiện giao dịch (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "account_id")
     private Account account;
 

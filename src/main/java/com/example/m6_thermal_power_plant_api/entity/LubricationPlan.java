@@ -3,6 +3,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 // Cân nhắc bật soft delete nếu nghiệp vụ cho phép huỷ kế hoạch dầu mỡ mà
 // KHÔNG cascade xoá lịch sử (LubricationHistory) đã thực hiện. Nếu bật, thêm:
 // import org.hibernate.annotations.SoftDelete;
@@ -49,7 +50,8 @@ public class LubricationPlan {
     private String lubricantType;
 
     /** Liên kết vật tư tiêu hao (dầu/mỡ) trong danh mục kho */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "consumable_id")
     private Consumable consumable;
 
