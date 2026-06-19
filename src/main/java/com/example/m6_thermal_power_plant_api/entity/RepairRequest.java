@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 // Cân nhắc bật soft delete nếu nghiệp vụ cho phép Trưởng Ca/Kíp tự huỷ
 // request khi CHƯA có WorkOrder liên kết. Nếu bật, thêm:
 // import org.hibernate.annotations.SoftDelete;

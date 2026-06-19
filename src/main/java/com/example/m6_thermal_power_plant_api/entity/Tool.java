@@ -16,7 +16,6 @@ import java.util.List;
  */
 @Entity
 @Table(name = "tools")
-@SoftDelete(columnName = "is_deleted", strategy = SoftDeleteType.DELETED)
 @Getter
 @Setter
 @Builder
