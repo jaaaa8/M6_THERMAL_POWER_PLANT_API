@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.SoftDelete;
 import org.hibernate.annotations.SoftDeleteType;
 
@@ -32,7 +33,8 @@ public class Account {
     private Integer id;
 
     /** Mỗi tài khoản thuộc về đúng 1 nhân viên */
-    @OneToOne(fetch = FetchType.EAGER)
+    @OneToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
 

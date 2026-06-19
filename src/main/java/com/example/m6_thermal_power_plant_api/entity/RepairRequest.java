@@ -37,12 +37,14 @@ public class RepairRequest {
     @Column(name = "request_code", unique = true, nullable = false, length = 50)
     private String requestCode;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "equipment_id")
     private Equipment equipment;
 
     /** Trưởng Ca / Trưởng Kíp tạo yêu cầu (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "requester_id")
     private Account requester;
 

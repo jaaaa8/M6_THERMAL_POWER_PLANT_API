@@ -12,16 +12,17 @@ import java.util.List;
  * Công cụ dụng cụ (CCDC) trong kho.
  * Table: tools
  *
- * Soft delete: is_deleted do Hibernate quản lý — CCDC hư hỏng/thanh lý chỉ
- * bị ẩn, nhật ký mượn/trả liên quan vẫn được giữ nguyên.
+ * Soft delete: is_deleted do Hibernate quản lý.
  */
 @Entity
 @Table(name = "tools")
 @SoftDelete(columnName = "is_deleted", strategy = SoftDeleteType.DELETED)
-@Getter @Setter
+@Getter
+@Setter
 @Builder
-@NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = "borrowLogs")
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString(exclude = {"borrowLogs", "toolCategory"})
 @EqualsAndHashCode(of = "id")
 public class Tool {
 
@@ -35,9 +36,14 @@ public class Tool {
     @Column(nullable = false, length = 255)
     private String name;
 
+    /** Chủng loại công cụ */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tool_category_id")
+    private ToolCategory toolCategory;
+
     /** Số lượng hiện có trong kho */
     @Builder.Default
-    @Column
+    @Column(nullable = false)
     private Integer quantity = 0;
 
     @Column(columnDefinition = "TEXT")

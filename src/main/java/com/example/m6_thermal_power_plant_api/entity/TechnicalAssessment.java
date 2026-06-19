@@ -4,6 +4,7 @@ import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentSt
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -33,7 +34,8 @@ public class TechnicalAssessment {
     private WorkOrder workOrder;
 
     /** Tổ trưởng thực hiện đánh giá (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "assessor_id")
     private Account assessor;
 
