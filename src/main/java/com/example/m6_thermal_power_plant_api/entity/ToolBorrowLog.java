@@ -3,6 +3,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 import com.example.m6_thermal_power_plant_api.entity.enums.BorrowType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -24,12 +25,14 @@ public class ToolBorrowLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "tool_id")
     private Tool tool;
 
     /** Người mượn/trả (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "account_id")
     private Account account;
 

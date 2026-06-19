@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,7 +34,8 @@ public class SparePartsIssue {
     private WorkOrder workOrder;
 
     /** Vật tư thay thế được cấp (tham chiếu danh mục) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "spare_part_id")
     private SparePart sparePart;
 
@@ -45,7 +47,8 @@ public class SparePartsIssue {
     private BigDecimal quantity;
 
     /** Người thực hiện cấp phát (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "issued_by")
     private Account issuedBy;
 
