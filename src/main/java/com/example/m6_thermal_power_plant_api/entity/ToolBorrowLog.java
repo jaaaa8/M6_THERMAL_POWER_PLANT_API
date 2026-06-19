@@ -1,5 +1,6 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.enums.BorrowStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.BorrowType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -7,17 +8,13 @@ import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
-/**
- * Nhật ký mượn / trả công cụ dụng cụ.
- * Table: tool_borrow_logs
- *
- * Không áp dụng @SoftDelete: là nhật ký giao dịch mượn/trả, không xoá.
- */
 @Entity
 @Table(name = "tool_borrow_logs")
-@Getter @Setter
+@Getter
+@Setter
 @Builder
-@NoArgsConstructor @AllArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(of = "id")
 public class ToolBorrowLog {
 
@@ -25,25 +22,47 @@ public class ToolBorrowLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    /** Công cụ được mượn */
     @ManyToOne(fetch = FetchType.LAZY)
     @SQLRestriction("is_deleted = false")
-    @JoinColumn(name = "tool_id")
+    @JoinColumn(name = "tool_id", nullable = false)
     private Tool tool;
 
-    /** Người mượn/trả (đăng nhập bằng tài khoản) */
+    /** Người mượn */
     @ManyToOne(fetch = FetchType.LAZY)
     @SQLRestriction("is_deleted = false")
-    @JoinColumn(name = "account_id")
+    @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
-    @Column
+    /** Số lượng mượn */
+    @Column(nullable = false)
     private Integer quantity;
 
-    /** BORROW = mượn | RETURN = trả (cột DB là VARCHAR(50) tự do) */
+    /** BORROW | RETURN */
     @Enumerated(EnumType.STRING)
-    @Column(name = "transaction_type", length = 50)
+    @Column(name = "transaction_type", nullable = false, length = 50)
     private BorrowType transactionType;
 
-    @Column(name = "transaction_date")
+    /** PENDING | APPROVED | REJECTED | RETURNED */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private BorrowStatus status;
+
+    /** Ngày tạo phiếu */
+    @Column(name = "transaction_date", nullable = false)
     private LocalDateTime transactionDate;
+
+    /** Hạn phải trả */
+    @Column(name = "due_date")
+    private LocalDateTime dueDate;
+
+    /** Ngày trả thực tế */
+    @Column(name = "actual_return_date")
+    private LocalDateTime actualReturnDate;
+
+    /** Thủ kho duyệt phiếu */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @SQLRestriction("is_deleted = false")
+    @JoinColumn(name = "approved_by")
+    private Account approvedBy;
 }
