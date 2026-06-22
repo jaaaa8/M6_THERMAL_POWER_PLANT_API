@@ -4,7 +4,6 @@ import com.example.m6_thermal_power_plant_api.entity.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,8 +13,10 @@ import java.time.LocalDateTime;
  * Mỗi dòng = 1 giao dịch (không cộng dồn).
  * Table: spare_parts_inventory
  *
- * Không áp dụng @SoftDelete: là nhật ký giao dịch — xoá (kể cả ẩn) sẽ làm
- * sai số tồn kho. Nhập nhầm thì tạo giao dịch đảo chiều, không xoá dòng cũ.
+ * Không soft-delete: là nhật ký giao dịch — xoá (kể cả ẩn) sẽ làm sai số tồn
+ * kho. Nhập nhầm thì tạo giao dịch đảo chiều, không xoá dòng cũ.
+ * (SparePart / Account đều đã @SQLRestriction("is_deleted = false") nên 2
+ * quan hệ dưới đây KHÔNG cần khai báo lại restriction.)
  */
 @Entity
 @Table(name = "spare_parts_inventory")
@@ -30,7 +31,6 @@ public class SparePartsInventory {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "spare_part_id")
     private SparePart sparePart;
 
@@ -39,7 +39,6 @@ public class SparePartsInventory {
 
     /** Nhân viên thực hiện giao dịch (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "account_id")
     private Account account;
 

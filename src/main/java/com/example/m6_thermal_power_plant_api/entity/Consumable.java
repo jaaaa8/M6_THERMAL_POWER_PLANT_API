@@ -1,10 +1,12 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SoftDelete;
-import org.hibernate.annotations.SoftDeleteType;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -13,17 +15,19 @@ import java.util.List;
  * Danh mục vật tư tiêu hao (RP7, Dẻ lau, Dầu bôi trơn...).
  * Table: consumable
  *
- * Soft delete: is_deleted do Hibernate quản lý.
+ * Có 2 cờ trạng thái KHÔNG thay thế nhau:
+ * - status     : trạng thái kinh doanh (còn dùng / ngừng dùng loại vật tư này)
+ * - is_deleted : xoá mềm hành chính, xem {@link BaseSoftDeleteEntity}
  */
 @Entity
 @Table(name = "consumable")
-@SoftDelete(columnName = "is_deleted", strategy = SoftDeleteType.DELETED)
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = {"inventoryTransactions", "issues", "lubricationPlans"})
-@EqualsAndHashCode(of = "id")
-public class Consumable {
+@ToString(callSuper = true, exclude = {"inventoryTransactions", "issues", "lubricationPlans"})
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class Consumable extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,6 +48,11 @@ public class Consumable {
     /** Đường dẫn file ảnh đính kèm */
     @Column(name = "img_path", columnDefinition = "TEXT")
     private String imgPath;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private PartStatus status = PartStatus.ACTIVE;
 
     @JsonIgnore
     @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
