@@ -13,7 +13,7 @@ import java.util.List;
  * trong hệ thống (tạo request, ký phiếu công tác, cấp vật tư, mượn CCDC...).
  * Table: accounts
  * Join table account_roles được quản lý tại đây bằng @ManyToMany.
- *
+
  * Có 2 cờ trạng thái phục vụ 2 mục đích khác nhau, không thay thế nhau:
  * - is_active : khoá/mở tài khoản tạm thời (vẫn còn tồn tại, chỉ không đăng nhập được)
  * - is_deleted: xoá tài khoản (do Hibernate @SoftDelete tự quản lý)
