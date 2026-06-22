@@ -1,10 +1,11 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SoftDelete;
-import org.hibernate.annotations.SoftDeleteType;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
 
@@ -12,19 +13,18 @@ import java.util.List;
  * Phòng ban / Phân xưởng.
  * Table: departments
  *
- * Soft delete: cột "is_deleted" do Hibernate tự quản lý.
- * repository.delete(...) sẽ UPDATE is_deleted = true thay vì xoá thật;
- * mọi câu lệnh SELECT tự động bỏ qua các dòng đã xoá.
+ * Soft delete: xem {@link BaseSoftDeleteEntity}. repository.delete(...) KHÔNG
+ * tự xoá mềm — gọi department.softDelete() rồi repository.save(department).
  */
 @Entity
 @Table(name = "departments")
-@SoftDelete(columnName = "is_deleted", strategy = SoftDeleteType.DELETED)
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = "employees")
-@EqualsAndHashCode(of = "id")
-public class Department {
+@ToString(callSuper = true, exclude = "employees")
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class Department extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

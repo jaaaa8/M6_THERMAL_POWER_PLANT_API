@@ -1,9 +1,10 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SoftDelete;
-import org.hibernate.annotations.SoftDeleteType;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
 
@@ -12,17 +13,17 @@ import java.util.List;
  * Table: parameter_catalog
  * Join table parameter_unit_map được quản lý tại đây bằng @ManyToMany.
  *
- * Soft delete: is_deleted do Hibernate quản lý.
+ * Soft delete: xem {@link BaseSoftDeleteEntity}.
  */
 @Entity
 @Table(name = "parameter_catalog")
-@SoftDelete(columnName = "is_deleted", strategy = SoftDeleteType.DELETED)
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = "units")
-@EqualsAndHashCode(of = "id")
-public class ParameterCatalog {
+@ToString(callSuper = true, exclude = "units")
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class ParameterCatalog extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

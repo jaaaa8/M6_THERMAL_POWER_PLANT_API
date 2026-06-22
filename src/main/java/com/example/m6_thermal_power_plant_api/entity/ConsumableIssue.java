@@ -2,7 +2,6 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,7 +10,8 @@ import java.time.LocalDateTime;
  * Phiếu cấp vật tư TIÊU HAO gắn với Phiếu Công Tác.
  * Table: consumable_issues
  *
- * Không áp dụng @SoftDelete (lý do tương tự SparePartsIssue).
+ * Không soft-delete (lý do tương tự SparePartsIssue). Consumable / Account
+ * đều đã @SQLRestriction nên không cần khai báo lại ở các quan hệ dưới.
  */
 @Entity
 @Table(name = "consumable_issues")
@@ -35,7 +35,6 @@ public class ConsumableIssue {
 
     /** Vật tư tiêu hao được cấp (tham chiếu danh mục) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "consumable_id")
     private Consumable consumable;
 
@@ -48,7 +47,6 @@ public class ConsumableIssue {
 
     /** Người thực hiện cấp phát (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "issued_by")
     private Account issuedBy;
 

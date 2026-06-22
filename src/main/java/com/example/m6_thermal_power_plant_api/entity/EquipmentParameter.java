@@ -2,15 +2,16 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SQLRestriction;
 
 /**
  * Giá trị thông số kỹ thuật cụ thể của một thiết bị.
  * Table: equipment_parameters
  *
- * Không áp dụng @SoftDelete: là dữ liệu phụ thuộc hoàn toàn vào Equipment
- * (entity cha) — khi Equipment bị soft-delete, nghiệp vụ truy vấn luôn đi
- * qua Equipment trước nên dữ liệu con tự nhiên không còn truy cập được.
+ * Không soft-delete: là dữ liệu phụ thuộc hoàn toàn vào Equipment (entity cha)
+ * — khi Equipment bị xoá mềm, nghiệp vụ truy vấn luôn đi qua Equipment trước
+ * nên dữ liệu con tự nhiên không còn truy cập được qua đường bình thường.
+ * (Equipment / ParameterCatalog đều đã @SQLRestriction("is_deleted = false")
+ * nên 2 quan hệ dưới đây KHÔNG cần khai báo lại restriction.)
  */
 @Entity
 @Table(name = "equipment_parameters")
@@ -25,12 +26,10 @@ public class EquipmentParameter {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "equipment_id")
     private Equipment equipment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "parameter_id")
     private ParameterCatalog parameter;
 

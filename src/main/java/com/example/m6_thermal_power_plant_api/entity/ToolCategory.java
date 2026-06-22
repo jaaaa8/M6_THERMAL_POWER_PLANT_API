@@ -10,32 +10,37 @@ import org.hibernate.annotations.SQLRestriction;
 import java.util.List;
 
 /**
- * Loại thiết bị (Bơm, Quạt, Van, Động cơ, Máy biến áp...).
- * Table: equipment_types
+ * Chủng loại công cụ dụng cụ (VD: Tháo lắp, Đo điện...).
+ * Table: tool_categories
  *
  * Soft delete: xem {@link BaseSoftDeleteEntity}.
  */
 @Entity
-@Table(name = "equipment_types")
+@Table(name = "tool_categories")
 @SQLRestriction("is_deleted = false")
-@Getter @Setter
+@Getter
+@Setter
 @SuperBuilder
-@NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = "equipmentList")
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString(callSuper = true, exclude = "tools")
 @EqualsAndHashCode(callSuper = false, of = "id")
-public class EquipmentType extends BaseSoftDeleteEntity {
+public class ToolCategory extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, length = 255)
-    private String name;
+    @Column(name = "category_code", unique = true, nullable = false, length = 50)
+    private String categoryCode;
+
+    @Column(name = "category_name", nullable = false, length = 255)
+    private String categoryName;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "equipmentType", fetch = FetchType.LAZY)
-    private List<Equipment> equipmentList;
+    @OneToMany(mappedBy = "toolCategory", fetch = FetchType.LAZY)
+    private List<Tool> tools;
 }

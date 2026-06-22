@@ -9,7 +9,7 @@ import java.time.LocalDate;
  * Lịch sử thực hiện bảo dưỡng dầu mỡ.
  * Table: lubrication_history
  *
- * Không áp dụng @SoftDelete: là lịch sử thực hiện, không xoá.
+ * Không soft-delete: là lịch sử thực hiện, không xoá.
  */
 @Entity
 @Table(name = "lubrication_history")
