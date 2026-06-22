@@ -2,8 +2,8 @@ package com.example.m6_thermal_power_plant_api.entity.base;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Lớp cha dùng chung cho các entity có hỗ trợ xoá mềm (soft delete).
@@ -36,6 +36,9 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
 @MappedSuperclass
 public abstract class BaseSoftDeleteEntity {
 
