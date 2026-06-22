@@ -11,9 +11,14 @@ import java.util.List;
  * Phiếu Công Tác (PCT) — do Quản đốc/Tổ trưởng sửa chữa tạo từ yêu cầu sửa chữa.
  * Table: work_orders
  *
- * Không áp dụng @SoftDelete: là chứng từ pháp lý (các bên ký trước khi sửa
- * chữa). Khi huỷ, nên cập nhật cột status (VD: "CANCELLED") thay vì ẩn dòng,
- * để báo cáo lịch sử không bị sai số.
+ * Không soft-delete: là chứng từ pháp lý (các bên ký trước khi sửa chữa).
+ * Khi huỷ, cập nhật cột status (VD: "CANCELLED") thay vì ẩn dòng — xem
+ * {@code WorkOrdersDeletionException} ở package exception, vốn đã được tạo
+ * sẵn cho đúng mục đích chặn hard-delete này ở tầng service.
+ *
+ * RepairRequest / Account đều đã @SQLRestriction("is_deleted = false") nên
+ * các quan hệ dưới đây KHÔNG cần khai báo lại restriction — và vẫn giữ LAZY
+ * bình thường (không cần ép EAGER như cách làm với @SoftDelete).
  */
 @Entity
 @Table(name = "work_orders")
@@ -37,17 +42,17 @@ public class WorkOrder {
     private RepairRequest repairRequest;
 
     /** Người lãnh đạo công việc */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "leader_id")
     private Account leader;
 
     /** Chỉ huy trực tiếp */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "direct_supervisor_id")
     private Account directSupervisor;
 
     /** Người giám sát an toàn */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "safety_supervisor_id")
     private Account safetySupervisor;
 

@@ -4,7 +4,6 @@ import com.example.m6_thermal_power_plant_api.entity.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,7 +12,8 @@ import java.time.LocalDateTime;
  * Nhật ký nhập / xuất kho vật tư TIÊU HAO.
  * Table: consumable_inventory
  *
- * Không áp dụng @SoftDelete (lý do tương tự SparePartsInventory).
+ * Không soft-delete (lý do tương tự SparePartsInventory). Consumable / Account
+ * đều đã @SQLRestriction nên không cần khai báo lại ở quan hệ dưới đây.
  */
 @Entity
 @Table(name = "consumable_inventory")
@@ -28,7 +28,6 @@ public class ConsumableInventory {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "consumable_id")
     private Consumable consumable;
 
@@ -37,7 +36,6 @@ public class ConsumableInventory {
 
     /** Nhân viên thực hiện giao dịch (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "account_id")
     private Account account;
 

@@ -4,7 +4,6 @@ import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentSt
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -12,7 +11,10 @@ import java.time.LocalDateTime;
  * Biên bản đánh giá kỹ thuật — Tổ trưởng lập khi thiết bị cần vật tư thay thế.
  * Table: technical_assessments
  *
- * Không áp dụng @SoftDelete: là biên bản đã ký các bên, không xoá.
+ * Không soft-delete: là biên bản đã ký các bên, không xoá — dùng field
+ * {@code status} (PENDING/IN_PROGRESS/COMPLETED/REJECTED) để theo dõi tiến
+ * trình xử lý thay vì ẩn bản ghi. Account đã @SQLRestriction nên không cần
+ * khai báo lại restriction ở quan hệ assessor.
  */
 @Entity
 @Table(name = "technical_assessments")
@@ -35,7 +37,6 @@ public class TechnicalAssessment {
 
     /** Tổ trưởng thực hiện đánh giá (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "assessor_id")
     private Account assessor;
 
@@ -57,6 +58,8 @@ public class TechnicalAssessment {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(columnDefinition = "TEXT")
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
     private TechnicalAssessmentStatus status = TechnicalAssessmentStatus.PENDING;
 }

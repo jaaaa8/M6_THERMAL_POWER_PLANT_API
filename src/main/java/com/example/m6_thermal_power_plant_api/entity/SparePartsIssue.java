@@ -2,7 +2,6 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,7 +10,8 @@ import java.time.LocalDateTime;
  * Phiếu cấp vật tư THAY THẾ gắn với Phiếu Công Tác.
  * Table: spare_parts_issues
  *
- * Không áp dụng @SoftDelete: là chứng từ cấp/xuất vật tư, không xoá.
+ * Không soft-delete: là chứng từ cấp/xuất vật tư, không xoá. SparePart /
+ * Account đều đã @SQLRestriction nên không cần khai báo lại ở các quan hệ dưới.
  */
 @Entity
 @Table(name = "spare_parts_issues")
@@ -35,7 +35,6 @@ public class SparePartsIssue {
 
     /** Vật tư thay thế được cấp (tham chiếu danh mục) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "spare_part_id")
     private SparePart sparePart;
 
@@ -48,7 +47,6 @@ public class SparePartsIssue {
 
     /** Người thực hiện cấp phát (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "issued_by")
     private Account issuedBy;
 

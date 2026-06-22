@@ -9,8 +9,9 @@ import java.time.LocalDateTime;
  * Nhân viên tham gia Phiếu Công Tác.
  * Table: work_order_members
  *
- * Không áp dụng @SoftDelete: dữ liệu phụ thuộc WorkOrder, dùng left_at để
- * đánh dấu thời điểm rời khỏi công việc thay vì xoá dòng.
+ * Không soft-delete: dữ liệu phụ thuộc WorkOrder, dùng left_at để đánh dấu
+ * thời điểm rời khỏi công việc thay vì xoá dòng. Account đã @SQLRestriction
+ * nên không cần khai báo lại restriction ở quan hệ account.
  */
 @Entity
 @Table(name = "work_order_members")
@@ -29,7 +30,7 @@ public class WorkOrderMember {
     private WorkOrder workOrder;
 
     /** Thành viên tham gia (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
 

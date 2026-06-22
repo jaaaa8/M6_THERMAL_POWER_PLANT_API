@@ -3,11 +3,6 @@ package com.example.m6_thermal_power_plant_api.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SQLRestriction;
-// Cân nhắc bật soft delete nếu nghiệp vụ cho phép huỷ kế hoạch dầu mỡ mà
-// KHÔNG cascade xoá lịch sử (LubricationHistory) đã thực hiện. Nếu bật, thêm:
-// import org.hibernate.annotations.SoftDelete;
-// import org.hibernate.annotations.SoftDeleteType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,9 +12,15 @@ import java.util.List;
  * Kế hoạch bảo dưỡng dầu mỡ cho thiết bị.
  * Table: lubrication_plans
  *
- * Soft delete: CHƯA bật mặc định — xem ghi chú phía trên class. Nếu bật,
- * KHÔNG cascade xoá LubricationHistory đã thực hiện (lịch sử bảo dưỡng cần
- * giữ nguyên vì thiết bị đã thực sự được bảo dưỡng theo kế hoạch đó).
+ * CHỦ ĐỘNG KHÔNG soft-delete: lubrication_history có FK trỏ tới bảng này mà
+ * KHÔNG có business rule "chỉ xoá khi hết lịch sử" giống RepairRequest —
+ * nếu soft-delete plan mà vẫn còn history, gọi history.getPlan() sẽ ném
+ * ObjectNotFoundException (bị lọc bởi is_deleted = false), làm hỏng chức
+ * năng xem lại lịch sử bảo dưỡng cũ. Nếu sau này cần "ngừng" 1 kế hoạch,
+ * nên thêm cột status riêng (VD: ACTIVE/STOPPED) thay vì xoá mềm.
+ *
+ * Equipment / Consumable đều đã @SQLRestriction nên 2 quan hệ dưới đây
+ * KHÔNG cần khai báo lại restriction.
  */
 @Entity
 @Table(name = "lubrication_plans")
@@ -34,7 +35,7 @@ public class LubricationPlan {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id")
     private Equipment equipment;
 
@@ -51,7 +52,6 @@ public class LubricationPlan {
 
     /** Liên kết vật tư tiêu hao (dầu/mỡ) trong danh mục kho */
     @ManyToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "consumable_id")
     private Consumable consumable;
 

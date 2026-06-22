@@ -1,10 +1,11 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.SoftDelete;
-import org.hibernate.annotations.SoftDeleteType;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
 
@@ -12,17 +13,17 @@ import java.util.List;
  * Loại thiết bị (Bơm, Quạt, Van, Động cơ, Máy biến áp...).
  * Table: equipment_types
  *
- * Soft delete: is_deleted do Hibernate quản lý.
+ * Soft delete: xem {@link BaseSoftDeleteEntity}.
  */
 @Entity
 @Table(name = "equipment_types")
-@SoftDelete(columnName = "is_deleted", strategy = SoftDeleteType.DELETED)
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = "equipmentList")
-@EqualsAndHashCode(of = "id")
-public class EquipmentType {
+@ToString(callSuper = true, exclude = "equipmentList")
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class EquipmentType extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

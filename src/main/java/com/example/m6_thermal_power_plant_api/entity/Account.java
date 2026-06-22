@@ -1,10 +1,10 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.SoftDelete;
-import org.hibernate.annotations.SoftDeleteType;
 
 import java.util.List;
 
@@ -14,27 +14,27 @@ import java.util.List;
  * Table: accounts
  * Join table account_roles được quản lý tại đây bằng @ManyToMany.
  *
- * Có 2 cờ trạng thái phục vụ 2 mục đích khác nhau, không thay thế nhau:
- * - is_active : khoá/mở tài khoản tạm thời (vẫn còn tồn tại, chỉ không đăng nhập được)
- * - is_deleted: xoá tài khoản (do Hibernate @SoftDelete tự quản lý)
+ * Có 2 cờ trạng thái phục vụ 2 mục đích khác nhau, KHÔNG thay thế nhau:
+ * - is_active : khoá/mở tài khoản tạm thời (vẫn tồn tại, chỉ không đăng nhập được)
+ * - is_deleted: xoá tài khoản (xem {@link BaseSoftDeleteEntity})
  */
 @Entity
 @Table(name = "accounts")
-@SoftDelete(columnName = "is_deleted", strategy = SoftDeleteType.DELETED)
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = "roles")
-@EqualsAndHashCode(of = "id")
-public class Account {
+@ToString(callSuper = true, exclude = "roles")
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class Account extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    /** Mỗi tài khoản thuộc về đúng 1 nhân viên */
+    /** Employee cũng @SQLRestriction("is_deleted = false") nên không cần khai
+     *  báo lại restriction ở đây — mỗi tài khoản thuộc về đúng 1 nhân viên. */
     @OneToOne(fetch = FetchType.LAZY)
-    @SQLRestriction("is_deleted = false")
     @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
 

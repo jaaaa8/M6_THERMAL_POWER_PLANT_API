@@ -10,8 +10,8 @@ import java.util.List;
  * Đơn vị đo lường (KW, bar, m3/h, V, A, vòng/phút...).
  * Table: units
  *
- * Không áp dụng @SoftDelete: bảng lookup nhỏ, ít thay đổi, không phải nơi
- * xảy ra nghiệp vụ "xoá" theo nghĩa cần giữ lại lịch sử.
+ * Không soft-delete: bảng lookup nhỏ, ít thay đổi, không phải nơi xảy ra
+ * nghiệp vụ "xoá" theo nghĩa cần giữ lại lịch sử.
  */
 @Entity
 @Table(name = "units")
