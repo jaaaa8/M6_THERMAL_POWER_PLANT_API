@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -43,6 +44,7 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     /** Quan hệ 1-1: mỗi PCT chỉ từ 1 yêu cầu duy nhất */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repair_request_id", unique = true)
+    @CascadeSoftDelete
     private RepairRequest repairRequest;
 
     /** Người lãnh đạo công việc */

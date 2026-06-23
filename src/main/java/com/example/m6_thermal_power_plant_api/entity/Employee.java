@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -49,6 +50,7 @@ public class Employee extends BaseSoftDeleteEntity {
      *  tự động ẩn phòng ban đã xoá mềm — không cần khai báo lại restriction ở đây. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
+    @CascadeSoftDelete
     private Department department;
 
     /** Chức vụ */

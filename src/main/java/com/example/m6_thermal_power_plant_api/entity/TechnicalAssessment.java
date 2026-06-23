@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,6 +38,7 @@ public class TechnicalAssessment extends BaseSoftDeleteEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_order_id")
+    @CascadeSoftDelete
     private WorkOrder workOrder;
 
     /** Tổ trưởng thực hiện đánh giá (đăng nhập bằng tài khoản) */

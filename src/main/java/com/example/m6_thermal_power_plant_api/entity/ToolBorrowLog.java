@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.example.m6_thermal_power_plant_api.entity.enums.BorrowStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.BorrowType;
 import jakarta.persistence.*;
@@ -36,6 +37,7 @@ public class ToolBorrowLog extends BaseSoftDeleteEntity {
     /** Công cụ được mượn */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tool_id", nullable = false)
+    @CascadeSoftDelete
     private Tool tool;
 
     /** Người mượn (đăng nhập bằng tài khoản) */

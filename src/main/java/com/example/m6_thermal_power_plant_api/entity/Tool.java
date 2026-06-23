@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +43,7 @@ public class Tool extends BaseSoftDeleteEntity {
      *  khai báo lại restriction ở đây. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tool_category_id")
+    @CascadeSoftDelete
     private ToolCategory toolCategory;
 
     /** Số lượng hiện có trong kho */

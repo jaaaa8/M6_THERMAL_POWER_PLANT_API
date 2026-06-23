@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -31,10 +32,12 @@ public class EquipmentParameter extends BaseSoftDeleteEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id")
+    @CascadeSoftDelete
     private Equipment equipment;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parameter_id")
+    @CascadeSoftDelete
     private ParameterCatalog parameter;
 
     /** Giá trị thực tế của thông số */

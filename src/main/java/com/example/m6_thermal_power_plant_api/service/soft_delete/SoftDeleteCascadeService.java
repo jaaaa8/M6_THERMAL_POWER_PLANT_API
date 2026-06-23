@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.service.soft_delete;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceUnitUtil;
 import jakarta.persistence.metamodel.Attribute;
@@ -100,7 +101,17 @@ public class SoftDeleteCascadeService {
         }
 
         Class<?> referenceType = attribute.getJavaType();
-        return referenceType.isAssignableFrom(parentClass);
+        if (!referenceType.isAssignableFrom(parentClass)) {
+            return false;
+        }
+
+        java.lang.reflect.Member member = attribute.getJavaMember();
+        if (member instanceof java.lang.reflect.Field) {
+            java.lang.reflect.Field field = (java.lang.reflect.Field) member;
+            return field.isAnnotationPresent(CascadeSoftDelete.class);
+        }
+
+        return false;
     }
 
     private record EntityKey(Class<?> entityClass, Object entityId) {
