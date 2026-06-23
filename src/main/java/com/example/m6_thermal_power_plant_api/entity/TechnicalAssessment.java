@@ -33,7 +33,8 @@ public class TechnicalAssessment extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "technical_code", unique = true, nullable = false, length = 50)
+    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    @Column(name = "technical_code", nullable = false, length = 50)
     private String technicalCode;
 
     @ManyToOne(fetch = FetchType.LAZY)

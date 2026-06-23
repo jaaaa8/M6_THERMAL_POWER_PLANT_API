@@ -33,7 +33,8 @@ public class Tool extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "tool_code", unique = true, nullable = false, length = 50)
+    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    @Column(name = "tool_code", nullable = false, length = 50)
     private String toolCode;
 
     @Column(nullable = false, length = 255)

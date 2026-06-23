@@ -38,7 +38,8 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "order_code", unique = true, nullable = false, length = 50)
+    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    @Column(name = "order_code", nullable = false, length = 50)
     private String orderCode;
 
     /** Quan hệ 1-1: mỗi PCT chỉ từ 1 yêu cầu duy nhất */

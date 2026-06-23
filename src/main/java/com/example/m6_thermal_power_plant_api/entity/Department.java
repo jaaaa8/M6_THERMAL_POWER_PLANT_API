@@ -30,7 +30,8 @@ public class Department extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "department_code", unique = true, nullable = false, length = 50)
+    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    @Column(name = "department_code", nullable = false, length = 50)
     private String departmentCode;
 
     @Column(nullable = false, length = 255)

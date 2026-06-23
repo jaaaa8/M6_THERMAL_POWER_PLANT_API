@@ -34,7 +34,8 @@ public class Employee extends BaseSoftDeleteEntity {
     private Integer id;
 
     /** Mã nhân viên */
-    @Column(name = "employee_code", unique = true, nullable = false, length = 50)
+    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    @Column(name = "employee_code", nullable = false, length = 50)
     private String employeeCode;
 
     @Column(name = "full_name", nullable = false, length = 255)

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,11 +34,12 @@ public class SoftDeleteCascadeService {
 
     @Transactional
     public void softDelete(BaseSoftDeleteEntity root) {
-        cascadeSoftDelete(root, new HashSet<>());
+        // Một mốc thời gian DUY NHẤT cho cả lần cascade → restore gom nhóm chính xác.
+        cascadeSoftDelete(root, LocalDateTime.now(), new HashSet<>());
         entityManager.flush();
     }
 
-    private void cascadeSoftDelete(BaseSoftDeleteEntity entity, Set<EntityKey> visited) {
+    private void cascadeSoftDelete(BaseSoftDeleteEntity entity, LocalDateTime deletedAt, Set<EntityKey> visited) {
         BaseSoftDeleteEntity managedEntity = attach(entity);
         EntityKey entityKey = createEntityKey(managedEntity);
         if (!visited.add(entityKey)) {
@@ -47,11 +49,11 @@ public class SoftDeleteCascadeService {
         List<BaseSoftDeleteEntity> dependents = findActiveDependents(managedEntity);
 
         if (!Boolean.TRUE.equals(managedEntity.getIsDeleted())) {
-            managedEntity.softDelete();
+            managedEntity.softDelete(deletedAt);
         }
 
         for (BaseSoftDeleteEntity dependent : dependents) {
-            cascadeSoftDelete(dependent, visited);
+            cascadeSoftDelete(dependent, deletedAt, visited);
         }
     }
 
@@ -64,6 +66,11 @@ public class SoftDeleteCascadeService {
      * JPQL/criteria sẽ KHÔNG nhìn thấy bản ghi đã xoá mềm → không thể tìm dependent
      * để khôi phục. Native SQL không bị @SQLRestriction lọc, nên ta dùng native query
      * để dò các dependent đang ở trạng thái is_deleted = true rồi bật lại.
+     *
+     * GOM NHÓM THEO deleted_at: chỉ khôi phục những dependent có cùng mốc deleted_at
+     * với root — tức là những bản ghi đã bị xoá CÙNG LÔ với root. Tránh "vô tình hồi sinh"
+     * các dependent vốn đã bị xoá riêng từ trước. Nếu root không có deleted_at (dữ liệu
+     * cũ xoá trước khi có cột này) thì khôi phục mọi dependent đang bị ẩn (hành vi cũ).
      */
     @Transactional
     public void restore(BaseSoftDeleteEntity root) {
@@ -73,13 +80,13 @@ public class SoftDeleteCascadeService {
         if (rootId == null) {
             throw new IllegalArgumentException("Cannot cascade restore a transient entity: " + rootClass.getName());
         }
-        cascadeRestore(rootClass, rootId, new HashSet<>());
+        cascadeRestore(rootClass, rootId, root.getDeletedAt(), new HashSet<>());
         // Bỏ các entity đang được quản lý trong context để lần đọc sau lấy lại dữ liệu mới.
         entityManager.flush();
         entityManager.clear();
     }
 
-    private void cascadeRestore(Class<?> entityClass, Object entityId, Set<EntityKey> visited) {
+    private void cascadeRestore(Class<?> entityClass, Object entityId, LocalDateTime batchDeletedAt, Set<EntityKey> visited) {
         if (!visited.add(new EntityKey(entityClass, entityId))) {
             return;
         }
@@ -88,16 +95,16 @@ public class SoftDeleteCascadeService {
         String idColumn = idColumnName(entityClass);
 
         entityManager.createNativeQuery(
-                        "update " + table + " set is_deleted = false where " + idColumn + " = :id and is_deleted = true")
+                        "update " + table + " set is_deleted = false, deleted_at = null where " + idColumn + " = :id and is_deleted = true")
                 .setParameter("id", entityId)
                 .executeUpdate();
 
-        for (DeletedDependent dependent : findDeletedDependents(entityClass, entityId)) {
-            cascadeRestore(dependent.entityClass(), dependent.id(), visited);
+        for (DeletedDependent dependent : findDeletedDependents(entityClass, entityId, batchDeletedAt)) {
+            cascadeRestore(dependent.entityClass(), dependent.id(), batchDeletedAt, visited);
         }
     }
 
-    private List<DeletedDependent> findDeletedDependents(Class<?> parentClass, Object parentId) {
+    private List<DeletedDependent> findDeletedDependents(Class<?> parentClass, Object parentId, LocalDateTime batchDeletedAt) {
         List<DeletedDependent> dependents = new ArrayList<>();
 
         for (EntityType<?> entityType : entityManager.getMetamodel().getEntities()) {
@@ -115,11 +122,17 @@ public class SoftDeleteCascadeService {
                 String childIdColumn = idColumnName(candidateClass);
                 String foreignKeyColumn = joinColumnName(attribute);
 
-                List<?> childIds = entityManager.createNativeQuery(
-                                "select " + childIdColumn + " from " + childTable
-                                        + " where " + foreignKeyColumn + " = :parentId and is_deleted = true")
-                        .setParameter("parentId", parentId)
-                        .getResultList();
+                String sql = "select " + childIdColumn + " from " + childTable
+                        + " where " + foreignKeyColumn + " = :parentId and is_deleted = true";
+                if (batchDeletedAt != null) {
+                    sql += " and deleted_at = :batchDeletedAt";
+                }
+
+                var query = entityManager.createNativeQuery(sql).setParameter("parentId", parentId);
+                if (batchDeletedAt != null) {
+                    query.setParameter("batchDeletedAt", batchDeletedAt);
+                }
+                List<?> childIds = query.getResultList();
 
                 for (Object childId : childIds) {
                     dependents.add(new DeletedDependent(candidateClass, ((Number) childId).intValue()));

@@ -31,7 +31,8 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
     private Integer id;
 
     /** Mã của chính phiếu cấp vật tư này (khác mã vật tư trong danh mục) */
-    @Column(name = "spare_part_code", unique = true, nullable = false, length = 50)
+    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    @Column(name = "spare_part_code", nullable = false, length = 50)
     private String sparePartCode;
 
     @ManyToOne(fetch = FetchType.LAZY)

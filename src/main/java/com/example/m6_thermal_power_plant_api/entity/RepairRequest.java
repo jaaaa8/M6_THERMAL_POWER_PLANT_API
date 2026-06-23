@@ -39,7 +39,8 @@ public class RepairRequest extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "request_code", unique = true, nullable = false, length = 50)
+    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    @Column(name = "request_code", nullable = false, length = 50)
     private String requestCode;
 
     /** Equipment đã @SQLRestriction nên không cần khai báo lại ở đây. */
