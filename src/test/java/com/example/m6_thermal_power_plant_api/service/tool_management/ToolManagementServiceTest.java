@@ -85,6 +85,26 @@ class ToolManagementServiceTest {
         verify(toolRepository, never()).save(any(Tool.class));
     }
 
+    @Test
+    void findById_whenToolFound_returnsTool() {
+        Tool tool = createTool(false);
+        when(toolRepository.findById(1)).thenReturn(Optional.of(tool));
+
+        Tool foundTool = toolManagementService.findById(1);
+
+        assertThat(foundTool).isNotNull();
+        assertThat(foundTool.getId()).isEqualTo(1);
+        assertThat(foundTool).isEqualTo(tool);
+    }
+
+    @Test
+    void findById_whenToolNotFound_throwsException() {
+        when(toolRepository.findById(1)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> toolManagementService.findById(1))
+                .isInstanceOf(ObjectNotFoundException.class);
+    }
+
     private static Tool createTool(boolean deleted) {
         Tool tool = new Tool();
         tool.setId(1);
