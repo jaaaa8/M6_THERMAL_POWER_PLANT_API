@@ -1,9 +1,12 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -18,11 +21,12 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "technical_assessments")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@EqualsAndHashCode(of = "id")
-public class TechnicalAssessment {
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class TechnicalAssessment extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

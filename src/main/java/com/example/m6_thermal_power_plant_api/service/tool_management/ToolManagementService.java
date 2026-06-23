@@ -4,23 +4,25 @@ import com.example.m6_thermal_power_plant_api.entity.Tool;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.ToolRepository;
 import com.example.m6_thermal_power_plant_api.service.IToolManagementService;
+import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ToolManagementService implements IToolManagementService {
     private final ToolRepository toolRepository;
+    private final SoftDeleteCascadeService softDeleteCascadeService;
 
-    public ToolManagementService(ToolRepository toolRepository) {
+    public ToolManagementService(ToolRepository toolRepository, SoftDeleteCascadeService softDeleteCascadeService) {
         this.toolRepository = toolRepository;
+        this.softDeleteCascadeService = softDeleteCascadeService;
     }
 
     @Override
     @Transactional
     public int deleteTool(int toolId) {
         Tool tool = getActiveToolOrThrow(toolId);
-        tool.softDelete();
-        toolRepository.save(tool);
+        softDeleteCascadeService.softDelete(tool);
         return toolId;
     }
 

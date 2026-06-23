@@ -1,9 +1,12 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,11 +20,12 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "consumable_inventory")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@EqualsAndHashCode(of = "id")
-public class ConsumableInventory {
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class ConsumableInventory extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

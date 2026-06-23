@@ -43,6 +43,7 @@ import lombok.experimental.SuperBuilder;
 public abstract class BaseSoftDeleteEntity {
 
     @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
     private Boolean isDeleted = Boolean.FALSE;
 
     /** Đánh dấu xoá mềm. Nhớ gọi repository.save(entity) sau khi gọi hàm này. */
