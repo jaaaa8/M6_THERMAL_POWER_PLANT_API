@@ -42,14 +42,14 @@ INSERT INTO account_roles (account_id, role_id) VALUES
 (5, 4),
 (6, 6);
 
-INSERT INTO units (id, name, description) VALUES
-(1, 'kW', 'Kilowatt'),
-(2, 'A', 'Ampere'),
-(3, 'V', 'Volt'),
-(4, 'bar', 'Pressure in bar'),
-(5, 'm3/h', 'Cubic meters per hour'),
-(6, 'rpm', 'Revolutions per minute'),
-(7, 'degC', 'Temperature in Celsius');
+INSERT INTO units (id, name, description, is_deleted) VALUES
+(1, 'kW', 'Kilowatt', false),
+(2, 'A', 'Ampere', false),
+(3, 'V', 'Volt', false),
+(4, 'bar', 'Pressure in bar', false),
+(5, 'm3/h', 'Cubic meters per hour', false),
+(6, 'rpm', 'Revolutions per minute', false),
+(7, 'degC', 'Temperature in Celsius', false);
 
 INSERT INTO parameter_catalog (id, name, description, is_deleted) VALUES
 (1, 'Power', 'Rated equipment power', false),
@@ -91,13 +91,13 @@ INSERT INTO equipment (
 (4, '10EBA10GS001', 'MCC Panel 1', 4, 2, 'OPERATING', 'Motor control center for unit 1 auxiliaries', null, false),
 (5, '10HFB20AF001', 'Coal Conveyor Fan', 3, 4, 'MAINTENANCE', 'Ventilation fan for coal conveyor gallery', null, false);
 
-INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, description) VALUES
-(1, 1, 1, '3500', 'Rated motor power'),
-(2, 1, 4, '180', 'Normal discharge pressure'),
-(3, 1, 5, '550', 'Nominal feedwater flow'),
-(4, 2, 1, '3500', 'Rated motor power'),
-(5, 3, 5, '1200', 'Nominal cooling water flow'),
-(6, 5, 6, '1450', 'Rated fan speed');
+INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, description, is_deleted) VALUES
+(1, 1, 1, '3500', 'Rated motor power', false),
+(2, 1, 4, '180', 'Normal discharge pressure', false),
+(3, 1, 5, '550', 'Nominal feedwater flow', false),
+(4, 2, 1, '3500', 'Rated motor power', false),
+(5, 3, 5, '1200', 'Nominal cooling water flow', false),
+(6, 5, 6, '1450', 'Rated fan speed', false);
 
 INSERT INTO spare_parts (
     id, spare_part_code, name, price, manufacturer, img_path, status, is_deleted
@@ -116,21 +116,21 @@ INSERT INTO consumable (
 (4, 'CON-RP7', 'Rust Remover Spray', 65000.00, 'RP7', null, 'ACTIVE', false);
 
 INSERT INTO spare_parts_inventory (
-    id, spare_part_id, supplier, account_id, quantity, transaction_type, transaction_date
+    id, spare_part_id, supplier, account_id, quantity, transaction_type, transaction_date, is_deleted
 ) VALUES
-(1, 1, 'ABC Industrial Supply', 4, 20.00, 'IMPORT', '2026-06-01 08:15:00'),
-(2, 2, 'Pump Service Co', 4, 5.00, 'IMPORT', '2026-06-02 09:00:00'),
-(3, 3, 'Electrical Parts VN', 4, 12.00, 'IMPORT', '2026-06-03 10:30:00'),
-(4, 1, 'Work order issue', 4, 2.00, 'EXPORT', '2026-06-10 14:00:00');
+(1, 1, 'ABC Industrial Supply', 4, 20.00, 'IMPORT', '2026-06-01 08:15:00', false),
+(2, 2, 'Pump Service Co', 4, 5.00, 'IMPORT', '2026-06-02 09:00:00', false),
+(3, 3, 'Electrical Parts VN', 4, 12.00, 'IMPORT', '2026-06-03 10:30:00', false),
+(4, 1, 'Work order issue', 4, 2.00, 'EXPORT', '2026-06-10 14:00:00', false);
 
 INSERT INTO consumable_inventory (
-    id, consumable_id, supplier, account_id, quantity, transaction_type, transaction_date
+    id, consumable_id, supplier, account_id, quantity, transaction_type, transaction_date, is_deleted
 ) VALUES
-(1, 1, 'Lubricant Distributor', 4, 200.00, 'IMPORT', '2026-06-01 08:30:00'),
-(2, 2, 'Lubricant Distributor', 4, 50.00, 'IMPORT', '2026-06-01 08:35:00'),
-(3, 3, 'General Supplier', 4, 100.00, 'IMPORT', '2026-06-04 11:00:00'),
-(4, 4, 'General Supplier', 4, 24.00, 'IMPORT', '2026-06-04 11:10:00'),
-(5, 1, 'Work order issue', 4, 10.00, 'EXPORT', '2026-06-10 14:05:00');
+(1, 1, 'Lubricant Distributor', 4, 200.00, 'IMPORT', '2026-06-01 08:30:00', false),
+(2, 2, 'Lubricant Distributor', 4, 50.00, 'IMPORT', '2026-06-01 08:35:00', false),
+(3, 3, 'General Supplier', 4, 100.00, 'IMPORT', '2026-06-04 11:00:00', false),
+(4, 4, 'General Supplier', 4, 24.00, 'IMPORT', '2026-06-04 11:10:00', false),
+(5, 1, 'Work order issue', 4, 10.00, 'EXPORT', '2026-06-10 14:05:00', false);
 
 INSERT INTO repair_requests (
     id, request_code, equipment_id, requester_id, incident_description, priority, status, created_at, is_deleted
@@ -141,43 +141,43 @@ INSERT INTO repair_requests (
 
 INSERT INTO work_orders (
     id, order_code, repair_request_id, leader_id, direct_supervisor_id, safety_supervisor_id,
-    start_time, end_time, status, pdf_path
+    start_time, end_time, status, pdf_path, is_deleted
 ) VALUES
-(1, 'WO-2026-0001', 1, 2, 1, 6, '2026-06-10 13:00:00', '2026-06-10 18:00:00', 'COMPLETED', '/exports/work-orders/WO-2026-0001.pdf'),
-(2, 'WO-2026-0002', 3, 2, 1, 6, '2026-06-15 08:00:00', '2026-06-15 16:00:00', 'IN_PROGRESS', '/exports/work-orders/WO-2026-0002.pdf');
+(1, 'WO-2026-0001', 1, 2, 1, 6, '2026-06-10 13:00:00', '2026-06-10 18:00:00', 'COMPLETED', '/exports/work-orders/WO-2026-0001.pdf', false),
+(2, 'WO-2026-0002', 3, 2, 1, 6, '2026-06-15 08:00:00', '2026-06-15 16:00:00', 'IN_PROGRESS', '/exports/work-orders/WO-2026-0002.pdf', false);
 
 INSERT INTO work_order_members (
-    id, work_order_id, account_id, role_in_task, joined_at, left_at
+    id, work_order_id, account_id, role_in_task, joined_at, left_at, is_deleted
 ) VALUES
-(1, 1, 2, 'Work leader', '2026-06-10 13:00:00', '2026-06-10 18:00:00'),
-(2, 1, 5, 'Mechanical technician', '2026-06-10 13:00:00', '2026-06-10 18:00:00'),
-(3, 1, 6, 'Safety supervisor', '2026-06-10 13:00:00', '2026-06-10 18:00:00'),
-(4, 2, 2, 'Work leader', '2026-06-15 08:00:00', null),
-(5, 2, 3, 'Electrical technician', '2026-06-15 08:00:00', null);
+(1, 1, 2, 'Work leader', '2026-06-10 13:00:00', '2026-06-10 18:00:00', false),
+(2, 1, 5, 'Mechanical technician', '2026-06-10 13:00:00', '2026-06-10 18:00:00', false),
+(3, 1, 6, 'Safety supervisor', '2026-06-10 13:00:00', '2026-06-10 18:00:00', false),
+(4, 2, 2, 'Work leader', '2026-06-15 08:00:00', null, false),
+(5, 2, 3, 'Electrical technician', '2026-06-15 08:00:00', null, false);
 
 INSERT INTO work_order_extensions (
-    id, work_order_id, reason, extended_until, approved_by
+    id, work_order_id, reason, extended_until, approved_by, is_deleted
 ) VALUES
-(1, 2, 'Need additional insulation resistance testing before energizing.', '2026-06-15 20:00:00', 1);
+(1, 2, 'Need additional insulation resistance testing before energizing.', '2026-06-15 20:00:00', 1, false);
 
 INSERT INTO technical_assessments (
-    id, technical_code, work_order_id, assessor_id, result, attachment_path, img_path, description, created_at, status
+    id, technical_code, work_order_id, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
 ) VALUES
-(1, 'TA-2026-0001', 1, 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED'),
-(2, 'TA-2026-0002', 2, 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS');
+(1, 'TA-2026-0001', 1, 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
+(2, 'TA-2026-0002', 2, 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS', false);
 
 INSERT INTO spare_parts_issues (
-    id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at
+    id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted
 ) VALUES
-(1, 'SPI-2026-0001', 1, 1, 'export', 2.00, 4, '2026-06-10 14:00:00'),
-(2, 'SPI-2026-0002', 2, 3, 'export', 1.00, 4, '2026-06-15 09:00:00');
+(1, 'SPI-2026-0001', 1, 1, 'export', 2.00, 4, '2026-06-10 14:00:00', false),
+(2, 'SPI-2026-0002', 2, 3, 'export', 1.00, 4, '2026-06-15 09:00:00', false);
 
 INSERT INTO consumable_issues (
-    id, consumable_code, work_order_id, consumable_id, transaction_type, quantity, issued_by, issued_at
+    id, consumable_code, work_order_id, consumable_id, transaction_type, quantity, issued_by, issued_at, is_deleted
 ) VALUES
-(1, 'CI-2026-0001', 1, 1, 'export', 10.00, 4, '2026-06-10 14:05:00'),
-(2, 'CI-2026-0002', 1, 3, 'export', 5.00, 4, '2026-06-10 14:10:00'),
-(3, 'CI-2026-0003', 2, 4, 'export', 2.00, 4, '2026-06-15 09:05:00');
+(1, 'CI-2026-0001', 1, 1, 'export', 10.00, 4, '2026-06-10 14:05:00', false),
+(2, 'CI-2026-0002', 1, 3, 'export', 5.00, 4, '2026-06-10 14:10:00', false),
+(3, 'CI-2026-0003', 2, 4, 'export', 2.00, 4, '2026-06-15 09:05:00', false);
 
 INSERT INTO tool_categories (
     id, category_code, category_name, description, is_deleted
@@ -195,22 +195,22 @@ INSERT INTO tools (
 (4, 'TL-LOCK-001', 'Lockout Tagout Kit', 3, 6, 'Electrical isolation lockout kit', null, false);
 
 INSERT INTO tool_borrow_logs (
-    id, tool_id, account_id, quantity, transaction_type, status, transaction_date, due_date, actual_return_date, approved_by
+    id, tool_id, account_id, quantity, transaction_type, status, transaction_date, due_date, actual_return_date, approved_by, is_deleted
 ) VALUES
-(1, 2, 5, 1, 'BORROW', 'RETURNED', '2026-06-10 12:30:00', '2026-06-10 19:00:00', '2026-06-10 18:10:00', 4),
-(2, 3, 3, 1, 'BORROW', 'APPROVED', '2026-06-15 08:10:00', '2026-06-15 20:00:00', null, 4),
-(3, 4, 6, 1, 'BORROW', 'APPROVED', '2026-06-15 08:15:00', '2026-06-15 20:00:00', null, 4);
+(1, 2, 5, 1, 'BORROW', 'RETURNED', '2026-06-10 12:30:00', '2026-06-10 19:00:00', '2026-06-10 18:10:00', 4, false),
+(2, 3, 3, 1, 'BORROW', 'APPROVED', '2026-06-15 08:10:00', '2026-06-15 20:00:00', null, 4, false),
+(3, 4, 6, 1, 'BORROW', 'APPROVED', '2026-06-15 08:15:00', '2026-06-15 20:00:00', null, 4, false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, lubricant_type, consumable_id, quantity
+    id, equipment_id, cycle_months, next_due_date, lubricant_type, consumable_id, quantity, is_deleted
 ) VALUES
-(1, 1, 3, '2026-09-10', 'Hydraulic oil ISO VG 68', 1, 25.00),
-(2, 3, 2, '2026-08-05', 'Grease EP2', 2, 3.00),
-(3, 5, 1, '2026-07-15', 'Grease EP2', 2, 1.50);
+(1, 1, 3, '2026-09-10', 'Hydraulic oil ISO VG 68', 1, 25.00, false),
+(2, 3, 2, '2026-08-05', 'Grease EP2', 2, 3.00, false),
+(3, 5, 1, '2026-07-15', 'Grease EP2', 2, 1.50, false);
 
 INSERT INTO lubrication_history (
-    id, plan_id, performed_date, notes
+    id, plan_id, performed_date, notes, is_deleted
 ) VALUES
-(1, 1, '2026-06-10', 'Oil level checked and topped up during bearing replacement.'),
-(2, 2, '2026-06-05', 'Greased cooling water pump bearings.'),
-(3, 3, '2026-06-15', 'Fan bearing lubrication completed before restart.');
+(1, 1, '2026-06-10', 'Oil level checked and topped up during bearing replacement.', false),
+(2, 2, '2026-06-05', 'Greased cooling water pump bearings.', false),
+(3, 3, '2026-06-15', 'Fan bearing lubrication completed before restart.', false);
