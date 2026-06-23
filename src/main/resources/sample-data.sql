@@ -214,3 +214,66 @@ INSERT INTO lubrication_history (
 (1, 1, '2026-06-10', 'Oil level checked and topped up during bearing replacement.', false),
 (2, 2, '2026-06-05', 'Greased cooling water pump bearings.', false),
 (3, 3, '2026-06-15', 'Fan bearing lubrication completed before restart.', false);
+
+-- ============================================================================
+-- Thiết bị MỚI NHẤT (id = 6) cùng toàn bộ cây dữ liệu liên quan.
+-- Dùng cho EquipmentManagementServiceDbTest: soft-delete / restore cascade.
+-- Khi xoá mềm equipment 6, các dòng dưới đây (tham chiếu trực tiếp/gián tiếp
+-- tới nó qua @CascadeSoftDelete) cũng bị ẩn; restore sẽ hiện lại tất cả.
+-- ============================================================================
+
+INSERT INTO equipment (
+    id, kks_code, name, system_id, equipment_type_id, status, description, img_path, is_deleted
+) VALUES
+(6, '10LAB30AP001', 'Condensate Pump A', 1, 1, 'OPERATING', 'Condensate extraction pump train A', null, false);
+
+INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, description, is_deleted) VALUES
+(7, 6, 1, '2200', 'Rated motor power', false),
+(8, 6, 4, '160', 'Normal discharge pressure', false);
+
+INSERT INTO repair_requests (
+    id, request_code, equipment_id, requester_id, incident_description, priority, status, created_at, is_deleted
+) VALUES
+(4, 'RR-2026-0004', 6, 1, 'Condensate pump mechanical seal leakage observed during operation.', 'high', 'APPROVED', '2026-06-18 08:00:00', false);
+
+INSERT INTO work_orders (
+    id, order_code, repair_request_id, leader_id, direct_supervisor_id, safety_supervisor_id,
+    start_time, end_time, status, pdf_path, is_deleted
+) VALUES
+(3, 'WO-2026-0003', 4, 2, 1, 6, '2026-06-18 13:00:00', '2026-06-18 17:30:00', 'COMPLETED', '/exports/work-orders/WO-2026-0003.pdf', false);
+
+INSERT INTO work_order_members (
+    id, work_order_id, account_id, role_in_task, joined_at, left_at, is_deleted
+) VALUES
+(6, 3, 2, 'Work leader', '2026-06-18 13:00:00', '2026-06-18 17:30:00', false),
+(7, 3, 5, 'Mechanical technician', '2026-06-18 13:00:00', '2026-06-18 17:30:00', false);
+
+INSERT INTO work_order_extensions (
+    id, work_order_id, reason, extended_until, approved_by, is_deleted
+) VALUES
+(2, 3, 'Awaiting replacement mechanical seal delivery before reassembly.', '2026-06-18 22:00:00', 1, false);
+
+INSERT INTO technical_assessments (
+    id, technical_code, work_order_id, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+) VALUES
+(3, 'TA-2026-0003', 3, 2, 'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
+
+INSERT INTO spare_parts_issues (
+    id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted
+) VALUES
+(3, 'SPI-2026-0003', 3, 2, 'export', 1.00, 4, '2026-06-18 14:00:00', false);
+
+INSERT INTO consumable_issues (
+    id, consumable_code, work_order_id, consumable_id, transaction_type, quantity, issued_by, issued_at, is_deleted
+) VALUES
+(4, 'CI-2026-0004', 3, 1, 'export', 8.00, 4, '2026-06-18 14:05:00', false);
+
+INSERT INTO lubrication_plans (
+    id, equipment_id, cycle_months, next_due_date, lubricant_type, consumable_id, quantity, is_deleted
+) VALUES
+(4, 6, 3, '2026-09-18', 'Hydraulic oil ISO VG 68', 1, 20.00, false);
+
+INSERT INTO lubrication_history (
+    id, plan_id, performed_date, notes, is_deleted
+) VALUES
+(4, 4, '2026-06-18', 'Oil refilled after mechanical seal replacement.', false);

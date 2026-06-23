@@ -10,6 +10,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Kiểm tra thủ công cơ chế soft-delete / restore CASCADE trực tiếp trên database thật.
+ *
+ * Cả hai test đều thao tác trên "thiết bị mới nhất" (id lớn nhất trong bảng equipment,
+ * kể cả bản ghi đã bị xoá mềm) — tức là dòng equipment mới nhất trong sample-data.sql
+ * cùng toàn bộ dữ liệu liên quan (equipment_parameters, repair_requests, work_orders,
+ * lubrication_plans, ...).
+ *
+ * CÁCH CHẠY ĐỂ QUAN SÁT:
+ *   1. Chạy {@link #deleteLatestEquipment_andCommitToDatabase()} → mở DB kiểm tra:
+ *      thiết bị mới nhất và các dòng tham chiếu nó đều có is_deleted = 1 (bị ẩn).
+ *   2. Chạy {@link #restoreLatestEquipment_andCommitToDatabase()} → mở DB kiểm tra:
+ *      tất cả các dòng đó quay lại is_deleted = 0 (hiện lại).
+ *
+ * Vì dùng @Commit nên thay đổi được ghi thật xuống DB (không rollback sau test).
+ */
 @SpringBootTest
 public class EquipmentManagementServiceDbTest {
 
@@ -22,28 +38,44 @@ public class EquipmentManagementServiceDbTest {
     @Test
     @Transactional
     @Commit
-    void deleteEquipment_andCommitToDatabase() {
-        // 1. Create and save a new equipment
-        Equipment equipment = new Equipment();
-        equipment.setKksCode("KKS-TEST-001");
-        equipment.setName("Test Equipment for DB Check");
-        equipment.setStatus("Đang vận hành");
-        equipment.setIsDeleted(false);
-        
-        equipment = equipmentRepository.save(equipment);
-        Integer newEquipmentId = equipment.getId();
-        System.out.println("Created new equipment with ID: " + newEquipmentId);
+    void deleteLatestEquipment_andCommitToDatabase() {
+        // 1. Lấy thiết bị mới nhất (id lớn nhất), kể cả khi đã bị xoá mềm.
+        Equipment latest = equipmentRepository.findLatestIncludingDeleted()
+                .orElseThrow(() -> new RuntimeException("No equipment found. Did you run sample-data.sql?"));
+        Integer latestId = latest.getId();
+        System.out.println("Soft-deleting latest equipment id = " + latestId + " (" + latest.getName() + ")");
 
-        // 2. Delete the equipment using the new method
-        equipmentManagementService.deleteEquipment(newEquipmentId);
-        System.out.println("Deleted equipment with ID: " + newEquipmentId);
+        // 2. Xoá mềm cascade (ẩn thiết bị + mọi dependent tham chiếu nó).
+        equipmentManagementService.deleteEquipment(latestId);
 
-        // 3. Verify it is marked as deleted
-        Equipment deletedEquipment = equipmentRepository.findByIdIncludingDeleted(newEquipmentId)
-                .orElseThrow(() -> new RuntimeException("Equipment completely removed, should be soft-deleted!"));
-        
-        assertThat(deletedEquipment.getIsDeleted()).isTrue();
-        System.out.println("Equipment isDeleted status in Java: " + deletedEquipment.getIsDeleted());
-        System.out.println("Check your MySQL database for equipment ID " + newEquipmentId + ", is_deleted should be 1.");
+        // 3. Bản ghi vẫn còn trong DB nhưng đã bị đánh dấu is_deleted = true.
+        Equipment deleted = equipmentRepository.findByIdIncludingDeleted(latestId)
+                .orElseThrow(() -> new RuntimeException("Equipment was hard-deleted, expected soft-delete!"));
+        assertThat(deleted.getIsDeleted()).isTrue();
+
+        System.out.println("Done. Check the database: equipment id " + latestId
+                + " and its related rows should now have is_deleted = 1 (hidden).");
+    }
+
+    @Test
+    @Transactional
+    @Commit
+    void restoreLatestEquipment_andCommitToDatabase() {
+        // 1. Lấy lại đúng thiết bị mới nhất (kể cả khi đang bị ẩn vì is_deleted = true).
+        Equipment latest = equipmentRepository.findLatestIncludingDeleted()
+                .orElseThrow(() -> new RuntimeException("No equipment found. Did you run sample-data.sql?"));
+        Integer latestId = latest.getId();
+        System.out.println("Restoring latest equipment id = " + latestId + " (" + latest.getName() + ")");
+
+        // 2. Khôi phục cascade (hiện lại thiết bị + mọi dependent đã bị ẩn theo nó).
+        equipmentManagementService.restoreEquipment(latestId);
+
+        // 3. Thiết bị quay lại trạng thái is_deleted = false.
+        Equipment restored = equipmentRepository.findByIdIncludingDeleted(latestId)
+                .orElseThrow(() -> new RuntimeException("Equipment disappeared, restore failed!"));
+        assertThat(restored.getIsDeleted()).isFalse();
+
+        System.out.println("Done. Check the database: equipment id " + latestId
+                + " and its related rows should now have is_deleted = 0 (visible again).");
     }
 }

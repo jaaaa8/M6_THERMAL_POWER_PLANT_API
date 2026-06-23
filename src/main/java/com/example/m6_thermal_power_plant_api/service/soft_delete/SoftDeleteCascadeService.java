@@ -2,8 +2,12 @@ package com.example.m6_thermal_power_plant_api.service.soft_delete;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
+import jakarta.persistence.Column;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PersistenceUnitUtil;
+import jakarta.persistence.Table;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.SingularAttribute;
@@ -11,6 +15,8 @@ import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Member;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +53,115 @@ public class SoftDeleteCascadeService {
         for (BaseSoftDeleteEntity dependent : dependents) {
             cascadeSoftDelete(dependent, visited);
         }
+    }
+
+    /**
+     * Khôi phục (restore) ngược lại toàn bộ cây đã bị {@link #softDelete} cascade:
+     * bật lại is_deleted = false cho root và mọi dependent đã bị ẩn theo nó.
+     *
+     * VÌ SAO PHẢI DÙNG NATIVE SQL Ở ĐÂY?
+     * Các entity đều gắn {@code @SQLRestriction("is_deleted = false")} nên mọi câu
+     * JPQL/criteria sẽ KHÔNG nhìn thấy bản ghi đã xoá mềm → không thể tìm dependent
+     * để khôi phục. Native SQL không bị @SQLRestriction lọc, nên ta dùng native query
+     * để dò các dependent đang ở trạng thái is_deleted = true rồi bật lại.
+     */
+    @Transactional
+    public void restore(BaseSoftDeleteEntity root) {
+        Class<?> rootClass = Hibernate.getClass(root);
+        PersistenceUnitUtil persistenceUnitUtil = entityManager.getEntityManagerFactory().getPersistenceUnitUtil();
+        Object rootId = persistenceUnitUtil.getIdentifier(root);
+        if (rootId == null) {
+            throw new IllegalArgumentException("Cannot cascade restore a transient entity: " + rootClass.getName());
+        }
+        cascadeRestore(rootClass, rootId, new HashSet<>());
+        // Bỏ các entity đang được quản lý trong context để lần đọc sau lấy lại dữ liệu mới.
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    private void cascadeRestore(Class<?> entityClass, Object entityId, Set<EntityKey> visited) {
+        if (!visited.add(new EntityKey(entityClass, entityId))) {
+            return;
+        }
+
+        String table = tableName(entityClass);
+        String idColumn = idColumnName(entityClass);
+
+        entityManager.createNativeQuery(
+                        "update " + table + " set is_deleted = false where " + idColumn + " = :id and is_deleted = true")
+                .setParameter("id", entityId)
+                .executeUpdate();
+
+        for (DeletedDependent dependent : findDeletedDependents(entityClass, entityId)) {
+            cascadeRestore(dependent.entityClass(), dependent.id(), visited);
+        }
+    }
+
+    private List<DeletedDependent> findDeletedDependents(Class<?> parentClass, Object parentId) {
+        List<DeletedDependent> dependents = new ArrayList<>();
+
+        for (EntityType<?> entityType : entityManager.getMetamodel().getEntities()) {
+            Class<?> candidateClass = entityType.getJavaType();
+            if (!BaseSoftDeleteEntity.class.isAssignableFrom(candidateClass)) {
+                continue;
+            }
+
+            for (SingularAttribute<?, ?> attribute : entityType.getSingularAttributes()) {
+                if (!isCascadeReferenceTo(attribute, parentClass)) {
+                    continue;
+                }
+
+                String childTable = tableName(candidateClass);
+                String childIdColumn = idColumnName(candidateClass);
+                String foreignKeyColumn = joinColumnName(attribute);
+
+                List<?> childIds = entityManager.createNativeQuery(
+                                "select " + childIdColumn + " from " + childTable
+                                        + " where " + foreignKeyColumn + " = :parentId and is_deleted = true")
+                        .setParameter("parentId", parentId)
+                        .getResultList();
+
+                for (Object childId : childIds) {
+                    dependents.add(new DeletedDependent(candidateClass, ((Number) childId).intValue()));
+                }
+            }
+        }
+
+        return dependents;
+    }
+
+    private String tableName(Class<?> entityClass) {
+        Table table = entityClass.getAnnotation(Table.class);
+        if (table != null && !table.name().isBlank()) {
+            return table.name();
+        }
+        return entityClass.getSimpleName();
+    }
+
+    private String idColumnName(Class<?> entityClass) {
+        for (Class<?> current = entityClass; current != null; current = current.getSuperclass()) {
+            for (Field field : current.getDeclaredFields()) {
+                if (field.isAnnotationPresent(Id.class)) {
+                    Column column = field.getAnnotation(Column.class);
+                    if (column != null && !column.name().isBlank()) {
+                        return column.name();
+                    }
+                    return field.getName();
+                }
+            }
+        }
+        throw new IllegalStateException("No @Id field found on " + entityClass.getName());
+    }
+
+    private String joinColumnName(SingularAttribute<?, ?> attribute) {
+        Member member = attribute.getJavaMember();
+        if (member instanceof Field field) {
+            JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
+            if (joinColumn != null && !joinColumn.name().isBlank()) {
+                return joinColumn.name();
+            }
+        }
+        throw new IllegalStateException("No @JoinColumn found on attribute " + attribute.getName());
     }
 
     private BaseSoftDeleteEntity attach(BaseSoftDeleteEntity entity) {
@@ -118,6 +233,14 @@ public class SoftDeleteCascadeService {
         private EntityKey {
             Objects.requireNonNull(entityClass);
             Objects.requireNonNull(entityId);
+        }
+    }
+
+    /** Một bản ghi dependent đã bị xoá mềm, cần khôi phục theo cha. */
+    private record DeletedDependent(Class<?> entityClass, Object id) {
+        private DeletedDependent {
+            Objects.requireNonNull(entityClass);
+            Objects.requireNonNull(id);
         }
     }
 }
