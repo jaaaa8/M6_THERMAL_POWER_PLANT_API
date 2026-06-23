@@ -33,7 +33,7 @@ public class SparePart extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
     @Column(name = "spare_part_code", nullable = false, length = 30)
     private String sparePartCode;
 

@@ -38,7 +38,7 @@ public class Account extends BaseSoftDeleteEntity {
     @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
 
-    // Uniqueness enforced by upgrade-soft-delete-unique-constraints.sql (composite UNIQUE with active_flag)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
     @Column(nullable = false, length = 100)
     private String username;
 
