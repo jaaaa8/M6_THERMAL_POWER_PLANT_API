@@ -1,8 +1,12 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,12 +28,13 @@ import java.util.List;
  */
 @Entity
 @Table(name = "lubrication_plans")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = "history")
-@EqualsAndHashCode(of = "id")
-public class LubricationPlan {
+@ToString(callSuper = true, exclude = "history")
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class LubricationPlan extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,6 +42,7 @@ public class LubricationPlan {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id")
+    @CascadeSoftDelete
     private Equipment equipment;
 
     /** Chu kỳ bảo dưỡng tính theo tháng */

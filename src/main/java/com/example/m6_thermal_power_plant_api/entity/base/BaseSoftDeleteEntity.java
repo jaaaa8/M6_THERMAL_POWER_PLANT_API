@@ -5,6 +5,8 @@ import jakarta.persistence.MappedSuperclass;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
+
 /**
  * Lớp cha dùng chung cho các entity có hỗ trợ xoá mềm (soft delete).
  *
@@ -43,15 +45,40 @@ import lombok.experimental.SuperBuilder;
 public abstract class BaseSoftDeleteEntity {
 
     @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
     private Boolean isDeleted = Boolean.FALSE;
 
-    /** Đánh dấu xoá mềm. Nhớ gọi repository.save(entity) sau khi gọi hàm này. */
+    /**
+     * Thời điểm xoá mềm. NULL = đang active.
+     *
+     * Dùng cho 2 mục đích:
+     *  1) AUDIT: biết bản ghi bị ẩn lúc nào.
+     *  2) GOM NHÓM CASCADE: một lần cascade soft-delete đóng dấu CÙNG một mốc thời gian
+     *     cho cả cây (root + dependent). Nhờ vậy {@code restore} chỉ khôi phục đúng những
+     *     bản ghi đã bị xoá cùng lô, không "vô tình" hồi sinh các dependent vốn đã bị xoá
+     *     riêng từ trước. {@code is_deleted} vẫn là cờ lọc nhanh cho @SQLRestriction.
+     */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    /** Đánh dấu xoá mềm với mốc thời gian hiện tại. */
     public void softDelete() {
+        softDelete(LocalDateTime.now());
+    }
+
+    /**
+     * Đánh dấu xoá mềm với mốc thời gian chỉ định.
+     * Cascade truyền CÙNG một {@code when} cho toàn bộ cây để restore gom nhóm chính xác.
+     * Nhớ gọi repository.save(entity) (hoặc để cascade service flush) sau khi gọi hàm này.
+     */
+    public void softDelete(LocalDateTime when) {
         this.isDeleted = Boolean.TRUE;
+        this.deletedAt = when;
     }
 
     /** Khôi phục bản ghi đã xoá mềm. Nhớ gọi repository.save(entity) sau khi gọi hàm này. */
     public void restore() {
         this.isDeleted = Boolean.FALSE;
+        this.deletedAt = null;
     }
 }

@@ -31,7 +31,8 @@ public class ToolCategory extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "category_code", unique = true, nullable = false, length = 50)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "category_code", nullable = false, length = 50)
     private String categoryCode;
 
     @Column(name = "category_name", nullable = false, length = 255)

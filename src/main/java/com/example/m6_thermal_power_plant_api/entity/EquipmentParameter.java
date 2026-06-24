@@ -1,7 +1,11 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 /**
  * Giá trị thông số kỹ thuật cụ thể của một thiết bị.
@@ -15,11 +19,12 @@ import lombok.*;
  */
 @Entity
 @Table(name = "equipment_parameters")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@EqualsAndHashCode(of = "id")
-public class EquipmentParameter {
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class EquipmentParameter extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,10 +32,12 @@ public class EquipmentParameter {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id")
+    @CascadeSoftDelete
     private Equipment equipment;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parameter_id")
+    @CascadeSoftDelete
     private ParameterCatalog parameter;
 
     /** Giá trị thực tế của thông số */

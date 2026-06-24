@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,7 +34,8 @@ public class Employee extends BaseSoftDeleteEntity {
     private Integer id;
 
     /** Mã nhân viên */
-    @Column(name = "employee_code", unique = true, nullable = false, length = 50)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "employee_code", nullable = false, length = 50)
     private String employeeCode;
 
     @Column(name = "full_name", nullable = false, length = 255)
@@ -49,6 +51,7 @@ public class Employee extends BaseSoftDeleteEntity {
      *  tự động ẩn phòng ban đã xoá mềm — không cần khai báo lại restriction ở đây. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
+    @CascadeSoftDelete
     private Department department;
 
     /** Chức vụ */

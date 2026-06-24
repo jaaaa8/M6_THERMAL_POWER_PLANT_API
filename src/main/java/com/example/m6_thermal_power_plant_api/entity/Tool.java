@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -32,7 +33,8 @@ public class Tool extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "tool_code", unique = true, nullable = false, length = 50)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "tool_code", nullable = false, length = 50)
     private String toolCode;
 
     @Column(nullable = false, length = 255)
@@ -42,6 +44,7 @@ public class Tool extends BaseSoftDeleteEntity {
      *  khai báo lại restriction ở đây. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tool_category_id")
+    @CascadeSoftDelete
     private ToolCategory toolCategory;
 
     /** Số lượng hiện có trong kho */

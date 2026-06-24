@@ -33,7 +33,8 @@ public class Consumable extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "consumable_code", unique = true, nullable = false, length = 30)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "consumable_code", nullable = false, length = 30)
     private String consumableCode;
 
     @Column(nullable = false, length = 255)

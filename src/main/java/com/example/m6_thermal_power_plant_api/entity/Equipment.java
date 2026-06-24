@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,10 +42,12 @@ public class Equipment extends BaseSoftDeleteEntity {
      *  nên không cần khai báo lại restriction ở 2 quan hệ dưới đây. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "system_id")
+    @CascadeSoftDelete
     private EquipmentSystem system;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_type_id")
+    @CascadeSoftDelete
     private EquipmentType equipmentType;
 
     /** Đang vận hành / Đang sửa chữa / Đang hỏng / Đang dự phòng */

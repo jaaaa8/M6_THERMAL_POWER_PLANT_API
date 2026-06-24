@@ -38,7 +38,8 @@ public class Account extends BaseSoftDeleteEntity {
     @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
 
-    @Column(unique = true, nullable = false, length = 100)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(nullable = false, length = 100)
     private String username;
 
     @Column(name = "password_hash", nullable = false, length = 255)
