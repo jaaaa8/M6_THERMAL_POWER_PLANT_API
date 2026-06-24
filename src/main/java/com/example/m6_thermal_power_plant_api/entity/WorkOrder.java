@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -69,8 +70,10 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Column(name = "end_time")
     private LocalDateTime endTime;
 
+    /** Mới tạo (OPEN) / Đang thực hiện / Hoàn thành / Đã huỷ */
+    @Enumerated(EnumType.STRING)
     @Column(length = 100)
-    private String status;
+    private WorkOrderStatus status;
 
     /** Đường dẫn file PDF phiếu công tác đã xuất */
     @Column(name = "pdf_path", length = 500)

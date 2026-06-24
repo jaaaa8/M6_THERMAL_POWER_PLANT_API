@@ -135,9 +135,9 @@ INSERT INTO consumable_inventory (
 INSERT INTO repair_requests (
     id, request_code, equipment_id, requester_id, incident_description, priority, status, created_at, is_deleted
 ) VALUES
-(1, 'RR-2026-0001', 1, 1, 'Abnormal vibration detected at pump drive end bearing.', 'high', 'APPROVED', '2026-06-10 07:45:00', false),
-(2, 'RR-2026-0002', 5, 1, 'Coal conveyor fan trips intermittently during startup.', 'low', 'PENDING', '2026-06-12 09:20:00', false),
-(3, 'RR-2026-0003', 4, 1, 'MCC panel temperature alarm appears during peak load.', 'high', 'IN_PROGRESS', '2026-06-14 13:10:00', false);
+(1, 'RR-2026-0001', 1, 1, 'Abnormal vibration detected at pump drive end bearing.', 'HIGH', 'APPROVED', '2026-06-10 07:45:00', false),
+(2, 'RR-2026-0002', 5, 1, 'Coal conveyor fan trips intermittently during startup.', 'LOW', 'PENDING', '2026-06-12 09:20:00', false),
+(3, 'RR-2026-0003', 4, 1, 'MCC panel temperature alarm appears during peak load.', 'HIGH', 'IN_PROGRESS', '2026-06-14 13:10:00', false);
 
 INSERT INTO work_orders (
     id, order_code, repair_request_id, leader_id, direct_supervisor_id, safety_supervisor_id,
@@ -234,7 +234,7 @@ INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, descrip
 INSERT INTO repair_requests (
     id, request_code, equipment_id, requester_id, incident_description, priority, status, created_at, is_deleted
 ) VALUES
-(4, 'RR-2026-0004', 6, 1, 'Condensate pump mechanical seal leakage observed during operation.', 'high', 'APPROVED', '2026-06-18 08:00:00', false);
+(4, 'RR-2026-0004', 6, 1, 'Condensate pump mechanical seal leakage observed during operation.', 'HIGH', 'APPROVED', '2026-06-18 08:00:00', false);
 
 INSERT INTO work_orders (
     id, order_code, repair_request_id, leader_id, direct_supervisor_id, safety_supervisor_id,

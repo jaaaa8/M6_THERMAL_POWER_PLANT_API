@@ -2,6 +2,8 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
+import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
+import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -58,13 +60,15 @@ public class RepairRequest extends BaseSoftDeleteEntity {
     @Column(name = "incident_description", columnDefinition = "TEXT")
     private String incidentDescription;
 
-    /** Giá trị hợp lệ theo DB: 'high' | 'low' (MySQL ENUM, so khớp không phân biệt hoa/thường) */
+    /** Mức độ ưu tiên: HIGH | LOW */
+    @Enumerated(EnumType.STRING)
     @Column(length = 50)
-    private String priority;
+    private RepairPriority priority;
 
-    /** Đang chờ xử lý / Đang xử lý / Hoàn thành */
+    /** Đang chờ xử lý / Đã duyệt / Đang xử lý / Hoàn thành */
+    @Enumerated(EnumType.STRING)
     @Column(length = 100)
-    private String status;
+    private RepairRequestStatus status;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
