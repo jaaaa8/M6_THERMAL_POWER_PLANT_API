@@ -25,44 +25,57 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"inventoryTransactions", "issues", "lubricationPlans"})
-@EqualsAndHashCode(callSuper = false, of = "id")
-public class Consumable extends BaseSoftDeleteEntity {
+    @ToString(callSuper = true, exclude = {"inventoryTransactions", "issues", "lubricationPlans", "receipts", "exports"})
+    @EqualsAndHashCode(callSuper = false, of = "id")
+    public class Consumable extends BaseSoftDeleteEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Integer id;
 
-    @Column(name = "consumable_code", unique = true, nullable = false, length = 30)
-    private String consumableCode;
+        // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+        @Column(name = "consumable_code", nullable = false, length = 30)
+        private String consumableCode;
 
-    @Column(nullable = false, length = 255)
-    private String name;
+        @Column(nullable = false, length = 255)
+        private String name;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal price;
+        @Column(precision = 10, scale = 2)
+        private BigDecimal price;
 
-    @Column(length = 100)
-    private String manufacturer;
+        @Column(length = 100)
+        private String manufacturer;
 
-    /** Đường dẫn file ảnh đính kèm */
-    @Column(name = "img_path", columnDefinition = "TEXT")
-    private String imgPath;
+        /** Đường dẫn file ảnh đính kèm */
+        @Column(name = "img_path", columnDefinition = "TEXT")
+        private String imgPath;
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50)
-    private PartStatus status = PartStatus.ACTIVE;
+        @ManyToOne(fetch = FetchType.EAGER)
+        @JoinColumn(name = "unit_id")
+        private Unit unit;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-    private List<ConsumableInventory> inventoryTransactions;
+        @Builder.Default
+        @Enumerated(EnumType.STRING)
+        @Column(length = 50)
+        private PartStatus status = PartStatus.ACTIVE;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-    private List<ConsumableIssue> issues;
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<ConsumableInventory> inventoryTransactions;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-    private List<LubricationPlan> lubricationPlans;
-}
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<ConsumableIssue> issues;
+
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<LubricationPlan> lubricationPlans;
+
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<ConsumableReceipt> receipts;
+
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<ConsumableExport> exports;
+    }

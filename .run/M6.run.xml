@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="M6" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="M6_THERMAL_POWER_PLANT_API.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.m6_thermal_power_plant_api.M6ThermalPowerPlantApiApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -1,8 +1,11 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
 
@@ -15,12 +18,13 @@ import java.util.List;
  */
 @Entity
 @Table(name = "units")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = "parameters")
-@EqualsAndHashCode(of = "id")
-public class Unit {
+@ToString(callSuper = true, exclude = "parameters")
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class Unit extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -38,16 +39,18 @@ public class Account extends BaseSoftDeleteEntity {
     @JoinColumn(name = "employee_id", unique = true)
     private Employee employee;
 
-    @Column(unique = true, nullable = false, length = 100)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(nullable = false, length = 100)
     private String username;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    /** Khoá/mở tài khoản tạm thời (KHÁC với is_deleted) */
+    /** Trạng thái tài khoản (KHÁC với is_deleted) */
     @Builder.Default
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 50)
+    private AccountStatus status = AccountStatus.ACTIVE;
 
     /**
      * Phân quyền.

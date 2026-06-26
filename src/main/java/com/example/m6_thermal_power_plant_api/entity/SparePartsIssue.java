@@ -1,10 +1,17 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.List;
 
 /**
  * Phiếu cấp vật tư THAY THẾ gắn với Phiếu Công Tác.
@@ -15,22 +22,26 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "spare_parts_issues")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@EqualsAndHashCode(of = "id")
-public class SparePartsIssue {
+@ToString(callSuper = true, exclude = "exports")
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class SparePartsIssue extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     /** Mã của chính phiếu cấp vật tư này (khác mã vật tư trong danh mục) */
-    @Column(name = "spare_part_code", unique = true, nullable = false, length = 50)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "spare_part_code", nullable = false, length = 50)
     private String sparePartCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_order_id")
+    @CascadeSoftDelete
     private WorkOrder workOrder;
 
     /** Vật tư thay thế được cấp (tham chiếu danh mục) */
@@ -52,4 +63,8 @@ public class SparePartsIssue {
 
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "sparePartsIssue", fetch = FetchType.LAZY)
+    private List<SparePartExport> exports;
 }

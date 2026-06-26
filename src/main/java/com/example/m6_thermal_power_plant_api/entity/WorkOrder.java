@@ -1,8 +1,12 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,23 +26,26 @@ import java.util.List;
  */
 @Entity
 @Table(name = "work_orders")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "technicalAssessments"})
-@EqualsAndHashCode(of = "id")
-public class WorkOrder {
+@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "technicalAssessments"})
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class WorkOrder extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "order_code", unique = true, nullable = false, length = 50)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "order_code", nullable = false, length = 50)
     private String orderCode;
 
     /** Quan hệ 1-1: mỗi PCT chỉ từ 1 yêu cầu duy nhất */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repair_request_id", unique = true)
+    @CascadeSoftDelete
     private RepairRequest repairRequest;
 
     /** Người lãnh đạo công việc */

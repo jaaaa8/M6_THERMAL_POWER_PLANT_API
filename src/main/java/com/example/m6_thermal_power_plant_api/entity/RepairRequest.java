@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -38,12 +39,14 @@ public class RepairRequest extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "request_code", unique = true, nullable = false, length = 50)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "request_code", nullable = false, length = 50)
     private String requestCode;
 
     /** Equipment đã @SQLRestriction nên không cần khai báo lại ở đây. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id")
+    @CascadeSoftDelete
     private Equipment equipment;
 
     /** Trưởng Ca / Trưởng Kíp tạo yêu cầu (đăng nhập bằng tài khoản).
