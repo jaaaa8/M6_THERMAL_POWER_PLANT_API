@@ -3,7 +3,6 @@ package com.example.m6_thermal_power_plant_api.entity;
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.example.m6_thermal_power_plant_api.entity.enums.LubricationStatus;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -11,21 +10,17 @@ import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * Kế hoạch bảo dưỡng dầu mỡ cho thiết bị.
  * Table: lubrication_plans
  *
- * CHỦ ĐỘNG KHÔNG soft-delete: lubrication_history có FK trỏ tới bảng này mà
- * KHÔNG có business rule "chỉ xoá khi hết lịch sử" giống RepairRequest —
- * nếu soft-delete plan mà vẫn còn history, gọi history.getPlan() sẽ ném
- * ObjectNotFoundException (bị lọc bởi is_deleted = false), làm hỏng chức
- * năng xem lại lịch sử bảo dưỡng cũ. Nếu sau này cần "ngừng" 1 kế hoạch,
- * nên thêm cột status riêng (VD: ACTIVE/STOPPED) thay vì xoá mềm.
+ * Soft delete: xem {@link BaseSoftDeleteEntity}. Equipment / Consumable đều đã
+ * @SQLRestriction nên 2 quan hệ dưới đây KHÔNG cần khai báo lại restriction;
+ * cả hai gắn @CascadeSoftDelete để kế hoạch bị ẩn cùng thiết bị / danh mục vật tư.
  *
- * Equipment / Consumable đều đã @SQLRestriction nên 2 quan hệ dưới đây
- * KHÔNG cần khai báo lại restriction.
+ * LƯU Ý (sau merge): lubrication_history KHÔNG còn FK trỏ tới bảng này — nó tham
+ * chiếu trực tiếp tới equipment_id (xem {@link LubricationHistory}).
  */
 @Entity
 @Table(name = "lubrication_plans")
@@ -33,7 +28,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = "history")
+@ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class LubricationPlan extends BaseSoftDeleteEntity {
 
@@ -54,7 +49,9 @@ public class LubricationPlan extends BaseSoftDeleteEntity {
     @Column(name = "next_due_date")
     private LocalDate nextDueDate;
 
-    @Column(name = "status", length = 255)
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 50)
     private LubricationStatus status = LubricationStatus.NOT_LUBRICATED;
 
     /** Liên kết vật tư tiêu hao (dầu/mỡ) trong danh mục kho */

@@ -218,18 +218,18 @@ INSERT INTO tool_borrow_logs (
 (3, 4, 6, 1, 'BORROW', 'APPROVED', '2026-06-15 08:15:00', '2026-06-15 20:00:00', null, 4, false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, lubricant_type, consumable_id, quantity, is_deleted
+    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, is_deleted
 ) VALUES
-(1, 1, 3, '2026-09-10', 'Hydraulic oil ISO VG 68', 1, 25.00, false),
-(2, 3, 2, '2026-08-05', 'Grease EP2', 2, 3.00, false),
-(3, 5, 1, '2026-07-15', 'Grease EP2', 2, 1.50, false);
+(1, 1, 3, '2026-09-10', 1, 25.00, false),
+(2, 3, 2, '2026-08-05', 2, 3.00, false),
+(3, 5, 1, '2026-07-15', 2, 1.50, false);
 
 INSERT INTO lubrication_history (
-    id, plan_id, performed_date, notes, is_deleted
+    id, equipment_id, performed_date, notes, is_deleted
 ) VALUES
 (1, 1, '2026-06-10', 'Oil level checked and topped up during bearing replacement.', false),
-(2, 2, '2026-06-05', 'Greased cooling water pump bearings.', false),
-(3, 3, '2026-06-15', 'Fan bearing lubrication completed before restart.', false);
+(2, 3, '2026-06-05', 'Greased cooling water pump bearings.', false),
+(3, 5, '2026-06-15', 'Fan bearing lubrication completed before restart.', false);
 
 -- ============================================================================
 -- Thiết bị MỚI NHẤT (id = 6) cùng toàn bộ cây dữ liệu liên quan.
@@ -285,11 +285,11 @@ INSERT INTO consumable_issues (
 (4, 'CI-2026-0004', 3, 1, 'export', 8.00, 4, '2026-06-18 14:05:00', false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, lubricant_type, consumable_id, quantity, is_deleted
+    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, is_deleted
 ) VALUES
-(4, 6, 3, '2026-09-18', 'Hydraulic oil ISO VG 68', 1, 20.00, false);
+(4, 6, 3, '2026-09-18', 1, 20.00, false);
 
 INSERT INTO lubrication_history (
-    id, plan_id, performed_date, notes, is_deleted
+    id, equipment_id, performed_date, notes, is_deleted
 ) VALUES
-(4, 4, '2026-06-18', 'Oil refilled after mechanical seal replacement.', false);
+(4, 6, '2026-06-18', 'Oil refilled after mechanical seal replacement.', false);

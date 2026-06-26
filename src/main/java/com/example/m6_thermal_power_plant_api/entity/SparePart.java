@@ -25,7 +25,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"inventoryTransactions", "issues", "receipts", "exports"})
+@ToString(callSuper = true, exclude = {"inventoryTransactions", "issueDetails", "receipts", "exports"})
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class SparePart extends BaseSoftDeleteEntity {
 

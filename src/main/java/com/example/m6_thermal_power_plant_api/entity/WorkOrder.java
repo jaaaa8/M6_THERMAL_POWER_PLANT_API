@@ -31,7 +31,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "technicalAssessments"})
+@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues"})
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class WorkOrder extends BaseSoftDeleteEntity {
 
