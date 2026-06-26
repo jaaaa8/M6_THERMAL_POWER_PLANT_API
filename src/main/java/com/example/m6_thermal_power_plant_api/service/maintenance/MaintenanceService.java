@@ -87,6 +87,40 @@ public class MaintenanceService implements IMaintenanceService {
         return WorkOrderDTO.from(workOrder, members);
     }
 
+    @Override
+    @Transactional
+    public WorkOrderDTO cancelWorkOrder(Integer workOrderId) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay phieu cong tac voi id: " + workOrderId));
+
+        if (workOrder.getStatus() == WorkOrderStatus.COMPLETED) {
+            throw new IllegalStateException(
+                    "Khong the huy phieu cong tac da hoan thanh (" + workOrder.getOrderCode() + ").");
+        }
+
+        // Idempotent: đã huỷ rồi thì trả về nguyên trạng, không đụng tới yêu cầu.
+        if (workOrder.getStatus() != WorkOrderStatus.CANCELLED) {
+            workOrder.setStatus(WorkOrderStatus.CANCELLED);
+            workOrderRepository.save(workOrder);
+
+            // Không còn phiếu "sống" nào → đưa yêu cầu về PENDING để quay lại hàng chờ.
+            // (auto-flush trước SELECT đảm bảo phiếu vừa huỷ đã mang status CANCELLED.)
+            RepairRequest repairRequest = workOrder.getRepairRequest();
+            if (repairRequest != null && !hasLiveWorkOrder(repairRequest.getId())) {
+                repairRequest.setStatus(RepairRequestStatus.PENDING);
+                repairRequestRepository.save(repairRequest);
+            }
+        }
+
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    private boolean hasLiveWorkOrder(Integer repairRequestId) {
+        return workOrderRepository.findByRepairRequest_Id(repairRequestId).stream()
+                .anyMatch(MaintenanceService::isLive);
+    }
+
     private List<WorkOrderMember> saveMembers(WorkOrder workOrder, List<CreateWorkOrderRequest.MemberInput> inputs) {
         List<WorkOrderMember> saved = new ArrayList<>();
         if (inputs == null) {

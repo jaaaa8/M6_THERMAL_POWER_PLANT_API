@@ -246,6 +246,59 @@ class MaintenanceServiceTest {
         verify(workOrderRepository).save(any(WorkOrder.class));
     }
 
+    @Test
+    void cancelWorkOrder_setsCancelledAndRevertsRequestToPending_whenNoOtherLiveWorkOrder() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.OPEN).repairRequest(request).build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(wo));
+
+        WorkOrderDTO result = maintenanceService.cancelWorkOrder(10);
+
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.CANCELLED);
+        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.CANCELLED);
+        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.PENDING);
+        verify(workOrderRepository).save(wo);
+        verify(repairRequestRepository).save(request);
+    }
+
+    @Test
+    void cancelWorkOrder_keepsRequestInProgress_whenAnotherLiveWorkOrderExists() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        WorkOrder target = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.OPEN).repairRequest(request).build();
+        WorkOrder otherLive = liveWorkOrder(20, createAccount(3, "electric.tech", "Le Minh Cuong"),
+                LocalDateTime.of(2026, 7, 5, 8, 0), LocalDateTime.of(2026, 7, 5, 12, 0));
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(target));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(target, otherLive));
+
+        maintenanceService.cancelWorkOrder(10);
+
+        assertThat(target.getStatus()).isEqualTo(WorkOrderStatus.CANCELLED);
+        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.IN_PROGRESS);
+        verify(repairRequestRepository, never()).save(any(RepairRequest.class));
+    }
+
+    @Test
+    void cancelWorkOrder_whenCompleted_throwsConflict() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(11).orderCode("WO-done").status(WorkOrderStatus.COMPLETED).build();
+        when(workOrderRepository.findById(11)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(11))
+                .isInstanceOf(IllegalStateException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void cancelWorkOrder_whenNotFound_throws() {
+        when(workOrderRepository.findById(999)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(999))
+                .isInstanceOf(ObjectNotFoundException.class);
+    }
+
     /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + khung giờ cho trước. */
     private static WorkOrder liveWorkOrder(int id, Account directSupervisor, LocalDateTime start, LocalDateTime end) {
         return WorkOrder.builder()

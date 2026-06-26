@@ -13,6 +13,8 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -65,5 +67,16 @@ public class MaintenanceController {
         WorkOrderDTO created = codeRetryExecutor.execute(
                 () -> maintenanceService.createWorkOrderFromRequest(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /**
+     * Huỷ một phiếu công tác (đặt status = CANCELLED, KHÔNG xoá dòng — PCT là
+     * chứng từ pháp lý). Dùng khi kho không cấp được vật tư, cần tạm đóng phiếu
+     * để sau tạo phiếu mới. Sau khi huỷ, nếu yêu cầu không còn phiếu nào đang
+     * hoạt động thì yêu cầu quay lại trạng thái PENDING.
+     */
+    @PatchMapping("/work-orders/{id}/cancel")
+    public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id) {
+        return maintenanceService.cancelWorkOrder(id);
     }
 }
