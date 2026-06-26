@@ -37,11 +37,6 @@ public class TechnicalAssessment extends BaseSoftDeleteEntity {
     @Column(name = "technical_code", nullable = false, length = 50)
     private String technicalCode;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "work_order_id")
-    @CascadeSoftDelete
-    private WorkOrder workOrder;
-
     /** Tổ trưởng thực hiện đánh giá (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assessor_id")

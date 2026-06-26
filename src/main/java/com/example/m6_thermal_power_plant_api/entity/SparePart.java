@@ -65,7 +65,7 @@ public class SparePart extends BaseSoftDeleteEntity {
 
     @JsonIgnore
     @OneToMany(mappedBy = "sparePart", fetch = FetchType.LAZY)
-    private List<SparePartsIssue> issues;
+    private List<SparePartsIssueDetail> issueDetails;
 
     @JsonIgnore
     @OneToMany(mappedBy = "sparePart", fetch = FetchType.LAZY)

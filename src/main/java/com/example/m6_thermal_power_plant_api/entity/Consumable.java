@@ -64,8 +64,8 @@ import java.util.List;
         private List<ConsumableInventory> inventoryTransactions;
 
         @JsonIgnore
-        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-        private List<ConsumableIssue> issues;
+        @OneToMany(mappedBy = "consumable")
+        private List<ConsumableIssueDetail> issueDetails;
 
         @JsonIgnore
         @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
