@@ -59,6 +59,7 @@ public class LubricationPlan extends BaseSoftDeleteEntity {
     /** Liên kết vật tư tiêu hao (dầu/mỡ) trong danh mục kho */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "consumable_id")
+    @CascadeSoftDelete
     private Consumable consumable;
 
     @Column(precision = 10, scale = 2)

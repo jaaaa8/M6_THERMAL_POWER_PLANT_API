@@ -60,9 +60,34 @@ public class MaintenanceService implements IMaintenanceService {
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay yeu cau sua chua voi id: " + request.getRepairRequestId()));
 
-        if (workOrderRepository.existsByRepairRequest_Id(repairRequest.getId())) {
-            throw new IllegalStateException(
-                    "Yeu cau sua chua (id=" + repairRequest.getId() + ") da co phieu cong tac.");
+        List<WorkOrder> existingWorkOrders = workOrderRepository.findByRepairRequest_Id(repairRequest.getId());
+        for (WorkOrder oldWo : existingWorkOrders) {
+            if (request.getStartTime() != null && oldWo.getStartTime() != null && oldWo.getEndTime() != null) {
+                if (!request.getStartTime().isBefore(oldWo.getStartTime()) && !request.getStartTime().isAfter(oldWo.getEndTime())) {
+                    throw new IllegalStateException("Thoi gian bat dau trung voi phieu cong tac khac cua yeu cau nay.");
+                }
+            }
+
+            boolean sameLeader = java.util.Objects.equals(request.getLeaderId(), oldWo.getLeader() != null ? oldWo.getLeader().getId() : null);
+            boolean sameDirect = java.util.Objects.equals(request.getDirectSupervisorId(), oldWo.getDirectSupervisor() != null ? oldWo.getDirectSupervisor().getId() : null);
+            boolean sameSafety = java.util.Objects.equals(request.getSafetySupervisorId(), oldWo.getSafetySupervisor() != null ? oldWo.getSafetySupervisor().getId() : null);
+
+            if (sameLeader && sameDirect && sameSafety) {
+                List<Integer> oldMemberIds = oldWo.getMembers() == null ? java.util.Collections.emptyList() :
+                        oldWo.getMembers().stream()
+                                .map(m -> m.getAccount().getId())
+                                .sorted()
+                                .toList();
+                List<Integer> newMemberIds = request.getMembers() == null ? java.util.Collections.emptyList() :
+                        request.getMembers().stream()
+                                .map(CreateWorkOrderRequest.MemberInput::getAccountId)
+                                .sorted()
+                                .toList();
+
+                if (oldMemberIds.equals(newMemberIds)) {
+                    throw new IllegalStateException("Khong the tao phieu cong tac moi voi cung mot doi ngu (Leader, Direct Supervisor, Safety Supervisor, va Members).");
+                }
+            }
         }
 
         Account leader = loadAccount(request.getLeaderId(), "nguoi lanh dao cong viec");

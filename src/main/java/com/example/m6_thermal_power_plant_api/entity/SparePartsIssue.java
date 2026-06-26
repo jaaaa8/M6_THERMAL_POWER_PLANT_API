@@ -47,6 +47,7 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
     /** Vật tư thay thế được cấp (tham chiếu danh mục) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "spare_part_id")
+    @CascadeSoftDelete
     private SparePart sparePart;
 
     /** Giá trị hợp lệ theo DB: 'export' | 'import' */

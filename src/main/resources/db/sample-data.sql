@@ -14,25 +14,41 @@ INSERT INTO roles (id, name, is_deleted) VALUES
 (5, 'WAREHOUSE_STAFF', false),
 (6, 'SAFETY_SUPERVISOR', false);
 
+INSERT INTO positions (id, position_code, name, is_deleted) VALUES
+(1, 'POS-SL', 'Shift Leader', false),
+(2, 'POS-ML', 'Maintenance Leader', false),
+(3, 'POS-ET', 'Electrical Technician', false),
+(4, 'POS-WK', 'Warehouse Keeper', false),
+(5, 'POS-MT', 'Mechanical Technician', false),
+(6, 'POS-SS', 'Safety Supervisor', false);
+
+INSERT INTO expertises (id, expertise_code, name, is_deleted) VALUES
+(1, 'EXP-BO', 'Boiler operation', false),
+(2, 'EXP-RE', 'Rotating equipment', false),
+(3, 'EXP-MM', 'Motor and MCC', false),
+(4, 'EXP-IC', 'Inventory control', false),
+(5, 'EXP-PA', 'Pump alignment', false),
+(6, 'EXP-WS', 'Work safety', false);
+
 INSERT INTO employees (
-    id, employee_code, full_name, gmail, phone, department_id, position, expertise, is_active, img_path, is_deleted
+    id, employee_code, full_name, gmail, phone, department_id, position_id, expertise_id, is_active, img_path, is_deleted
 ) VALUES
-(1, 'EMP-001', 'Nguyen Van An', 'an.nguyen@example.com', '0901000001', 1, 'Shift Leader', 'Boiler operation', true, null, false),
-(2, 'EMP-002', 'Tran Thi Binh', 'binh.tran@example.com', '0901000002', 2, 'Maintenance Leader', 'Rotating equipment', true, null, false),
-(3, 'EMP-003', 'Le Minh Cuong', 'cuong.le@example.com', '0901000003', 3, 'Electrical Technician', 'Motor and MCC', true, null, false),
-(4, 'EMP-004', 'Pham Thu Dung', 'dung.pham@example.com', '0901000004', 4, 'Warehouse Keeper', 'Inventory control', true, null, false),
-(5, 'EMP-005', 'Hoang Quoc Dat', 'dat.hoang@example.com', '0901000005', 2, 'Mechanical Technician', 'Pump alignment', true, null, false),
-(6, 'EMP-006', 'Do Hai Nam', 'nam.do@example.com', '0901000006', 1, 'Safety Supervisor', 'Work safety', true, null, false);
+(1, 'EMP-001', 'Nguyen Van An', 'an.nguyen@example.com', '0901000001', 1, 1, 1, true, null, false),
+(2, 'EMP-002', 'Tran Thi Binh', 'binh.tran@example.com', '0901000002', 2, 2, 2, true, null, false),
+(3, 'EMP-003', 'Le Minh Cuong', 'cuong.le@example.com', '0901000003', 3, 3, 3, true, null, false),
+(4, 'EMP-004', 'Pham Thu Dung', 'dung.pham@example.com', '0901000004', 4, 4, 4, true, null, false),
+(5, 'EMP-005', 'Hoang Quoc Dat', 'dat.hoang@example.com', '0901000005', 2, 5, 5, true, null, false),
+(6, 'EMP-006', 'Do Hai Nam', 'nam.do@example.com', '0901000006', 1, 6, 6, true, null, false);
 
 INSERT INTO accounts (
-    id, employee_id, username, password_hash, is_active, is_deleted
+    id, employee_id, username, password_hash, status, is_deleted
 ) VALUES
-(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false);
+(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false);
 
 INSERT INTO account_roles (account_id, role_id) VALUES
 (1, 2),
@@ -85,10 +101,10 @@ INSERT INTO equipment_types (id, name, description, is_deleted) VALUES
 INSERT INTO equipment (
     id, kks_code, name, system_id, equipment_type_id, status, description, img_path, is_deleted
 ) VALUES
-(1, '10LAC10AP001', 'Boiler Feed Pump A', 1, 1, 'OPERATING', 'Main boiler feed pump train A', null, false),
+(1, '10LAC10AP001', 'Boiler Feed Pump A', 1, 1, 'ACTIVE', 'Main boiler feed pump train A', null, false),
 (2, '10LAC10AP002', 'Boiler Feed Pump B', 1, 1, 'STANDBY', 'Main boiler feed pump train B', null, false),
-(3, '10PAB10AN001', 'Cooling Water Pump A', 2, 1, 'OPERATING', 'Cooling water circulation pump A', null, false),
-(4, '10EBA10GS001', 'MCC Panel 1', 4, 2, 'OPERATING', 'Motor control center for unit 1 auxiliaries', null, false),
+(3, '10PAB10AN001', 'Cooling Water Pump A', 2, 1, 'ACTIVE', 'Cooling water circulation pump A', null, false),
+(4, '10EBA10GS001', 'MCC Panel 1', 4, 2, 'ACTIVE', 'Motor control center for unit 1 auxiliaries', null, false),
 (5, '10HFB20AF001', 'Coal Conveyor Fan', 3, 4, 'MAINTENANCE', 'Ventilation fan for coal conveyor gallery', null, false);
 
 INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, description, is_deleted) VALUES
@@ -161,10 +177,10 @@ INSERT INTO work_order_extensions (
 (1, 2, 'Need additional insulation resistance testing before energizing.', '2026-06-15 20:00:00', 1, false);
 
 INSERT INTO technical_assessments (
-    id, technical_code, work_order_id, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
 ) VALUES
-(1, 'TA-2026-0001', 1, 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
-(2, 'TA-2026-0002', 2, 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS', false);
+(1, 'TA-2026-0001', 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
+(2, 'TA-2026-0002', 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS', false);
 
 INSERT INTO spare_parts_issues (
     id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted
@@ -225,7 +241,7 @@ INSERT INTO lubrication_history (
 INSERT INTO equipment (
     id, kks_code, name, system_id, equipment_type_id, status, description, img_path, is_deleted
 ) VALUES
-(6, '10LAB30AP001', 'Condensate Pump A', 1, 1, 'OPERATING', 'Condensate extraction pump train A', null, false);
+(6, '10LAB30AP001', 'Condensate Pump A', 1, 1, 'ACTIVE', 'Condensate extraction pump train A', null, false);
 
 INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, description, is_deleted) VALUES
 (7, 6, 1, '2200', 'Rated motor power', false),
@@ -254,9 +270,9 @@ INSERT INTO work_order_extensions (
 (2, 3, 'Awaiting replacement mechanical seal delivery before reassembly.', '2026-06-18 22:00:00', 1, false);
 
 INSERT INTO technical_assessments (
-    id, technical_code, work_order_id, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
 ) VALUES
-(3, 'TA-2026-0003', 3, 2, 'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
+(3, 'TA-2026-0003', 2, 'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
 
 INSERT INTO spare_parts_issues (
     id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted

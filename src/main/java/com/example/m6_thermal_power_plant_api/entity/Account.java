@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,6 +38,7 @@ public class Account extends BaseSoftDeleteEntity {
      *  báo lại restriction ở đây — mỗi tài khoản thuộc về đúng 1 nhân viên. */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", unique = true)
+    @CascadeSoftDelete
     private Employee employee;
 
     // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db

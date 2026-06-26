@@ -75,7 +75,7 @@ class MaintenanceServiceTest {
         Account technician = createAccount(5, "mechanic.tech", "Hoang Quoc Dat");
 
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        when(workOrderRepository.existsByRepairRequest_Id(2)).thenReturn(false);
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of());
         when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
         when(accountRepository.findById(5)).thenReturn(Optional.of(technician));
         when(workOrderRepository.findFirstByOrderCodeStartingWithOrderByOrderCodeDesc(anyString()))
@@ -134,7 +134,9 @@ class MaintenanceServiceTest {
     void createWorkOrderFromRequest_whenRequestAlreadyHasWorkOrder_throwsConflict() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        when(workOrderRepository.existsByRepairRequest_Id(2)).thenReturn(true);
+        Account existingLeader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
+        when(workOrderRepository.findByRepairRequest_Id(2))
+                .thenReturn(List.of(WorkOrder.builder().id(1).leader(existingLeader).build()));
 
         CreateWorkOrderRequest req = new CreateWorkOrderRequest();
         req.setRepairRequestId(2);

@@ -12,6 +12,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Phiếu yêu cầu sửa chữa — do Trưởng Ca/Kíp tạo khi thiết bị hỏng.
@@ -33,7 +34,7 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = "workOrder")
+@ToString(callSuper = true, exclude = "workOrders")
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class RepairRequest extends BaseSoftDeleteEntity {
 
@@ -74,8 +75,8 @@ public class RepairRequest extends BaseSoftDeleteEntity {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    /** 1 yêu cầu sinh ra đúng 1 phiếu công tác */
+    /** 1 yêu cầu có thể sinh ra nhiều phiếu công tác */
     @JsonIgnore
-    @OneToOne(mappedBy = "repairRequest", fetch = FetchType.LAZY)
-    private WorkOrder workOrder;
+    @OneToMany(mappedBy = "repairRequest", fetch = FetchType.LAZY)
+    private List<WorkOrder> workOrders;
 }

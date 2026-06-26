@@ -6,11 +6,13 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+import java.util.List;
+
 @Repository
 public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
 
-    /** Mỗi yêu cầu sửa chữa chỉ sinh ra đúng 1 phiếu công tác (quan hệ 1-1). */
-    boolean existsByRepairRequest_Id(Integer repairRequestId);
+    /** Lấy danh sách phiếu công tác theo ID yêu cầu sửa chữa */
+    List<WorkOrder> findByRepairRequest_Id(Integer repairRequestId);
 
     /**
      * Lấy phiếu công tác có mã lớn nhất theo tiền tố năm (VD prefix = "WO-2026-").

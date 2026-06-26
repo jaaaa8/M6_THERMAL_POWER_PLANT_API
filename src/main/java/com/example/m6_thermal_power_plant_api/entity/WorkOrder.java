@@ -31,7 +31,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "technicalAssessments"})
+@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues"})
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class WorkOrder extends BaseSoftDeleteEntity {
 
@@ -43,9 +43,9 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Column(name = "order_code", nullable = false, length = 50)
     private String orderCode;
 
-    /** Quan hệ 1-1: mỗi PCT chỉ từ 1 yêu cầu duy nhất */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "repair_request_id", unique = true)
+    /** Quan hệ n-1: mỗi PCT thuộc về 1 yêu cầu. 1 yêu cầu có thể có nhiều PCT */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repair_request_id")
     @CascadeSoftDelete
     private RepairRequest repairRequest;
 
@@ -95,7 +95,4 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @OneToMany(mappedBy = "workOrder", fetch = FetchType.LAZY)
     private List<ConsumableIssue> consumableIssues;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "workOrder", fetch = FetchType.LAZY)
-    private List<TechnicalAssessment> technicalAssessments;
 }

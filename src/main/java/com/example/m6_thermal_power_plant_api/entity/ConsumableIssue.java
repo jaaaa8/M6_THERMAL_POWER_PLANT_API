@@ -47,6 +47,7 @@ public class ConsumableIssue extends BaseSoftDeleteEntity {
     /** Vật tư tiêu hao được cấp (tham chiếu danh mục) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "consumable_id")
+    @CascadeSoftDelete
     private Consumable consumable;
 
     /** Giá trị hợp lệ theo DB: 'export' | 'import' */
