@@ -1,6 +1,6 @@
 package com.example.m6_thermal_power_plant_api.service.tool_management;
 
-import com.example.m6_thermal_power_plant_api.entity.Tool;
+import com.example.m6_thermal_power_plant_api.entity.tool.Tool;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.ToolRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
