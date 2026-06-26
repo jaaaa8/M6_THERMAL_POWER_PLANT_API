@@ -82,4 +82,8 @@ public class Equipment extends BaseSoftDeleteEntity {
     @JsonIgnore
     @OneToMany(mappedBy = "equipment", fetch = FetchType.LAZY)
     private List<LubricationPlan> lubricationPlans;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "equipment", fetch = FetchType.LAZY)
+    private List<LubricationHistory> histories;
 }

@@ -65,6 +65,9 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
 
+    @OneToMany(mappedBy = "issue")
+    private List<SparePartsIssueDetail> details;
+
     @JsonIgnore
     @OneToMany(mappedBy = "sparePartsIssue", fetch = FetchType.LAZY)
     private List<SparePartExport> exports;

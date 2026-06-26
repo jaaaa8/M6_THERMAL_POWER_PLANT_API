@@ -29,9 +29,9 @@ public class LubricationHistory extends BaseSoftDeleteEntity {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plan_id")
+    @JoinColumn(name = "equipment_id")
     @CascadeSoftDelete
-    private LubricationPlan plan;
+    private Equipment equipment;
 
     @Column(name = "performed_date")
     private LocalDate performedDate;

@@ -65,6 +65,9 @@ public class ConsumableIssue extends BaseSoftDeleteEntity {
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
 
+    @OneToMany(mappedBy = "issue")
+    private List<ConsumableIssueDetail> details;
+
     @JsonIgnore
     @OneToMany(mappedBy = "consumableIssue", fetch = FetchType.LAZY)
     private List<ConsumableExport> exports;
