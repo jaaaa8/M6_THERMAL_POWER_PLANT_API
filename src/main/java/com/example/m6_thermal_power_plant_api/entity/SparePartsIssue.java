@@ -10,6 +10,9 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.List;
+
 /**
  * Phiếu cấp vật tư THAY THẾ gắn với Phiếu Công Tác.
  * Table: spare_parts_issues
@@ -23,6 +26,7 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
+@ToString(callSuper = true, exclude = "exports")
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class SparePartsIssue extends BaseSoftDeleteEntity {
 
@@ -59,4 +63,8 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
 
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "sparePartsIssue", fetch = FetchType.LAZY)
+    private List<SparePartExport> exports;
 }

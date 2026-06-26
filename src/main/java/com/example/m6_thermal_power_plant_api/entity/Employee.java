@@ -55,12 +55,16 @@ public class Employee extends BaseSoftDeleteEntity {
     private Department department;
 
     /** Chức vụ */
-    @Column(length = 255)
-    private String position;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "position_id")
+    @CascadeSoftDelete
+    private Position position;
 
     /** Chuyên môn */
-    @Column(length = 255)
-    private String expertise;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "expertise_id")
+    @CascadeSoftDelete
+    private Expertise expertise;
 
     @Builder.Default
     @Column(name = "is_active")
