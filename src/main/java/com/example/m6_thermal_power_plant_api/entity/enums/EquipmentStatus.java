@@ -4,6 +4,6 @@ public enum EquipmentStatus {
     ACTIVE,        // Hoạt động
     MAINTENANCE,   // Bảo dưỡng
     FAILURE,       // Sự cố
-    STANDBY,       // Dự phòng
-    RETIRED        // Thanh lý
+    STANDBY,// dujw phong
+    RETIRED // dung hoat dogn
 }
