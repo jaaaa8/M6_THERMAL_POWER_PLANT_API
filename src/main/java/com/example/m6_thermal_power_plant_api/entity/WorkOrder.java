@@ -68,7 +68,7 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     private LocalDateTime startTime;
 
     @Column(name = "end_time")
-    private LocalDateTime endTime;
+    private LocalDateTime expectedEndTime;
 
     /** Mới tạo (OPEN) / Đang thực hiện / Hoàn thành / Đã huỷ */
     @Enumerated(EnumType.STRING)

@@ -22,11 +22,19 @@ import java.util.List;
  * #35 ("Tôi có thể tạo mới, xoá một yêu cầu sửa chữa 1 thiết bị"). An toàn vì
  * dùng @SQLRestriction (không như @SoftDelete, không cấm LAZY).
  *
+ * MỨC ĐỘ AN TOÀN SOFT-DELETE: ⚠️ CÓ ĐIỀU KIỆN
+ *
  * RÀNG BUỘC NGHIỆP VỤ BẮT BUỘC ở tầng service: CHỈ cho phép soft-delete khi
- * {@code getWorkOrder() == null}. Vì work_orders.repair_request_id là FK trỏ
- * tới bảng này (quan hệ 1-1) — nếu đã có WorkOrder mà vẫn xoá mềm request,
- * gọi workOrder.getRepairRequest() sau đó sẽ ném ObjectNotFoundException
- * (bị lọc bởi is_deleted = false).
+ * {@code workOrders == null || workOrders.isEmpty()}. Lý do:
+ *  - WorkOrder không soft-delete (chứng từ pháp lý — xem {@link WorkOrder}).
+ *  - Nếu Request bị ẩn mà WorkOrder vẫn còn → gọi
+ *    workOrder.getRepairRequest() sẽ ném ObjectNotFoundException (bị
+ *    @SQLRestriction lọc).
+ *  - Nếu cố cascade qua WorkOrder thì lại vi phạm rule "PCT không xoá".
+ *
+ * Khuyến nghị implement ở service: nếu user cố xoá request đã có PCT, ném
+ * exception nghiệp vụ rõ ràng (vd: "Không thể xoá yêu cầu đã có PCT —
+ * vui lòng huỷ PCT trước bằng cách chuyển trạng thái CANCELLED").
  */
 @Entity
 @Table(name = "repair_requests")

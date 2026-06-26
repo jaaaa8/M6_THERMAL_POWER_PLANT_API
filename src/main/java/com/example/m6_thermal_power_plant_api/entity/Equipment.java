@@ -15,8 +15,24 @@ import java.util.List;
  * Thiết bị trong nhà máy.
  * Table: equipment
  *
- * Soft delete: xem {@link BaseSoftDeleteEntity} — thiết bị thanh lý chỉ bị ẩn,
- * lịch sử sửa chữa / bảo dưỡng liên quan vẫn được giữ nguyên trong DB.
+ * MỨC ĐỘ AN TOÀN SOFT-DELETE: ❌ RỦI RO CAO — đây là GỐC của cây cascade lớn
+ * nhất hệ thống. Soft-delete Equipment kéo theo TOÀN BỘ:
+ *   - EquipmentParameter (thông số chi tiết)
+ *   - LubricationPlan + LubricationHistory (kế hoạch & lịch sử bôi trơn)
+ *   - SparePartExport, ConsumableExport (qua cột equipment_id)
+ *   - RepairRequest → WorkOrder → WorkOrderMember, WorkOrderExtension,
+ *     SparePart/ConsumableIssue → details & exports
+ * Tức là toàn bộ lịch sử sửa chữa & chứng từ pháp lý của thiết bị bị ẩn khỏi
+ * UI. DB vẫn còn (cùng deleted_at) nên restore được, nhưng restore sẽ "hồi
+ * sinh" cả chứng từ đã ký — cẩn trọng.
+ *
+ * QUY TẮC NGHIỆP VỤ:
+ *   - CHỈ thanh lý thiết bị khi không còn PCT/chứng từ "đang dở" tham chiếu.
+ *   - Service phải cảnh báo người dùng rằng toàn bộ lịch sử liên quan sẽ bị
+ *     ẩn khỏi màn hình mặc định trước khi xác nhận.
+ *   - Nếu chỉ muốn đánh dấu thiết bị "ngừng vận hành" → dùng
+ *     {@code EquipmentStatus} (đang vận hành / đang sửa chữa / dự phòng /
+ *     ngừng vận hành), KHÔNG soft-delete.
  */
 @Entity
 @Table(name = "equipment")

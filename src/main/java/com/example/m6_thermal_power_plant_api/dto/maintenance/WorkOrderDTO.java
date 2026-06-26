@@ -31,7 +31,7 @@ public class WorkOrderDTO {
     private String orderCode;
     private WorkOrderStatus status;
     private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private LocalDateTime expectedEndTime;
     private String pdfPath;
 
     private Integer repairRequestId;
@@ -57,7 +57,7 @@ public class WorkOrderDTO {
                 .orderCode(wo.getOrderCode())
                 .status(wo.getStatus())
                 .startTime(wo.getStartTime())
-                .endTime(wo.getEndTime())
+                .expectedEndTime(wo.getExpectedEndTime())
                 .pdfPath(wo.getPdfPath());
 
         RepairRequest req = wo.getRepairRequest();

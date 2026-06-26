@@ -23,15 +23,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,13 +58,15 @@ class MaintenanceServiceTest {
     @Test
     void getPendingRepairRequests_mapsEntitiesToDtos() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.PENDING);
-        when(repairRequestRepository.findByStatusOrderByCreatedAtDesc(RepairRequestStatus.PENDING))
-                .thenReturn(List.of(request));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(repairRequestRepository.findByStatus(eq(RepairRequestStatus.PENDING), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(request), pageable, 1));
 
-        List<RepairRequestDTO> result = maintenanceService.getPendingRepairRequests();
+        Page<RepairRequestDTO> result = maintenanceService.getPendingRepairRequests(pageable);
 
-        assertThat(result).hasSize(1);
-        RepairRequestDTO dto = result.get(0);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent()).hasSize(1);
+        RepairRequestDTO dto = result.getContent().get(0);
         assertThat(dto.getId()).isEqualTo(2);
         assertThat(dto.getRequestCode()).isEqualTo("RR-2026-0002");
         assertThat(dto.getStatus()).isEqualTo(RepairRequestStatus.PENDING);
@@ -78,8 +84,6 @@ class MaintenanceServiceTest {
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of());
         when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
         when(accountRepository.findById(5)).thenReturn(Optional.of(technician));
-        when(workOrderRepository.findFirstByOrderCodeStartingWithOrderByOrderCodeDesc(anyString()))
-                .thenReturn(Optional.empty());
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
             WorkOrder wo = inv.getArgument(0);
             wo.setId(100);
@@ -97,9 +101,9 @@ class MaintenanceServiceTest {
 
         WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
 
-        String expectedPrefix = "WO-" + LocalDate.now().getYear() + "-";
         assertThat(result.getId()).isEqualTo(100);
-        assertThat(result.getOrderCode()).isEqualTo(expectedPrefix + "0001");
+        // Mã PCT mới: "WO-" + yyMMddHHmmss (12 chữ số) + "-" + SEQ (3 chữ số).
+        assertThat(result.getOrderCode()).matches("WO-\\d{12}-\\d{3}");
         assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.OPEN);
         assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
         assertThat(result.getEquipmentKksCode()).isEqualTo("10LAC10AP001");
@@ -131,22 +135,127 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    void createWorkOrderFromRequest_whenRequestAlreadyHasWorkOrder_throwsConflict() {
+    void createWorkOrder_whenActiveWorkOrderHasSameDirectSupervisor_throwsConflict() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        Account existingLeader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
-        when(workOrderRepository.findByRepairRequest_Id(2))
-                .thenReturn(List.of(WorkOrder.builder().id(1).leader(existingLeader).build()));
+        WorkOrder live = liveWorkOrder(1, createAccount(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
+
+        // Cùng direct supervisor (id=1) dù giờ KHÔNG đè (ngày khác) -> vẫn bị từ chối.
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(1);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 2, 12, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(IllegalStateException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+        verify(repairRequestRepository, never()).save(any(RepairRequest.class));
+    }
+
+    @Test
+    void createWorkOrder_whenActiveWorkOrderTimeOverlaps_throwsConflict() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
+        WorkOrder live = liveWorkOrder(1, createAccount(3, "electric.tech", "Le Minh Cuong"),
+                LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
+
+        // Khác direct supervisor (1 vs 3) nhưng giờ đè lên 08:00-12:00 -> bị từ chối.
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(1);
+        req.setStartTime(LocalDateTime.of(2026, 7, 1, 10, 0));
+        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 1, 14, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(IllegalStateException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrder_secondTeamDifferentSupervisorAndNoOverlap_isAllowed() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        WorkOrder live = liveWorkOrder(1, createAccount(3, "electric.tech", "Le Minh Cuong"),
+                LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
+        Account leader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
+        Account newDirect = createAccount(1, "shift.leader", "Nguyen Van An");
+
+        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
+        when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(accountRepository.findById(1)).thenReturn(Optional.of(newDirect));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(101);
+            return wo;
+        });
+
+        // Khác direct supervisor (1 vs 3) VÀ giờ bắt đầu (13:00) sau khi phiếu cũ kết thúc (12:00).
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(1);
+        req.setStartTime(LocalDateTime.of(2026, 7, 1, 13, 0));
+        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 1, 17, 0));
+
+        WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
+
+        assertThat(result.getId()).isEqualTo(101);
+        verify(workOrderRepository).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrder_existingCancelledWorkOrderIsIgnored_allowsRecreate() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        Account director = createAccount(1, "shift.leader", "Nguyen Van An");
+        // Phiếu CANCELLED: cùng direct supervisor VÀ cùng khung giờ với phiếu mới,
+        // nhưng vì đã huỷ nên phải bị BỎ QUA -> cho phép tạo lại.
+        WorkOrder cancelled = WorkOrder.builder()
+                .id(1).orderCode("WO-old").status(WorkOrderStatus.CANCELLED)
+                .directSupervisor(director)
+                .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
+                .build();
+        Account leader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
+
+        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(cancelled));
+        when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(accountRepository.findById(1)).thenReturn(Optional.of(director));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(102);
+            return wo;
+        });
 
         CreateWorkOrderRequest req = new CreateWorkOrderRequest();
         req.setRepairRequestId(2);
         req.setLeaderId(2);
+        req.setDirectSupervisorId(1);
+        req.setStartTime(LocalDateTime.of(2026, 7, 1, 8, 0));
+        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0));
 
-        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
-                .isInstanceOf(IllegalStateException.class);
+        WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
 
-        verify(workOrderRepository, never()).save(any(WorkOrder.class));
-        verify(repairRequestRepository, never()).save(any(RepairRequest.class));
+        assertThat(result.getId()).isEqualTo(102);
+        verify(workOrderRepository).save(any(WorkOrder.class));
+    }
+
+    /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + khung giờ cho trước. */
+    private static WorkOrder liveWorkOrder(int id, Account directSupervisor, LocalDateTime start, LocalDateTime end) {
+        return WorkOrder.builder()
+                .id(id)
+                .orderCode("WO-live-" + id)
+                .status(WorkOrderStatus.IN_PROGRESS)
+                .directSupervisor(directSupervisor)
+                .startTime(start)
+                .expectedEndTime(end)
+                .build();
     }
 
     private static RepairRequest createRequest(int id, String code, RepairRequestStatus status) {

@@ -4,8 +4,6 @@ import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
-
 import java.util.List;
 
 @Repository
@@ -13,11 +11,4 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
 
     /** Lấy danh sách phiếu công tác theo ID yêu cầu sửa chữa */
     List<WorkOrder> findByRepairRequest_Id(Integer repairRequestId);
-
-    /**
-     * Lấy phiếu công tác có mã lớn nhất theo tiền tố năm (VD prefix = "WO-2026-").
-     * Vì mã được zero-pad 4 chữ số nên thứ tự chữ cái giảm dần = thứ tự số giảm dần,
-     * dùng để sinh số thứ tự tiếp theo cho orderCode.
-     */
-    Optional<WorkOrder> findFirstByOrderCodeStartingWithOrderByOrderCodeDesc(String prefix);
 }

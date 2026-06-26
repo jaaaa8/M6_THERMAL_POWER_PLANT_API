@@ -15,6 +15,8 @@ import lombok.NonNull;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *      đang chờ xử lý (sample-data: RR-2026-0002). KHÔNG ghi DB.
  *   2. {@link #createWorkOrderFromPendingRequest_andCommitToDatabase()} → tạo PCT từ
  *      request chờ xử lý đầu tiên rồi @Commit. Mở DB kiểm tra:
- *        - work_orders        : có 1 dòng mới, status = OPEN, order_code = WO-{năm}-{NNNN}
+ *        - work_orders        : có 1 dòng mới, status = OPEN, order_code = WO-yyMMddHHmmss-NNN
  *        - work_order_members : có thành viên gắn với work_order_id mới
  *        - repair_requests     : status của request đó chuyển PENDING -> IN_PROGRESS
  *
@@ -59,7 +61,8 @@ public class MaintenanceServiceDbTest {
 
     @Test
     void listPendingRepairRequests_printForManualCheck() {
-        List<RepairRequestDTO> pending = maintenanceService.getPendingRepairRequests();
+        Pageable pageable = PageRequest.of(0, 50);
+        List<RepairRequestDTO> pending = maintenanceService.getPendingRepairRequests(pageable).getContent();
 
         System.out.println("Pending repair requests (status = PENDING): " + pending.size());
         pending.forEach(r -> System.out.println(
@@ -78,7 +81,7 @@ public class MaintenanceServiceDbTest {
     @Commit
     void createWorkOrderFromPendingRequest_andCommitToDatabase() {
         // 1. Lấy 1 yêu cầu đang chờ xử lý (sample-data: RR-2026-0002, chưa có PCT).
-        RepairRequestDTO target = maintenanceService.getPendingRepairRequests().stream()
+        RepairRequestDTO target = maintenanceService.getPendingRepairRequests(PageRequest.of(0, 50)).getContent().stream()
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException(
                         "No PENDING repair request found. Did you run sample-data.sql? "
@@ -110,7 +113,7 @@ public class MaintenanceServiceDbTest {
         RepairRequest movedRequest = repairRequestRepository.findById(target.getId())
                 .orElseThrow(() -> new RuntimeException("Repair request disappeared!"));
         assertThat(movedRequest.getStatus()).isEqualTo(RepairRequestStatus.IN_PROGRESS);
-        assertThat(maintenanceService.getPendingRepairRequests())
+        assertThat(maintenanceService.getPendingRepairRequests(PageRequest.of(0, 50)).getContent())
                 .noneMatch(r -> r.getId().equals(target.getId()));
 
         System.out.println("Done. Created work order " + created.getOrderCode()

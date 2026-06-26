@@ -17,8 +17,21 @@ import java.util.List;
  * Phiếu cấp vật tư THAY THẾ gắn với Phiếu Công Tác.
  * Table: spare_parts_issues
  *
- * Không soft-delete: là chứng từ cấp/xuất vật tư, không xoá. SparePart /
- * Account đều đã @SQLRestriction nên không cần khai báo lại ở các quan hệ dưới.
+ * MỨC ĐỘ AN TOÀN SOFT-DELETE: ❌ KHÔNG NÊN
+ *  - Đây là chứng từ cấp vật tư đã ký các bên.
+ *  - Nếu soft-delete:
+ *    (1) Cascade ẩn toàn bộ SparePartsIssueDetail + SparePartExport đính kèm.
+ *    (2) KHÔNG hoàn lại tồn kho — vì kho hiện hành dựa trên
+ *        SparePartsInventory (sổ giao dịch, không soft-delete). Hậu quả:
+ *        tổng actual_quantity từ Export khác tổng EXPORT từ Inventory →
+ *        mất khớp, không đối chiếu được.
+ *  - QUY TẮC: cấp nhầm → tạo phiếu trả/giao dịch đảo chiều trong Inventory,
+ *    KHÔNG xoá phiếu cũ. Service tầng trên KHÔNG gọi softDelete trực tiếp
+ *    lên phiếu này; chỉ tồn tại đường cascade từ Equipment/SparePart (cả
+ *    hai đều ❌ ở cấp gốc — coi như không xảy ra trong nghiệp vụ thường ngày).
+ *
+ * (SparePart / Account đều đã @SQLRestriction nên không cần khai báo lại
+ * restriction ở các quan hệ dưới.)
  */
 @Entity
 @Table(name = "spare_parts_issues")

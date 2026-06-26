@@ -35,6 +35,15 @@ public class CreateWorkOrderRequest {
     /** Thời điểm bắt đầu công việc; để trống nếu chưa xác định. */
     private LocalDateTime startTime;
 
+    /**
+     * Thời điểm dự kiến kết thúc công việc; để trống nếu chưa xác định.
+     *
+     * BẮT BUỘC (cùng startTime) khi yêu cầu này ĐÃ có một phiếu công tác đang
+     * hoạt động (OPEN/IN_PROGRESS) — để hệ thống kiểm tra khung giờ KHÔNG chồng
+     * lấn giữa các phiếu song song (xem ràng buộc ở MaintenanceService).
+     */
+    private LocalDateTime expectedEndTime;
+
     @Valid
     private List<MemberInput> members;
 

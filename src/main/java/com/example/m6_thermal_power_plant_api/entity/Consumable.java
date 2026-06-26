@@ -16,8 +16,24 @@ import java.util.List;
  * Table: consumable
  *
  * Có 2 cờ trạng thái KHÔNG thay thế nhau:
- * - status     : trạng thái kinh doanh (còn dùng / ngừng dùng loại vật tư này)
- * - is_deleted : xoá mềm hành chính, xem {@link BaseSoftDeleteEntity}
+ *  - status (PartStatus): trạng thái kinh doanh — còn dùng / ngừng dùng loại
+ *    vật tư này. Dùng cờ này khi muốn "khoá danh mục" mà vẫn giữ lịch sử.
+ *  - is_deleted: xoá mềm hành chính, xem {@link BaseSoftDeleteEntity}.
+ *
+ * MỨC ĐỘ AN TOÀN SOFT-DELETE: ❌ RỦI RO CAO
+ *  - Soft-delete kéo theo TOÀN BỘ:
+ *    + ConsumableInventory (sổ nhập/xuất loại vật tư này) → mất khả năng
+ *      truy vết tồn kho.
+ *    + ConsumableIssue → ConsumableIssueDetail, ConsumableExport (chứng từ
+ *      cấp phát đã ký).
+ *    + LubricationPlan (kế hoạch bôi trơn dùng loại dầu này).
+ *  - Hậu quả: lịch sử kho và sử dụng vật tư biến mất khỏi UI.
+ *  - KHUYẾN NGHỊ: nếu chỉ muốn "ngừng dùng loại vật tư này" (không nhập
+ *    thêm, không cấp thêm) → đổi cờ {@code status} (đã có sẵn cho đúng mục
+ *    đích này), KHÔNG soft-delete.
+ *  - Soft-delete chỉ làm khi loại vật tư mới nhập danh mục nhầm và CHƯA
+ *    TỪNG có giao dịch nào (Inventory rỗng, Issue rỗng, Plan rỗng) — service
+ *    nên check trước khi cho phép.
  */
 @Entity
 @Table(name = "consumable")

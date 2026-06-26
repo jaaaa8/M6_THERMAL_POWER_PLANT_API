@@ -203,19 +203,20 @@ INSERT INTO tool_categories (
 (3, 'TOOL-SAFE', 'Safety Tools', 'Safety lockout and permit tools', false);
 
 INSERT INTO tools (
-    id, tool_code, name, tool_category_id, quantity, description, img_path, is_deleted
+    id, tool_code, name, tool_category_id, unit, quantity, quantity_borrowed, quantity_damaged, note, is_deleted
 ) VALUES
-(1, 'TL-TORQUE-001', 'Torque Wrench 20-200 Nm', 1, 4, 'Calibrated torque wrench', null, false),
-(2, 'TL-PULLER-001', 'Bearing Puller Set', 1, 2, 'Hydraulic bearing puller set', null, false),
-(3, 'TL-MEGA-001', 'Insulation Tester 1kV', 2, 3, 'Digital insulation resistance tester', null, false),
-(4, 'TL-LOCK-001', 'Lockout Tagout Kit', 3, 6, 'Electrical isolation lockout kit', null, false);
+(1, 'TL-TORQUE-001', 'Torque Wrench 20-200 Nm', 1, 'Cái', 4, 0, 0, 'Calibrated torque wrench', false),
+(2, 'TL-PULLER-001', 'Bearing Puller Set',      1, 'Bộ',  2, 0, 0, 'Hydraulic bearing puller set', false),
+(3, 'TL-MEGA-001',   'Insulation Tester 1kV',   2, 'Cái', 3, 1, 0, 'Digital insulation resistance tester', false),
+(4, 'TL-LOCK-001',   'Lockout Tagout Kit',      3, 'Bộ',  6, 1, 0, 'Electrical isolation lockout kit', false);
 
 INSERT INTO tool_borrow_logs (
-    id, tool_id, account_id, quantity, transaction_type, status, transaction_date, due_date, actual_return_date, approved_by, is_deleted
+    id, tool_id, account_id, quantity, borrow_purpose, status, transaction_date, delivered_date,
+    due_date, actual_return_date, return_note, approved_by, overdue_notified
 ) VALUES
-(1, 2, 5, 1, 'BORROW', 'RETURNED', '2026-06-10 12:30:00', '2026-06-10 19:00:00', '2026-06-10 18:10:00', 4, false),
-(2, 3, 3, 1, 'BORROW', 'APPROVED', '2026-06-15 08:10:00', '2026-06-15 20:00:00', null, 4, false),
-(3, 4, 6, 1, 'BORROW', 'APPROVED', '2026-06-15 08:15:00', '2026-06-15 20:00:00', null, 4, false);
+(1, 2, 5, 1, 'Pull bearing for pump A overhaul', 'RETURNED', '2026-06-10 12:30:00', '2026-06-10 13:00:00', '2026-06-10 19:00:00', '2026-06-10 18:10:00', 'Returned in good condition', 4, false),
+(2, 3, 3, 1, 'Insulation test on MCC panel',      'APPROVED', '2026-06-15 08:10:00', '2026-06-15 08:30:00', '2026-06-15 20:00:00', null, null, 4, false),
+(3, 4, 6, 1, 'Lockout for electrical isolation',  'APPROVED', '2026-06-15 08:15:00', '2026-06-15 08:35:00', '2026-06-15 20:00:00', null, null, 4, false);
 
 INSERT INTO lubrication_plans (
     id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, is_deleted

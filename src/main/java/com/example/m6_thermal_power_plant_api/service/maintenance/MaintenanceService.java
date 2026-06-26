@@ -15,18 +15,19 @@ import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
 import com.example.m6_thermal_power_plant_api.service.IMaintenanceService;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class MaintenanceService implements IMaintenanceService {
-
-    private static final String ORDER_CODE_PREFIX = "WO-";
 
     private final RepairRequestRepository repairRequestRepository;
     private final WorkOrderRepository workOrderRepository;
@@ -45,12 +46,12 @@ public class MaintenanceService implements IMaintenanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<RepairRequestDTO> getPendingRepairRequests() {
+    public Page<RepairRequestDTO> getPendingRepairRequests(Pageable pageable) {
+        // Page.map giữ nguyên metadata phân trang; RepairRequestDTO.from chạy
+        // TRONG transaction readOnly nên các quan hệ LAZY map được an toàn.
         return repairRequestRepository
-                .findByStatusOrderByCreatedAtDesc(RepairRequestStatus.PENDING)
-                .stream()
-                .map(RepairRequestDTO::from)
-                .toList();
+                .findByStatus(RepairRequestStatus.PENDING, pageable)
+                .map(RepairRequestDTO::from);
     }
 
     @Override
@@ -60,35 +61,7 @@ public class MaintenanceService implements IMaintenanceService {
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay yeu cau sua chua voi id: " + request.getRepairRequestId()));
 
-        List<WorkOrder> existingWorkOrders = workOrderRepository.findByRepairRequest_Id(repairRequest.getId());
-        for (WorkOrder oldWo : existingWorkOrders) {
-            if (request.getStartTime() != null && oldWo.getStartTime() != null && oldWo.getEndTime() != null) {
-                if (!request.getStartTime().isBefore(oldWo.getStartTime()) && !request.getStartTime().isAfter(oldWo.getEndTime())) {
-                    throw new IllegalStateException("Thoi gian bat dau trung voi phieu cong tac khac cua yeu cau nay.");
-                }
-            }
-
-            boolean sameLeader = java.util.Objects.equals(request.getLeaderId(), oldWo.getLeader() != null ? oldWo.getLeader().getId() : null);
-            boolean sameDirect = java.util.Objects.equals(request.getDirectSupervisorId(), oldWo.getDirectSupervisor() != null ? oldWo.getDirectSupervisor().getId() : null);
-            boolean sameSafety = java.util.Objects.equals(request.getSafetySupervisorId(), oldWo.getSafetySupervisor() != null ? oldWo.getSafetySupervisor().getId() : null);
-
-            if (sameLeader && sameDirect && sameSafety) {
-                List<Integer> oldMemberIds = oldWo.getMembers() == null ? java.util.Collections.emptyList() :
-                        oldWo.getMembers().stream()
-                                .map(m -> m.getAccount().getId())
-                                .sorted()
-                                .toList();
-                List<Integer> newMemberIds = request.getMembers() == null ? java.util.Collections.emptyList() :
-                        request.getMembers().stream()
-                                .map(CreateWorkOrderRequest.MemberInput::getAccountId)
-                                .sorted()
-                                .toList();
-
-                if (oldMemberIds.equals(newMemberIds)) {
-                    throw new IllegalStateException("Khong the tao phieu cong tac moi voi cung mot doi ngu (Leader, Direct Supervisor, Safety Supervisor, va Members).");
-                }
-            }
-        }
+        validateActiveWorkOrderConstraints(repairRequest, request);
 
         Account leader = loadAccount(request.getLeaderId(), "nguoi lanh dao cong viec");
         Account directSupervisor = loadAccountOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
@@ -101,6 +74,7 @@ public class MaintenanceService implements IMaintenanceService {
                 .directSupervisor(directSupervisor)
                 .safetySupervisor(safetySupervisor)
                 .startTime(request.getStartTime())
+                .expectedEndTime(request.getExpectedEndTime())
                 .status(WorkOrderStatus.OPEN)
                 .build());
 
@@ -132,23 +106,86 @@ public class MaintenanceService implements IMaintenanceService {
     }
 
     /**
-     * Sinh mã phiếu công tác dạng WO-{năm}-{4 chữ số} dựa trên mã lớn nhất hiện có
-     * trong năm (VD WO-2026-0003 -> WO-2026-0004).
+     * Ràng buộc quan hệ 1 RepairRequest → N WorkOrder khi tạo PCT mới.
+     *
+     * Chỉ xét các phiếu đang "SỐNG" (OPEN/IN_PROGRESS) của cùng yêu cầu; phiếu
+     * CANCELLED (đã huỷ, VD vì kho không cấp được vật tư) và COMPLETED (đã xong)
+     * được BỎ QUA — nhờ đó luồng "huỷ phiếu cũ → tạo phiếu mới nội dung tương tự"
+     * hoạt động bình thường.
+     *
+     * Với mỗi phiếu đang sống, phiếu mới bị TỪ CHỐI (409) nếu:
+     *  (a) cùng Chỉ huy trực tiếp (direct supervisor) — leader / safety supervisor
+     *      được phép trùng, riêng direct supervisor thì KHÔNG; HOẶC
+     *  (b) khung giờ [startTime, expectedEndTime] CHỒNG LẤN nhau.
+     *
+     * Hai phiếu song song chỉ hợp lệ khi KHÁC direct supervisor VÀ giờ không đè.
+     *
+     * Để kiểm tra (b), khi đã có ít nhất 1 phiếu sống thì phiếu mới BẮT BUỘC khai
+     * báo cả startTime lẫn expectedEndTime (nếu thiếu → 409, kèm gợi ý huỷ phiếu cũ).
      */
-    private String generateOrderCode() {
-        String prefix = ORDER_CODE_PREFIX + LocalDate.now().getYear() + "-";
-        int next = workOrderRepository.findFirstByOrderCodeStartingWithOrderByOrderCodeDesc(prefix)
-                .map(wo -> parseSequence(wo.getOrderCode(), prefix) + 1)
-                .orElse(1);
-        return prefix + String.format("%04d", next);
+    private void validateActiveWorkOrderConstraints(RepairRequest repairRequest, CreateWorkOrderRequest input) {
+        if (input.getStartTime() != null && input.getExpectedEndTime() != null
+                && !input.getExpectedEndTime().isAfter(input.getStartTime())) {
+            throw new IllegalArgumentException("expectedEndTime phai sau startTime.");
+        }
+
+        List<WorkOrder> liveWorkOrders = workOrderRepository.findByRepairRequest_Id(repairRequest.getId())
+                .stream()
+                .filter(MaintenanceService::isLive)
+                .toList();
+
+        if (liveWorkOrders.isEmpty()) {
+            return; // chưa có phiếu sống nào → tạo tự do
+        }
+
+        // Đã có phiếu sống → buộc khai báo đủ mốc thời gian để kiểm tra chồng lấn.
+        if (input.getStartTime() == null || input.getExpectedEndTime() == null) {
+            throw new IllegalStateException(
+                    "Yeu cau nay dang co phieu cong tac hoat dong. Phieu moi phai khai bao startTime va "
+                            + "expectedEndTime de kiem tra khong trung thoi gian, hoac hay huy (CANCELLED) phieu cu truoc.");
+        }
+
+        for (WorkOrder live : liveWorkOrders) {
+            Integer liveDirectId = live.getDirectSupervisor() != null ? live.getDirectSupervisor().getId() : null;
+            if (Objects.equals(liveDirectId, input.getDirectSupervisorId())) {
+                throw new IllegalStateException(
+                        "Da ton tai phieu cong tac dang hoat dong (" + live.getOrderCode() + ") cung Chi huy truc tiep. "
+                                + "Cac phieu hoat dong song song phai khac Chi huy truc tiep, hoac hay huy phieu cu (CANCELLED).");
+            }
+            if (timeOverlaps(input.getStartTime(), input.getExpectedEndTime(), live.getStartTime(), live.getExpectedEndTime())) {
+                throw new IllegalStateException(
+                        "Thoi gian lam viec chong lan voi phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
+                                + "Hay chon khung gio khac hoac huy phieu cu (CANCELLED).");
+            }
+        }
     }
 
-    private int parseSequence(String orderCode, String prefix) {
-        try {
-            return Integer.parseInt(orderCode.substring(prefix.length()));
-        } catch (NumberFormatException | IndexOutOfBoundsException e) {
-            return 0;
+    /** Phiếu "sống" = đang ràng buộc quan hệ 1-n (chưa huỷ, chưa hoàn thành). */
+    private static boolean isLive(WorkOrder wo) {
+        return wo.getStatus() == WorkOrderStatus.OPEN || wo.getStatus() == WorkOrderStatus.IN_PROGRESS;
+    }
+
+    /**
+     * Hai khoảng [s1,e1) và [s2,e2) chồng lấn khi {@code s1 < e2 && s2 < e1}
+     * (chạm đúng điểm cuối — e1 == s2 — KHÔNG tính là trùng). Thiếu bất kỳ mốc
+     * nào (null) thì coi như không khẳng định được chồng lấn → trả false.
+     */
+    private static boolean timeOverlaps(LocalDateTime s1, LocalDateTime e1, LocalDateTime s2, LocalDateTime e2) {
+        if (s1 == null || e1 == null || s2 == null || e2 == null) {
+            return false;
         }
+        return s1.isBefore(e2) && s2.isBefore(e1);
+    }
+
+    /**
+     * Sinh mã phiếu công tác dạng {@code WO-yyMMddHHmmss-SEQ} (VD
+     * "WO-260627153045-003") qua {@link TimeStampCodeGenerator} — KHÔNG còn đọc
+     * mã lớn nhất trong DB rồi +1 như trước. Trùng mã (hiếm) được chốt chặn
+     * bởi unique constraint ở DB; nếu cần tự sinh lại + thử lại, bọc lời gọi
+     * service bằng {@code UniqueCodeRetryExecutor} ở tầng controller.
+     */
+    private String generateOrderCode() {
+        return TimeStampCodeGenerator.generate(WorkOrder.class);
     }
 
     private Account loadAccount(Integer accountId, String label) {
