@@ -25,7 +25,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"inventoryTransactions", "issues"})
+@ToString(callSuper = true, exclude = {"inventoryTransactions", "issues", "receipts", "exports"})
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class SparePart extends BaseSoftDeleteEntity {
 
@@ -50,6 +50,10 @@ public class SparePart extends BaseSoftDeleteEntity {
     @Column(name = "img_path", columnDefinition = "TEXT")
     private String imgPath;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "unit_id")
+    private Unit unit;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
@@ -62,4 +66,12 @@ public class SparePart extends BaseSoftDeleteEntity {
     @JsonIgnore
     @OneToMany(mappedBy = "sparePart", fetch = FetchType.LAZY)
     private List<SparePartsIssue> issues;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "sparePart", fetch = FetchType.LAZY)
+    private List<SparePartReceipt> receipts;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "sparePart", fetch = FetchType.LAZY)
+    private List<SparePartExport> exports;
 }

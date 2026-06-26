@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -46,4 +47,7 @@ public class ParameterCatalog extends BaseSoftDeleteEntity {
         inverseJoinColumns = @JoinColumn(name = "unit_id")
     )
     private List<Unit> units;
+    @JsonIgnore
+    @OneToMany(mappedBy = "parameter", fetch = FetchType.LAZY)
+    private List<EquipmentParameter> equipmentParameters;
 }

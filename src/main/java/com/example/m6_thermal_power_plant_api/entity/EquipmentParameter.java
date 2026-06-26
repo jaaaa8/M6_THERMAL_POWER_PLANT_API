@@ -31,14 +31,15 @@ public class EquipmentParameter extends BaseSoftDeleteEntity {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "equipment_id")
+    @JoinColumn(name = "equipment_id", nullable=false)
     @CascadeSoftDelete
     private Equipment equipment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parameter_id")
+    @JoinColumn(name = "parameter_id", nullable=false)
     @CascadeSoftDelete
     private ParameterCatalog parameter;
+
 
     /** Giá trị thực tế của thông số */
     @Column(length = 255)
