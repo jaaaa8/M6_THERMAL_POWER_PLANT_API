@@ -91,8 +91,4 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @JsonIgnore
     @OneToMany(mappedBy = "workOrder", fetch = FetchType.LAZY)
     private List<ConsumableIssue> consumableIssues;
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "workOrder", fetch = FetchType.LAZY)
-    private List<TechnicalAssessment> technicalAssessments;
 }
