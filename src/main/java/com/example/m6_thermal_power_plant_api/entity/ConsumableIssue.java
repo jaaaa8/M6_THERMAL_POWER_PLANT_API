@@ -44,18 +44,6 @@ public class ConsumableIssue extends BaseSoftDeleteEntity {
     @CascadeSoftDelete
     private WorkOrder workOrder;
 
-    /** Vật tư tiêu hao được cấp (tham chiếu danh mục) */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "consumable_id")
-    private Consumable consumable;
-
-    /** Giá trị hợp lệ theo DB: 'export' | 'import' */
-    @Column(name = "transaction_type", length = 50)
-    private String transactionType;
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal quantity;
-
     /** Người thực hiện cấp phát (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "issued_by")
@@ -63,6 +51,9 @@ public class ConsumableIssue extends BaseSoftDeleteEntity {
 
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
+
+    @OneToMany(mappedBy = "issue")
+    private List<ConsumableIssueDetail> details;
 
     @JsonIgnore
     @OneToMany(mappedBy = "consumableIssue", fetch = FetchType.LAZY)
