@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface EquipmentRepository extends JpaRepository<Equipment, Integer> {
+public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> {
     @Query(value = "SELECT * FROM equipment WHERE id = :equipmentId", nativeQuery = true)
     Optional<Equipment> findByIdIncludingDeleted(@Param("equipmentId") Integer equipmentId);
 

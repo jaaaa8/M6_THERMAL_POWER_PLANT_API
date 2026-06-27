@@ -45,53 +45,54 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class Consumable extends BaseSoftDeleteEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Integer id;
 
-    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
-    @Column(name = "consumable_code", nullable = false, length = 30)
-    private String consumableCode;
+        // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+        @Column(name = "consumable_code", nullable = false, length = 30)
+        private String consumableCode;
 
-    @Column(nullable = false, length = 255)
-    private String name;
+        @Column(nullable = false, length = 255)
+        private String name;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal price;
+        @Column(precision = 10, scale = 2)
+        private BigDecimal price;
 
-    @Column(length = 100)
-    private String manufacturer;
+        @Column(length = 100)
+        private String manufacturer;
 
-    /** Đường dẫn file ảnh đính kèm */
-    @Column(name = "img_path", columnDefinition = "TEXT")
-    private String imgPath;
+        /** Đường dẫn file ảnh đính kèm */
+        @Lob
+        @Column(name = "img_path", columnDefinition = "LONGTEXT")
+        private String imgPath;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "unit_id")
-    private Unit unit;
+        @ManyToOne(fetch = FetchType.EAGER)
+        @JoinColumn(name = "unit_id")
+        private Unit unit;
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(length = 50)
-    private PartStatus status = PartStatus.ACTIVE;
+        @Builder.Default
+        @Enumerated(EnumType.STRING)
+        @Column(length = 50)
+        private PartStatus status = PartStatus.ACTIVE;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-    private List<ConsumableInventory> inventoryTransactions;
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<ConsumableInventory> inventoryTransactions;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable")
-    private List<ConsumableIssueDetail> issueDetails;
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable")
+        private List<ConsumableIssueDetail> issueDetails;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-    private List<LubricationPlan> lubricationPlans;
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<LubricationPlan> lubricationPlans;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-    private List<ConsumableReceipt> receipts;
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<ConsumableReceipt> receipts;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
-    private List<ConsumableExport> exports;
-}
+        @JsonIgnore
+        @OneToMany(mappedBy = "consumable", fetch = FetchType.LAZY)
+        private List<ConsumableExport> exports;
+    }
