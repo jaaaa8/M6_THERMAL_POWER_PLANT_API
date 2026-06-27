@@ -15,11 +15,18 @@ import java.time.LocalDateTime;
 public class TechnicalAssessmentRequestDto {
     private String technicalCode;
     private Account assessor;
-    private String result;
     private String attachmentPath;
     private String imgPath;
-    private String resultDescription;
+    private String result;
     private String description;
     private LocalDateTime createdAt;
     private TechnicalAssessmentStatus status = TechnicalAssessmentStatus.PENDING;
+
+    public TechnicalAssessmentRequestDto(String technicalCode, Account assessor, String imgPath, String result, String description) {
+        this.technicalCode = technicalCode;
+        this.assessor = assessor;
+        this.imgPath = imgPath;
+        this.result = result;
+        this.description = description;
+    }
 }
