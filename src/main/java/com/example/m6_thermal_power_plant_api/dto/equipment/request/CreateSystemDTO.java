@@ -17,8 +17,8 @@ public class CreateSystemDTO {
     @Size(min = 3, max = 255,
             message = "Tên hệ thống phải từ 3 đến 255 ký tự.")
     @Pattern(
-            regexp = "^(?!\\s*$).+",
-            message = "Tên hệ thống không hợp lệ."
+            regexp = "^[A-Za-zÀ-ỹ][A-Za-zÀ-ỹ0-9\\s\\-()]*$",
+            message = "Tên hệ thống phải bắt đầu bằng chữ cái và chỉ chứa chữ, số, khoảng trắng, dấu gạch ngang hoặc ngoặc."
     )
     private String name;
     private String description;
