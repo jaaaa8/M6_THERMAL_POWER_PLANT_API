@@ -23,16 +23,13 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
 
     private final IEquipmentSystemRepository equipmentSystemRepository;
     @Override
-    public Page<SystemListDTO> getSystem(String keyword, int page, int size) {
+    public Page<SystemListDTO> getSystem(String name,EquipmentStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page,size);
-        Page<EquipmentSystem> result;
-        if(keyword == null || keyword.isBlank()){
-            result = equipmentSystemRepository.findAll(pageable);
-        }else{
-            result = equipmentSystemRepository.findByNameContainingIgnoreCase(
-                    keyword,pageable
-            );
-        }
+        Page<EquipmentSystem> result = equipmentSystemRepository.search(
+                (name == null || name.isBlank()) ? null : name,
+                status,
+                pageable
+        );
         return  result.map(this :: convertDTO);
     }
 
@@ -45,6 +42,13 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
         system.setIsDeleted(true);
         equipmentSystemRepository.save(system);
 
+    }
+
+    @Override
+    public SystemListDTO getById(int id) {
+        EquipmentSystem system= equipmentSystemRepository.findById(id)
+                .orElseThrow(()-> new RuntimeException("Không tìm thấy hệ thống"));
+        return convertDTO(system);
     }
 
     @Override
@@ -82,9 +86,11 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
 
     private SystemListDTO convertDTO(EquipmentSystem equipmentSystem) {
        return SystemListDTO.builder()
+               .id(equipmentSystem.getId())
                .code(equipmentSystem.getCode())
                .name(equipmentSystem.getName())
                .status(equipmentSystem.getStatus())
+               .description(equipmentSystem.getDescription())
                .build();
     }
 
@@ -97,7 +103,7 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
         for (EquipmentSystem system : systems) {
             String code = system.getCode(); // SYS001
 
-            int number = Integer.parseInt(code.substring(3));
+            int number = Integer.parseInt(code.substring(4));
 
             max = Math.max(max, number);
         }
