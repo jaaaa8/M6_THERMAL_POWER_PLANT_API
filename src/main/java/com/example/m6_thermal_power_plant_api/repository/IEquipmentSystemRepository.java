@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface IEquipmentSystemRepository extends JpaRepository<EquipmentSystem, Integer> {
     Page<EquipmentSystem> findByNameContainingIgnoreCase(
@@ -13,5 +15,8 @@ public interface IEquipmentSystemRepository extends JpaRepository<EquipmentSyste
     );
     boolean existsByNameIgnoreCase(String name);
 
+    List<EquipmentSystem> findByCodeStartingWith (String prefix);
+
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Integer id);
 
 }
