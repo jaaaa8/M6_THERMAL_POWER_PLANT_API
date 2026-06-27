@@ -1,0 +1,14 @@
+package com.example.m6_thermal_power_plant_api.repository;
+
+import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
+
+    /** Lấy danh sách phiếu công tác theo ID yêu cầu sửa chữa */
+    List<WorkOrder> findByRepairRequest_Id(Integer repairRequestId);
+}

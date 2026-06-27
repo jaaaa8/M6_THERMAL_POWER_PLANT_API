@@ -15,7 +15,21 @@ import org.hibernate.annotations.SQLRestriction;
  * Lưu ý: hầu hết bảng nghiệp vụ (repair_requests, work_orders,
  * technical_assessments, tool_borrow_logs...) tham chiếu accounts(id),
  * KHÔNG tham chiếu trực tiếp employees(id). Employee chỉ liên kết qua
- * accounts.employee_id (1 nhân viên ↔ 1 tài khoản).
+ * accounts.employee_id (1 nhân viên ↔ 1 tài khoản). Không phải nhân viên
+ * nào cũng có tài khoản — chỉ cấp cho người cần dùng hệ thống.
+ *
+ * MỨC ĐỘ AN TOÀN SOFT-DELETE: ⚠️ CẨN THẬN
+ *  - Soft-delete Employee sẽ CASCADE xuống Account (xem @CascadeSoftDelete
+ *    ở Account.employee). Account bị ẩn → mọi tham chiếu "sống" tới account
+ *    đó (RepairRequest.requester, WorkOrder.leader/directSupervisor/
+ *    safetySupervisor, WorkOrderMember.account, *Issue.issuedBy,
+ *    *Receipt.receivedBy, *Inventory.account, WorkOrderExtension.approvedBy,
+ *    ToolBorrowLog.account, TechnicalAssessment.assessor) sẽ ném
+ *    ObjectNotFoundException khi LAZY-load proxy.
+ *  - CHỈ soft-delete khi: (1) nhân viên thật sự nghỉ việc, VÀ (2) đã xử lý
+ *    xong mọi chứng từ "đang dở" do tài khoản của họ đứng tên.
+ *  - Chiều ngược lại an toàn: xoá Account KHÔNG đụng tới Employee (đúng
+ *    nghiệp vụ — thu hồi quyền truy cập không đồng nghĩa với mất hồ sơ).
  *
  * Soft delete: xem {@link BaseSoftDeleteEntity}.
  */
