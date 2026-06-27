@@ -47,7 +47,8 @@ public class SparePart extends BaseSoftDeleteEntity {
     private String manufacturer;
 
     /** Đường dẫn file ảnh đính kèm */
-    @Column(name = "img_path", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "img_path", columnDefinition = "LONGTEXT")
     private String imgPath;
 
     @ManyToOne(fetch = FetchType.EAGER)
