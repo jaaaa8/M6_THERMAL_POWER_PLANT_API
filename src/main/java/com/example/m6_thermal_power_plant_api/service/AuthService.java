@@ -109,7 +109,7 @@ public class AuthService implements IAuthService {
                 .roles(roles)
                 .employeeCode(emp != null ? emp.getEmployeeCode() : null)
                 .departmentName(emp != null && emp.getDepartment() != null ? emp.getDepartment().getName() : null)
-                .position(emp != null ? emp.getPosition() : null)
+                .position(emp != null && emp.getPosition() != null ? emp.getPosition().getName() : null)
                 .avatarUrl(emp != null ? emp.getImgPath() : null)
                 .build();
     }

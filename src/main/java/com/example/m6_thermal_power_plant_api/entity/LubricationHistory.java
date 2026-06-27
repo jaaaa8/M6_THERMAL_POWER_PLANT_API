@@ -1,7 +1,11 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 
@@ -13,19 +17,21 @@ import java.time.LocalDate;
  */
 @Entity
 @Table(name = "lubrication_history")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@EqualsAndHashCode(of = "id")
-public class LubricationHistory {
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class LubricationHistory extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "plan_id")
-    private LubricationPlan plan;
+    @JoinColumn(name = "equipment_id")
+    @CascadeSoftDelete
+    private Equipment equipment;
 
     @Column(name = "performed_date")
     private LocalDate performedDate;

@@ -1,9 +1,12 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
+import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -18,22 +21,20 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "technical_assessments")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@EqualsAndHashCode(of = "id")
-public class TechnicalAssessment {
+@EqualsAndHashCode(callSuper = false, of = "id")
+public class TechnicalAssessment extends BaseSoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "technical_code", unique = true, nullable = false, length = 50)
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    @Column(name = "technical_code", nullable = false, length = 50)
     private String technicalCode;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "work_order_id")
-    private WorkOrder workOrder;
 
     /** Tổ trưởng thực hiện đánh giá (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)

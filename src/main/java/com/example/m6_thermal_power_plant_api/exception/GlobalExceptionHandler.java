@@ -82,4 +82,36 @@ public class GlobalExceptionHandler {
         log.error("Lỗi hệ thống nghiêm trọng: ", ex);
         return ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR, "Hệ thống đang bảo trì hoặc gặp sự cố!", "SERVER_ERROR");
     }
+
+
+    /**
+     * Exception nghiệp vụ tự định nghĩa (cùng package): service ném khi không tìm thấy đối tượng.
+     * KHÔNG import org.hibernate.ObjectNotFoundException ở đầu file — nếu import, tên đơn ở đây sẽ
+     * trỏ nhầm sang kiểu của Hibernate và đụng độ với {@link #handleHibernateObjectNotFound}.
+     */
+    @ExceptionHandler(ObjectNotFoundException.class)
+    public ResponseEntity<String> handleObjectNotFound(ObjectNotFoundException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    /**
+     * Quan hệ LAZY trỏ tới bản ghi đã bị soft-delete (bị lọc bởi @SQLRestriction)
+     * khiến Hibernate không tìm thấy dòng — coi là 404.
+     */
+    @ExceptionHandler(org.hibernate.ObjectNotFoundException.class)
+    public ResponseEntity<String> handleHibernateObjectNotFound(org.hibernate.ObjectNotFoundException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    /** Xung đột nghiệp vụ (VD: yêu cầu đã có phiếu công tác). */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    /** Dữ liệu đầu vào không hợp lệ. */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
 }

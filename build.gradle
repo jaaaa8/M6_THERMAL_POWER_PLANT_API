@@ -21,32 +21,35 @@ repositories {
 }
 
 dependencies {
+    // 1. Core Starters
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // 2. JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-
-    def lombokVersion = '1.18.26'
-    implementation "org.projectlombok:lombok:${lombokVersion}"
-    compileOnly "org.projectlombok:lombok:${lombokVersion}"
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    // 3. Database & Dev Tools
     runtimeOnly 'com.mysql:mysql-connector-j'
-    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+    // 4. Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    // 5. Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
-    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    jvmArgs '-Xshare:off'
 }

@@ -15,9 +15,21 @@ import java.util.List;
  * Join table account_roles được quản lý tại đây bằng @ManyToMany.
  *
  * Có 2 cờ trạng thái phục vụ 2 mục đích khác nhau, KHÔNG thay thế nhau:
- * - is_active : khoá/mở tài khoản tạm thời (vẫn tồn tại, chỉ không đăng nhập
- * được)
- * - is_deleted: xoá tài khoản (xem {@link BaseSoftDeleteEntity})
+ *  - status (AccountStatus.ACTIVE/LOCKED): khoá/mở đăng nhập tạm thời —
+ *    bản ghi vẫn tồn tại, mọi tham chiếu LAZY vẫn đọc được, chỉ là không
+ *    đăng nhập được.
+ *  - is_deleted: xoá tài khoản (xem {@link BaseSoftDeleteEntity}).
+ *
+ * MỨC ĐỘ AN TOÀN SOFT-DELETE: ✅ AN TOÀN VỀ CASCADE
+ *  - Không có @CascadeSoftDelete nào trỏ về Account → soft-delete Account
+ *    KHÔNG kéo theo bảng nào (kể cả Employee — đúng nghiệp vụ).
+ *  - Hậu quả gián tiếp đáng kể: mọi chứng từ FK tới accounts(id) (xem danh
+ *    sách ở Employee Javadoc) sẽ bị "đứt" proxy do @SQLRestriction lọc khi
+ *    LAZY-load → ObjectNotFoundException.
+ *  - KHUYẾN NGHỊ: nếu chỉ muốn KHOÁ ĐĂNG NHẬP tạm thời (nghỉ phép, mất pass,
+ *    đổi bộ phận...) → dùng {@code status = LOCKED}. KHÔNG soft-delete.
+ *    Soft-delete chỉ dùng khi tài khoản bị huỷ hẳn và đã chấp nhận việc các
+ *    chứng từ cũ mất khả năng resolve proxy "createdBy/issuedBy/...".
  */
 @Entity
 @Table(name = "accounts")
@@ -59,6 +71,10 @@ public class Account extends BaseSoftDeleteEntity {
      * Join table: account_roles (account_id, role_id)
      */
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "account_roles", joinColumns = @JoinColumn(name = "account_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JoinTable(
+        name = "account_roles",
+        joinColumns        = @JoinColumn(name = "account_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
     private List<Role> roles;
 }

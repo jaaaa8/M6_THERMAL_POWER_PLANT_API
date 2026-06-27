@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
+import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,11 +31,18 @@ public class EquipmentSystem extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(name = "code", nullable = false, length = 50)
+    private String code;
+
     @Column(nullable = false, length = 255)
     private String name;
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EquipmentStatus status;
 
     @JsonIgnore
     @OneToMany(mappedBy = "system", fetch = FetchType.LAZY)
