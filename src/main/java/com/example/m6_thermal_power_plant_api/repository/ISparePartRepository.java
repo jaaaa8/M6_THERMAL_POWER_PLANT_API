@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Repository
-public interface SparePartRepository extends JpaRepository<SparePart, Integer>, JpaSpecificationExecutor<SparePart> {
+public interface ISparePartRepository extends JpaRepository<SparePart, Integer>, JpaSpecificationExecutor<SparePart> {
     boolean existsBySparePartCode(String sparePartCode);
     boolean existsBySparePartCodeAndIdNot(String sparePartCode, Integer id);
 

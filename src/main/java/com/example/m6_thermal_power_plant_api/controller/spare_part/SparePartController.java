@@ -24,7 +24,7 @@ public class SparePartController {
     private final ISparePartService sparePartService;
 
     @PostMapping
-    public SparePartDTO create(@RequestBody SparePartDTO dto) {
+    public SparePartDTO create(@Valid @RequestBody SparePartDTO dto) {
         return sparePartService.create(dto);
     }
 

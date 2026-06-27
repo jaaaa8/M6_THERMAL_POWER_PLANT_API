@@ -2,9 +2,11 @@ package com.example.m6_thermal_power_plant_api.service.spare_part;
 
 import com.example.m6_thermal_power_plant_api.dto.spare_parts.SparePartDTO;
 import com.example.m6_thermal_power_plant_api.entity.SparePart;
+import com.example.m6_thermal_power_plant_api.entity.Unit;
 import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
-import com.example.m6_thermal_power_plant_api.repository.SparePartRepository;
-import lombok.AllArgsConstructor;
+import com.example.m6_thermal_power_plant_api.repository.ISparePartRepository;
+import com.example.m6_thermal_power_plant_api.repository.IUnitRepository;
+import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +20,9 @@ import java.math.BigDecimal;
 @Transactional
 public class SparePartService implements ISparePartService{
 
-    private final SparePartRepository sparePartRepository;
+    private final ISparePartRepository sparePartRepository;
+    private final IUnitRepository unitRepository;
+    private final SoftDeleteCascadeService softDeleteCascadeService;
 
     @Override
     public SparePartDTO create(SparePartDTO dto) {
@@ -30,7 +34,9 @@ public class SparePartService implements ISparePartService{
         SparePart sparePart = toEntity(dto);
         sparePart.setId(null);
         sparePart.setSparePartCode(code);
-        sparePart.setStatus(PartStatus.ACTIVE);
+        if (sparePart.getStatus() == null) {
+            sparePart.setStatus(PartStatus.ACTIVE);
+        }
 
         return toDto(sparePartRepository.save(sparePart));
     }
@@ -45,11 +51,19 @@ public class SparePartService implements ISparePartService{
             throw new IllegalStateException("Mã vật tư thay thế đã tồn tại");
         }
 
+        Unit unit = null;
+        if (dto.getUnitId() != null) {
+            unit = unitRepository.findById(dto.getUnitId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn vị tính với id = " + dto.getUnitId()));
+        }
+
         sparePart.setSparePartCode(code);
         sparePart.setName(normalize(dto.getName()));
         sparePart.setPrice(dto.getPrice());
         sparePart.setManufacturer(normalize(dto.getManufacturer()));
+        sparePart.setUnit(unit);
         sparePart.setImgPath(normalize(dto.getImgPath()));
+        sparePart.setStatus(dto.getStatus() != null ? dto.getStatus() : sparePart.getStatus());
 
         return toDto(sparePartRepository.save(sparePart));
     }
@@ -96,8 +110,7 @@ public class SparePartService implements ISparePartService{
         SparePart sparePart = sparePartRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vật tư thay thế với id = " + id));
 
-        sparePart.setStatus(PartStatus.INACTIVE);
-        sparePartRepository.save(sparePart);
+        softDeleteCascadeService.softDelete(sparePart);
     }
 
     public String normalize(String value){
@@ -105,6 +118,11 @@ public class SparePartService implements ISparePartService{
     }
 
     public SparePart toEntity(SparePartDTO dto){
+        Unit unit = null;
+        if (dto.getUnitId() != null) {
+            unit = unitRepository.findById(dto.getUnitId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn vị tính với id = " + dto.getUnitId()));
+        }
         return SparePart.builder()
                 .sparePartCode(normalize(dto.getSparePartCode()))
                 .name(normalize(dto.getName()))
@@ -112,6 +130,8 @@ public class SparePartService implements ISparePartService{
                 .manufacturer(normalize(dto.getManufacturer()))
                 .imgPath(normalize(dto.getImgPath()))
                 .status(PartStatus.ACTIVE)
+                .unit(unit)
+                .status(dto.getStatus() != null ? dto.getStatus() : PartStatus.ACTIVE)
                 .build();
     }
 
@@ -123,6 +143,9 @@ public class SparePartService implements ISparePartService{
                 .price(entity.getPrice())
                 .manufacturer(entity.getManufacturer())
                 .imgPath(entity.getImgPath())
+                .unitId(entity.getUnit() != null ? entity.getUnit().getId() : null)
+                .unitName(entity.getUnit() != null ? entity.getUnit().getName() : null)
+                .status(entity.getStatus())
                 .build();
     }
 }

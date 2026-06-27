@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Repository
-public interface ConsumableRepository extends JpaRepository<Consumable, Integer> {
+public interface IConsumableRepository extends JpaRepository<Consumable, Integer> {
     boolean existsByConsumableCode(String consumableCode);
     boolean existsByConsumableCodeAndIdNot(String consumableCode, Integer id);
     Optional<Consumable> findByConsumableCodeIgnoreCase(String consumableCode);

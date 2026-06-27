@@ -2,8 +2,11 @@ package com.example.m6_thermal_power_plant_api.service.consumable;
 
 import com.example.m6_thermal_power_plant_api.dto.consumables.ConsumableDTO;
 import com.example.m6_thermal_power_plant_api.entity.Consumable;
+import com.example.m6_thermal_power_plant_api.entity.Unit;
 import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
-import com.example.m6_thermal_power_plant_api.repository.ConsumableRepository;
+import com.example.m6_thermal_power_plant_api.repository.IConsumableRepository;
+import com.example.m6_thermal_power_plant_api.repository.IUnitRepository;
+import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -17,7 +20,9 @@ import java.math.BigDecimal;
 @Transactional
 public class ConsumableService implements IConsumableService{
 
-    private final ConsumableRepository consumableRepository;
+    private final IConsumableRepository consumableRepository;
+    private final IUnitRepository unitRepository;
+    private final SoftDeleteCascadeService softDeleteCascadeService;
 
 
     @Override
@@ -30,7 +35,9 @@ public class ConsumableService implements IConsumableService{
         Consumable consumable = toEntity(dto);
         consumable.setId(null);
         consumable.setConsumableCode(code);
-        consumable.setStatus(PartStatus.ACTIVE);
+        if(consumable.getStatus() == null){
+            consumable.setStatus(PartStatus.ACTIVE);
+        }
         return toDto(consumableRepository.save(consumable));
     }
 
@@ -45,13 +52,20 @@ public class ConsumableService implements IConsumableService{
             throw new IllegalStateException("Mã vật tư tiêu hao đã tồn tại");
         }
 
+        Unit unit = null;
+        if (dto.getUnitId() != null) {
+            unit = unitRepository.findById(dto.getUnitId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn vị tính với id = " + dto.getUnitId()));
+        }
+
         consumable.setConsumableCode(code);
         consumable.setName(dto.getName());
         consumable.setPrice(dto.getPrice());
         consumable.setImgPath(dto.getImgPath());
         consumable.setManufacturer(dto.getManufacturer());
         consumable.setImgPath(dto.getImgPath());
-        consumable.setStatus(dto.getStatus());
+        consumable.setUnit(unit);
+        consumable.setStatus(dto.getStatus() != null ? dto.getStatus() : consumable.getStatus());
 
         return toDto(consumableRepository.save(consumable));
     }
@@ -94,8 +108,7 @@ public class ConsumableService implements IConsumableService{
         Consumable consumable = consumableRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vật tư tiêu hao với id = " + id));
 
-        consumable.setStatus(PartStatus.INACTIVE);
-        consumableRepository.save(consumable);
+        softDeleteCascadeService.softDelete(consumable);
     }
 
     private String normalize(String value){
@@ -103,6 +116,11 @@ public class ConsumableService implements IConsumableService{
     }
 
     private Consumable toEntity(ConsumableDTO consumableDTO){
+        Unit unit = null;
+        if(consumableDTO.getUnitId() != null){
+            unit = unitRepository.findById(consumableDTO.getUnitId()).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn vị với id = " + consumableDTO.getUnitId()));
+        }
+
         return Consumable.builder()
                 .consumableCode(consumableDTO.getConsumableCode())
                 .name(consumableDTO.getName())
@@ -110,6 +128,7 @@ public class ConsumableService implements IConsumableService{
                 .manufacturer(consumableDTO.getManufacturer())
                 .imgPath(consumableDTO.getImgPath())
                 .status(consumableDTO.getStatus() != null ? consumableDTO.getStatus() : PartStatus.ACTIVE)
+                .unit(unit)
                 .build();
     }
 
@@ -121,6 +140,9 @@ public class ConsumableService implements IConsumableService{
                 .price(consumable.getPrice())
                 .manufacturer(consumable.getManufacturer())
                 .imgPath(consumable.getImgPath())
+                .unitId(consumable.getUnit() != null ? consumable.getUnit().getId() : null)
+                .unitName(consumable.getUnit() != null ? consumable.getUnit().getName() : null)
+                .status(consumable.getStatus())
                 .build();
     }
 }

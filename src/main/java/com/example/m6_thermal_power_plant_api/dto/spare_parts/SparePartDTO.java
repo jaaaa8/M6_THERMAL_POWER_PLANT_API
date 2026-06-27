@@ -33,7 +33,7 @@ public class SparePartDTO {
     @NotBlank(message = "Ảnh vật tư thay thế không được để trống")
     private String imgPath;
 
-    @NotBlank(message = "Đơn vị không được để trống")
+    @NotNull(message = "Đơn vị không được để trống")
     private Integer unitId;
 
     private String unitName;
