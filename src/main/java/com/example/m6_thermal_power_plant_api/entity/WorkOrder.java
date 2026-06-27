@@ -62,6 +62,16 @@ public class WorkOrder {
     @Column(name = "end_time")
     private LocalDateTime endTime;
 
+    @Column(name = "work_content", columnDefinition = "TEXT")
+    private String workContent;
+
+    @Column(length = 255)
+    private String location;
+
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
     @Column(length = 100)
     private String status;
 
