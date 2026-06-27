@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
+import com.example.m6_thermal_power_plant_api.entity.enums.LubricationStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -53,8 +54,8 @@ public class LubricationPlan extends BaseSoftDeleteEntity {
     @Column(name = "next_due_date")
     private LocalDate nextDueDate;
 
-    @Column(name = "lubricant_type", length = 255)
-    private String lubricantType;
+    @Column(name = "status", length = 255)
+    private LubricationStatus status = LubricationStatus.NOT_LUBRICATED;
 
     /** Liên kết vật tư tiêu hao (dầu/mỡ) trong danh mục kho */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -63,8 +64,4 @@ public class LubricationPlan extends BaseSoftDeleteEntity {
 
     @Column(precision = 10, scale = 2)
     private BigDecimal quantity;
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "plan", fetch = FetchType.LAZY)
-    private List<LubricationHistory> history;
 }
