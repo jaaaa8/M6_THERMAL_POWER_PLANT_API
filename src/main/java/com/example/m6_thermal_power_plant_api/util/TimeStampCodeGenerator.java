@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.util;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -11,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * QUY TẮC SINH MÃ: {@code PREFIX-yyMMddHHmmss-SEQ} (ngăn cách bằng dấu gạch '-')
  *
  * 1) PREFIX = chữ cái viết HOA suy ra từ TÊN CLASS (tách theo camelCase):
- *    - Class 1 từ   → lấy 2 ký tự đầu.   VD: Equipment → "EQ", Employee → "EM"
+ *    - Class 1 từ   → lấy 2 ký tự đầu.   VD: Tool → "TO", Employee → "EM"
  *    - Class ≥ 2 từ → lấy ký tự đầu MỖI từ. VD: WorkOrder → "WO",
  *      RepairRequest → "RR", ConsumableIssueDetail → "CID"
  *      (LƯU Ý: bản mô tả ban đầu ghi ConsumableIssueDetail → "CIS"; đây là lỗi
@@ -23,17 +24,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  *    VD lúc 2026‑06‑27 15:30:45 → "260627153045".
  *
  * 3) SEQ = hậu tố 3 chữ số (000–999) lấy từ một bộ đếm {@link AtomicInteger}
- *    DÙNG CHUNG toàn JVM, tăng nguyên tử (atomic) mỗi lần gọi và cuộn vòng
- *    (wrap) ở 1000. ĐÂY là phần khử trùng cho các mã tạo trong CÙNG một giây.
+ *    RIÊNG THEO TỪNG PREFIX (mỗi loại entity một bộ đếm), giữ trong một
+ *    {@link ConcurrentHashMap}. Mỗi prefix tăng nguyên tử (atomic) độc lập mỗi
+ *    lần gọi và cuộn vòng (wrap) ở 1000. ĐÂY là phần khử trùng cho các mã CÙNG
+ *    prefix tạo trong CÙNG một giây.
  *
- * Ghép lại: WorkOrder tạo lúc đó (lần gọi thứ 3) → {@code "WO-260627153045-002"}.
+ * Ghép lại: WorkOrder (lần gọi thứ 3 cho prefix "WO") → {@code "WO-260627153045-002"},
+ * trong khi RepairRequest tính riêng → {@code "RR-260627153045-000"}.
  *
  * TẠI SAO DÙNG AtomicInteger THAY VÌ "ĐỌC MÃ MAX TRONG DB RỒI +1"?
  *  - Cách cũ phải truy vấn DB để biết số kế tiếp (phiền, thêm round-trip, dễ
  *    race khi nhiều request đồng thời). Bộ đếm trong bộ nhớ {@code getAndIncrement()}
  *    là lock-free, thread-safe, KHÔNG chạm DB.
- *  - Bộ đếm dùng chung toàn cục là đủ: chỉ cần SEQ khác nhau trong cùng giây
- *    thì cả mã đã khác nhau, không cần tách bộ đếm theo từng loại entity.
+ *  - Tách bộ đếm theo PREFIX: vì mã chỉ có thể đụng nhau khi trùng cả prefix lẫn
+ *    timestamp, đếm riêng theo prefix là đủ khử trùng mà mỗi loại entity vẫn có
+ *    chuỗi SEQ liên tục, dễ đọc. Hai class ra cùng prefix sẽ DÙNG CHUNG một bộ
+ *    đếm — đúng mong muốn, vì chúng mới là cặp có nguy cơ trùng mã.
  *
  * GIỚI HẠN CÒN LẠI (cần lưới an toàn ở tầng service):
  *  - Nếu sinh > 1000 mã trong CÙNG một giây, SEQ cuộn vòng và có thể trùng.
@@ -55,8 +61,8 @@ public final class TimeStampCodeGenerator {
     /** Số phần tử của vòng cuộn hậu tố (000–999). */
     private static final int SEQUENCE_MODULO = 1000;
 
-    /** Bộ đếm dùng chung toàn JVM cho hậu tố khử trùng. */
-    private static final AtomicInteger SEQUENCE = new AtomicInteger(0);
+    /** Bộ đếm hậu tố khử trùng, TÁCH RIÊNG theo từng prefix (mỗi loại entity một bộ đếm). */
+    private static final ConcurrentHashMap<String, AtomicInteger> SEQUENCES = new ConcurrentHashMap<>();
 
     private TimeStampCodeGenerator() {
         // tiện ích thuần static — không khởi tạo
@@ -88,10 +94,15 @@ public final class TimeStampCodeGenerator {
         return generate(className, LocalDateTime.now());
     }
 
-    /** Sinh mã từ tên class với mốc thời gian chỉ định + hậu tố tự tăng. */
+    /** Sinh mã từ tên class với mốc thời gian chỉ định + hậu tố tự tăng (riêng theo prefix). */
     public static String generate(String className, LocalDateTime when) {
-        int seq = Math.floorMod(SEQUENCE.getAndIncrement(), SEQUENCE_MODULO);
-        return generate(className, when, seq);
+        if (when == null) {
+            throw new IllegalArgumentException("when không được null");
+        }
+        String prefix = prefixOf(className);
+        AtomicInteger counter = SEQUENCES.computeIfAbsent(prefix, k -> new AtomicInteger(0));
+        int seq = Math.floorMod(counter.getAndIncrement(), SEQUENCE_MODULO);
+        return prefix + "-" + when.format(TIMESTAMP_FORMAT) + "-" + String.format("%03d", seq);
     }
 
     /**

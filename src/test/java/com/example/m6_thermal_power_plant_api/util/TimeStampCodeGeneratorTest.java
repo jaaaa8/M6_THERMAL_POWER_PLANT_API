@@ -72,4 +72,22 @@ class TimeStampCodeGeneratorTest {
         String b = TimeStampCodeGenerator.generate(WorkOrder.class);
         assertThat(a).isNotEqualTo(b);
     }
+
+    @Test
+    void generate_separateCounterPerPrefix_eachSequenceIncrementsIndependently() {
+        LocalDateTime t = LocalDateTime.of(2026, 6, 27, 15, 30, 45);
+        // Hai prefix riêng biệt phải đếm độc lập, không ăn chung số.
+        int first = seqOf(TimeStampCodeGenerator.generate("Unit", t));
+        int firstOther = seqOf(TimeStampCodeGenerator.generate("Garage", t));
+        int second = seqOf(TimeStampCodeGenerator.generate("Unit", t));
+        // Bộ đếm "UN" tăng 1 bất kể có gọi prefix "GA" xen vào giữa.
+        assertThat(second).isEqualTo(first + 1);
+        // Lần đầu của prefix "GA" không bị ảnh hưởng bởi bộ đếm của "UN".
+        assertThat(firstOther).isZero();
+    }
+
+    /** Lấy phần SEQ (3 số cuối) từ mã sinh ra. */
+    private static int seqOf(String code) {
+        return Integer.parseInt(code.substring(code.lastIndexOf('-') + 1));
+    }
 }

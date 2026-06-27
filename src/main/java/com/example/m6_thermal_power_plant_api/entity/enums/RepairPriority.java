@@ -9,5 +9,7 @@ package com.example.m6_thermal_power_plant_api.entity.enums;
  */
 public enum RepairPriority {
     HIGH,  // Ưu tiên cao
-    LOW    // Ưu tiên thấp
+    LOW,   // Ưu tiên thấp
+    NORMAL,
+    EMERGENCY
 }
