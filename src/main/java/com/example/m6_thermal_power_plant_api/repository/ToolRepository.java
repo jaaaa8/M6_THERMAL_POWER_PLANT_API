@@ -1,6 +1,6 @@
 package com.example.m6_thermal_power_plant_api.repository;
 
-import com.example.m6_thermal_power_plant_api.entity.Tool;
+import com.example.m6_thermal_power_plant_api.entity.tool.Tool;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

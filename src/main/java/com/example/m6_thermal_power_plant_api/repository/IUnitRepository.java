@@ -1,9 +1,10 @@
 package com.example.m6_thermal_power_plant_api.repository;
 
-import com.example.m6_thermal_power_plant_api.entity.tool.ToolCategory;
+import com.example.m6_thermal_power_plant_api.entity.Unit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ToolCategoryRepository extends JpaRepository<ToolCategory, Integer> {
+public interface IUnitRepository extends JpaRepository<Unit, Integer> {
+
 }
