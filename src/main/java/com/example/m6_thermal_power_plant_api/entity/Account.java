@@ -1,8 +1,6 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
-import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
-import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -36,9 +34,11 @@ import java.util.List;
 @Entity
 @Table(name = "accounts")
 @SQLRestriction("is_deleted = false")
-@Getter @Setter
+@Getter
+@Setter
 @SuperBuilder
-@NoArgsConstructor @AllArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @ToString(callSuper = true, exclude = "roles")
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class Account extends BaseSoftDeleteEntity {
@@ -47,25 +47,24 @@ public class Account extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    /** Employee cũng @SQLRestriction("is_deleted = false") nên không cần khai
-     *  báo lại restriction ở đây — mỗi tài khoản thuộc về đúng 1 nhân viên. */
+    /**
+     * Employee cũng @SQLRestriction("is_deleted = false") nên không cần khai
+     * báo lại restriction ở đây — mỗi tài khoản thuộc về đúng 1 nhân viên.
+     */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", unique = true)
-    @CascadeSoftDelete
     private Employee employee;
 
-    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
-    @Column(nullable = false, length = 100)
+    @Column(unique = true, nullable = false, length = 100)
     private String username;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    /** Trạng thái tài khoản (KHÁC với is_deleted) */
+    /** Khoá/mở tài khoản tạm thời (KHÁC với is_deleted) */
     @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 50)
-    private AccountStatus status = AccountStatus.ACTIVE;
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 
     /**
      * Phân quyền.
