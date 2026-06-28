@@ -18,8 +18,7 @@ import java.time.LocalDateTime;
 public class WorkOrderMemberDTO {
 
     private Integer id;
-    private Integer accountId;
-    private String username;
+    private Integer employeeId;
     private String fullName;
     private String roleInTask;
     private LocalDateTime joinedAt;
@@ -28,17 +27,11 @@ public class WorkOrderMemberDTO {
     public static WorkOrderMemberDTO from(WorkOrderMember m) {
         WorkOrderMemberDTOBuilder b = WorkOrderMemberDTO.builder()
                 .id(m.getId())
+                .employeeId(m.getEmployees() != null ? m.getEmployees().getId() : null)
+                .fullName(m.getEmployees() != null ? m.getEmployees().getFullName() : null)
                 .roleInTask(m.getRoleInTask())
                 .joinedAt(m.getJoinedAt())
                 .leftAt(m.getLeftAt());
-
-        if (m.getAccount() != null) {
-            b.accountId(m.getAccount().getId())
-                    .username(m.getAccount().getUsername());
-            if (m.getAccount().getEmployee() != null) {
-                b.fullName(m.getAccount().getEmployee().getFullName());
-            }
-        }
         return b.build();
     }
 }

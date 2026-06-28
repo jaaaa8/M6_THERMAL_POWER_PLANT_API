@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -78,5 +79,19 @@ public class MaintenanceController {
     @PatchMapping("/work-orders/{id}/cancel")
     public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id) {
         return maintenanceService.cancelWorkOrder(id);
+    }
+
+    /**
+     * Danh sach phieu cong tac, CO PHAN TRANG + TIM KIEM.
+     * Tham so query: {@code ?page=0&size=20&sort=createdAt,desc&search=...}
+     * Mac dinh trang 20 dong, sap xep createdAt giam dan.
+     *
+     * @param search tu khoa tim trong orderCode / requestCode / noi dung.
+     */
+    @GetMapping("/work-orders")
+    public PagedModel<WorkOrderDTO> listWorkOrders(
+            @RequestParam(required = false) String search,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return new PagedModel<>(maintenanceService.listWorkOrders(search, pageable));
     }
 }

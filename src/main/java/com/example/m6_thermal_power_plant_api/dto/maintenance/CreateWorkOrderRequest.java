@@ -22,17 +22,19 @@ import java.util.List;
 @Setter
 public class CreateWorkOrderRequest {
 
-    @NotNull(message = "repairRequestId là bắt buộc")
     private Integer repairRequestId;
 
     @NotNull(message = "leaderId (người lãnh đạo công việc) là bắt buộc")
     private Integer leaderId;
 
+    @NotNull(message = "directSupervisorId (chỉ huy trực tiếp) là bắt buộc")
     private Integer directSupervisorId;
 
+    @NotNull(message = "safetySupervisorId (người giám sát an toàn) là bắt buộc")
     private Integer safetySupervisorId;
 
     /** Thời điểm bắt đầu công việc; để trống nếu chưa xác định. */
+    @NotNull(message = "startTime là bắt buộc.")
     private LocalDateTime startTime;
 
     /**
@@ -51,8 +53,8 @@ public class CreateWorkOrderRequest {
     @Setter
     public static class MemberInput {
 
-        @NotNull(message = "accountId của thành viên là bắt buộc")
-        private Integer accountId;
+        @NotNull(message = "employeeId của thành viên là bắt buộc")
+        private Integer employeeId;
 
         /** Vai trò trong công việc (VD: Thợ cơ khí, Thợ điện...). */
         private String roleInTask;

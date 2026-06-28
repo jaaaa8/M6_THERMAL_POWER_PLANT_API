@@ -37,4 +37,14 @@ public interface IMaintenanceService {
      *    đưa yêu cầu về PENDING để quay lại hàng chờ xử lý.
      */
     WorkOrderDTO cancelWorkOrder(Integer workOrderId);
+
+    /**
+     * User Story #42 (row 46): xem danh sách các phiếu công tác, tìm kiếm theo
+     * nội dung hoặc số phiếu. Trả về danh sách CÓ PHÂN TRANG.
+     *
+     * @param search   từ khoá tìm trong orderCode, requestCode
+     *                 (null hoặc rỗng = không lọc).
+     * @param pageable phân trang + sắp xếp (mặc định createdAt giảm dần).
+     */
+    Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable);
 }

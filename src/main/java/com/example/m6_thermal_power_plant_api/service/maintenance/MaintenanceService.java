@@ -3,17 +3,11 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
-import com.example.m6_thermal_power_plant_api.entity.Account;
-import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
+import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
-import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
-import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
-import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
-import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
+import com.example.m6_thermal_power_plant_api.repository.*;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,15 +25,17 @@ public class MaintenanceService implements IMaintenanceService {
     private final RepairRequestRepository repairRequestRepository;
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderMemberRepository workOrderMemberRepository;
+    private final EmployeeRepository employeeRepository;
     private final AccountRepository accountRepository;
 
     public MaintenanceService(RepairRequestRepository repairRequestRepository,
                               WorkOrderRepository workOrderRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
-                              AccountRepository accountRepository) {
+                              EmployeeRepository employeeRepository, AccountRepository accountRepository) {
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
+        this.employeeRepository = employeeRepository;
         this.accountRepository = accountRepository;
     }
 
@@ -127,10 +123,10 @@ public class MaintenanceService implements IMaintenanceService {
         }
         LocalDateTime now = LocalDateTime.now();
         for (CreateWorkOrderRequest.MemberInput input : inputs) {
-            Account account = loadAccount(input.getAccountId(), "nhan vien lam viec");
+            Employee employee = loadEmployee(input.getEmployeeId(), "nhan vien lam viec");
             saved.add(workOrderMemberRepository.save(WorkOrderMember.builder()
                     .workOrder(workOrder)
-                    .account(account)
+                    .employees(employee)
                     .roleInTask(input.getRoleInTask())
                     .joinedAt(now)
                     .build()));
@@ -193,7 +189,20 @@ public class MaintenanceService implements IMaintenanceService {
         }
     }
 
-    /** Phiếu "sống" = đang ràng buộc quan hệ 1-n (chưa huỷ, chưa hoàn thành). */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable) {
+        boolean hasSearch = search != null && !search.isBlank();
+        Page<WorkOrder> page = hasSearch
+                ? workOrderRepository.searchWorkOrders(search, pageable)
+                : workOrderRepository.findAll(pageable);
+        return page.map(wo -> {
+            List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
+            return WorkOrderDTO.from(wo, members);
+        });
+    }
+
+    /** Phieu "song" = dang rang buoc quan he 1-n (chua huy, chua hoan thanh). */
     private static boolean isLive(WorkOrder wo) {
         return wo.getStatus() == WorkOrderStatus.OPEN || wo.getStatus() == WorkOrderStatus.IN_PROGRESS;
     }
@@ -219,6 +228,12 @@ public class MaintenanceService implements IMaintenanceService {
      */
     private String generateOrderCode() {
         return TimeStampCodeGenerator.generate(WorkOrder.class);
+    }
+
+    private Employee loadEmployee(Integer employeeId, String label) {
+        return employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay nhan vien (" + label + ") voi id: " + employeeId));
     }
 
     private Account loadAccount(Integer accountId, String label) {
