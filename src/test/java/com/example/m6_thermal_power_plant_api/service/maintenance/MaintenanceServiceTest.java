@@ -51,7 +51,8 @@ class MaintenanceServiceTest {
     private WorkOrderMemberRepository workOrderMemberRepository;
     @Mock
     private AccountRepository accountRepository;
-
+    @Mock
+    private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -83,7 +84,8 @@ class MaintenanceServiceTest {
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of());
         when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
-        when(accountRepository.findById(5)).thenReturn(Optional.of(technician));
+
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(technician.getEmployee()));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
             WorkOrder wo = inv.getArgument(0);
             wo.setId(100);
@@ -95,7 +97,7 @@ class MaintenanceServiceTest {
         req.setRepairRequestId(2);
         req.setLeaderId(2);
         CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
-        member.setAccountId(5);
+        member.setEmployeeId(5);
         member.setRoleInTask("Mechanical technician");
         req.setMembers(List.of(member));
 

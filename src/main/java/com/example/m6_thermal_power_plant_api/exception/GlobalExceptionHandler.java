@@ -23,9 +23,10 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.toList());
         String errors = String.join("; ", errorList);
-
         return ApiResponse.error(HttpStatus.BAD_REQUEST, errors, "VALIDATION_ERROR");
     }
+
+
 
     @ExceptionHandler({EntityNotFoundException.class, ResourceNotFoundException.class})
     public ResponseEntity<ApiResponse<Object>> handleNotFound(RuntimeException ex) {

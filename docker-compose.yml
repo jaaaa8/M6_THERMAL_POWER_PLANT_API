@@ -1,0 +1,84 @@
+# ================================================================
+#  Docker Compose — Chạy toàn bộ stack trên LOCAL / Cloud Server
+#  Dùng để: test trước khi push lên GitLab, hoặc deploy lên server
+# ================================================================
+#
+# Cách dùng:
+#   1. Copy file .env.example → .env và điền giá trị thực
+#   2. docker-compose up -d
+#   3. Truy cập http://localhost (frontend) hoặc http://localhost:8080 (backend)
+
+services:
+
+  # ── MySQL Database ─────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: thermal_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: m6_thermal_power_plant
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"        # Mở ra ngoài để dễ debug bằng MySQL Workbench
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - thermal_network
+
+  # ── Spring Boot Backend ────────────────────────────────────────
+  backend:
+    image: ${ECR_REGISTRY}/thermal-power-plant-api:latest   # Dùng image từ ECR
+    # Hoặc build local: build: .
+    container_name: thermal_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy     # Chờ MySQL sẵn sàng mới start
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/m6_thermal_power_plant?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s              # Spring Boot cần ~30-60s để khởi động
+    networks:
+      - thermal_network
+
+  # ── React Frontend (Nginx) ────────────────────────────────────
+  frontend:
+    image: ${ECR_REGISTRY}/thermal-power-plant-frontend:latest
+    # Hoặc build local: build: ../M6_THERMAL_POWER_PLANT
+    container_name: thermal_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    networks:
+      - thermal_network
+
+# ── Volumes ────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+    driver: local
+
+# ── Networks ───────────────────────────────────────────────────
+networks:
+  thermal_network:
+    driver: bridge

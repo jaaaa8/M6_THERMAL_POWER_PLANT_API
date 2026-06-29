@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.1.0'
+    id 'org.springframework.boot' version '3.5.1'
     id 'io.spring.dependency-management' version '1.1.7'
     // freefair Lombok plugin improves IDE and Gradle integration for Lombok
     id 'io.freefair.lombok' version '6.6.1'
@@ -45,11 +45,14 @@ dependencies {
 
     // 5. Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'    // H2 in-memory DB cho integration tests trong CI/CD
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'manual'  // Bỏ qua test cần MySQL thật + sample-data.sql
+    }
     jvmArgs '-Xshare:off'
 }

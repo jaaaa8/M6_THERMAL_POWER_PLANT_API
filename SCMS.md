@@ -1,32 +1,238 @@
-# **1\. Luồng quản lý thiết bị**
+# CHƯƠNG X. PHÂN TÍCH LUỒNG NGHIỆP VỤ HỆ THỐNG SCMS
 
-Hệ thống cho phép quản lý toàn bộ thiết bị trong nhà máy theo cấu trúc phân cấp từ hệ thống lớn đến từng thiết bị cụ thể. Mỗi hệ thống có thể bao gồm nhiều thiết bị thuộc các nhóm chuyên môn khác nhau như Cơ khí, Điện và Điều khiển \- Đo lường (CI).
+## 1\. Luồng quản lý nhân sự và phân quyền
 
-Đối với mỗi thiết bị, hệ thống lưu trữ đầy đủ các thông tin nhận dạng bao gồm mã KKS, tên thiết bị, hệ thống trực thuộc, loại thiết bị và trạng thái hoạt động hiện tại. Ngoài ra, hệ thống hỗ trợ quản lý các thông số kỹ thuật động của thiết bị như lưu lượng, áp suất, điện áp, công suất,... thông qua cơ chế khai báo thông số linh hoạt, giúp đáp ứng được sự đa dạng của các loại thiết bị trong nhà máy.
+### Mô tả nghiệp vụ
 
-Người dùng có thể tìm kiếm thiết bị theo mã KKS, tên thiết bị hoặc loại thiết bị. Khi truy cập vào thông tin chi tiết, hệ thống hiển thị toàn bộ hồ sơ kỹ thuật của thiết bị phục vụ cho quá trình vận hành và sửa chữa.
+Hệ thống quản lý thông tin nhân sự tham gia vào quá trình vận hành và sửa chữa trong nhà máy. Tuy nhiên, không phải tất cả nhân sự đều được phép truy cập hệ thống. Chỉ những nhân sự đảm nhận vai trò quản lý hoặc thực hiện các nghiệp vụ trên phần mềm mới được cấp tài khoản đăng nhập.
 
-# **2\. Luồng xử lý yêu cầu sửa chữa và phiếu công tác**
+Mỗi tài khoản có thể được gán một hoặc nhiều vai trò khác nhau nhằm xác định phạm vi chức năng được sử dụng.
 
-Khi nhân viên vận hành phát hiện thiết bị xảy ra sự cố hoặc cần được kiểm tra, bảo dưỡng, nhân viên sẽ tạo một Phiếu yêu cầu sửa chữa trên hệ thống. Nội dung yêu cầu bao gồm thiết bị gặp sự cố, mô tả tình trạng, mức độ ưu tiên và các thông tin liên quan.
+### Luồng xử lý
 
-Sau khi được tiếp nhận, bộ phận sửa chữa sẽ xem xét và xác nhận yêu cầu. Từ Phiếu yêu cầu sửa chữa, Tổ trưởng hoặc người có thẩm quyền sẽ tạo Phiếu công tác để triển khai thực hiện công việc.
+1. Quản trị viên tạo phòng ban.  
+2. Quản trị viên khai báo thông tin nhân sự.  
+3. Xác định nhân sự có cần sử dụng hệ thống hay không.  
+4. Nếu có, tạo tài khoản đăng nhập.  
+5. Gán vai trò phù hợp cho tài khoản.  
+6. Người dùng đăng nhập và sử dụng các chức năng được phân quyền.
 
-Phiếu công tác là trung tâm của toàn bộ quy trình sửa chữa. Trong phiếu công tác, người quản lý sẽ phân công các vai trò cần thiết như Người lãnh đạo công việc, Người chỉ huy trực tiếp, Người giám sát an toàn và các nhân viên thực hiện. Hệ thống cho phép cập nhật danh sách nhân sự tham gia theo thời gian thực nhằm đáp ứng các trường hợp thay đổi nhân sự hoặc đổi ca làm việc.
+### Bảng dữ liệu liên quan
 
-Sau khi hoàn tất việc bố trí nhân lực, hệ thống sẽ sinh Phiếu công tác dưới dạng tệp PDF để phục vụ việc in ấn, ký xác nhận và lưu trữ theo quy định an toàn của nhà máy. Phiếu công tác sau đó được trình lên bộ phận vận hành để thực hiện các thao tác cô lập thiết bị trước khi tiến hành sửa chữa.
+* phong\_ban  
+* nhan\_su  
+* tai\_khoan  
+* vai\_tro  
+* phan\_quyen\_tai\_khoan
 
-Trong quá trình thực hiện, nếu công việc chưa thể hoàn thành trong thời gian dự kiến, người phụ trách có thể đề nghị gia hạn Phiếu công tác. Mọi thay đổi liên quan đến phiếu đều được ghi nhận vào nhật ký hệ thống nhằm phục vụ công tác kiểm tra và truy vết sau này.
+## 2\. Luồng quản lý hệ thống và thiết bị
 
-Sau khi công việc kết thúc, Phiếu công tác được đóng lại và lưu vào lịch sử sửa chữa của thiết bị.
+### Mô tả nghiệp vụ
 
-# **3\. Luồng quản lý vật tư, công cụ và bảo dưỡng định kỳ**
+Nhà máy được chia thành nhiều hệ thống khác nhau như: lò hơi, tua-bin, xử lý nước, nhiên liệu,...
 
-Trong quá trình sửa chữa, nếu cần sử dụng vật tư tiêu hao như dầu mỡ, hóa chất, vật liệu phụ trợ,... nhân viên có thể thực hiện yêu cầu xuất kho trực tiếp thông qua Phiếu công tác. Hệ thống sẽ ghi nhận đầy đủ các giao dịch nhập, xuất và điều chỉnh tồn kho để đảm bảo tính chính xác của số liệu vật tư.
+Mỗi hệ thống bao gồm nhiều thiết bị. Thiết bị có thể thuộc nhóm cơ khí, điện hoặc CI (Control & Instrument).
 
-Đối với các vật tư thay thế có giá trị lớn hoặc ảnh hưởng trực tiếp đến hoạt động của thiết bị, bộ phận sửa chữa phải lập Biên bản đánh giá kỹ thuật để xác nhận tình trạng hư hỏng và đề xuất phương án thay thế. Sau khi được phê duyệt, hệ thống sẽ tạo yêu cầu xuất kho tương ứng và cập nhật số lượng tồn kho.
+Mỗi thiết bị được định danh duy nhất bằng mã KKS và có thể có nhiều thông số kỹ thuật khác nhau.
 
-Bên cạnh vật tư, hệ thống còn quản lý Công cụ dụng cụ phục vụ công tác sửa chữa. Các công cụ này được theo dõi theo hình thức mượn và trả, giúp kiểm soát số lượng hiện có cũng như trách nhiệm của người sử dụng.
+### Luồng xử lý
 
-Ngoài hoạt động sửa chữa khi phát sinh sự cố, hệ thống còn hỗ trợ quản lý công tác bảo dưỡng định kỳ. Đối với các thiết bị cần thay dầu, bôi mỡ hoặc kiểm tra theo chu kỳ, người quản lý có thể thiết lập kế hoạch bảo dưỡng với tần suất cụ thể. Hệ thống sẽ tự động nhắc lịch khi đến hạn thực hiện. Sau khi hoàn thành công việc bảo dưỡng, thông tin thực hiện sẽ được lưu vào lịch sử bảo dưỡng của thiết bị nhằm phục vụ công tác theo dõi và đánh giá độ tin cậy vận hành.
+1. Khai báo hệ thống.  
+2. Khai báo loại thiết bị.  
+3. Khai báo thiết bị thuộc hệ thống.  
+4. Khai báo các loại thông số kỹ thuật.  
+5. Gán thông số tương ứng cho từng thiết bị.  
+6. Người dùng tìm kiếm thiết bị theo:  
+   * Tên thiết bị;  
+   * Mã KKS;  
+   * Loại thiết bị;  
+   * Hệ thống.
+
+### Bảng dữ liệu liên quan
+
+* he\_thong  
+* loai\_thiet\_bi  
+* thiet\_bi  
+* danh\_muc\_thong\_so  
+* thong\_so\_thiet\_bi
+
+## 3\. Luồng tạo phiếu yêu cầu sửa chữa
+
+### Mô tả nghiệp vụ
+
+Khi bộ phận vận hành phát hiện thiết bị gặp sự cố hoặc có dấu hiệu bất thường, nhân sự vận hành sẽ tạo phiếu yêu cầu sửa chữa để gửi sang bộ phận sửa chữa xử lý.
+
+Phiếu yêu cầu chỉ mang tính chất ghi nhận sự cố, chưa phải là lệnh sửa chữa.
+
+### Luồng xử lý
+
+1. Người vận hành xác định thiết bị gặp sự cố.  
+2. Chọn thiết bị cần sửa chữa.  
+3. Nhập mô tả sự cố.  
+4. Chọn mức độ ưu tiên.  
+5. Gửi phiếu yêu cầu.  
+6. Bộ phận sửa chữa tiếp nhận yêu cầu.
+
+### Bảng dữ liệu liên quan
+
+* phieu\_yeu\_cau\_sua\_chua  
+* thiet\_bi  
+* nhan\_su
+
+## 4\. Luồng lập phiếu công tác
+
+### Mô tả nghiệp vụ
+
+Sau khi tiếp nhận yêu cầu sửa chữa, tổ trưởng hoặc quản đốc sửa chữa sẽ tạo phiếu công tác.
+
+Phiếu công tác là căn cứ để bố trí nhân lực, triển khai công việc, thực hiện ký duyệt và kiểm soát an toàn.
+
+### Luồng xử lý
+
+1. Tiếp nhận phiếu yêu cầu sửa chữa.  
+2. Xác định tổ thực hiện.  
+3. Tạo phiếu công tác.  
+4. Chỉ định:  
+   * Người lãnh đạo công việc;  
+   * Người chỉ huy trực tiếp;  
+   * Người giám sát an toàn.  
+5. Bổ sung danh sách nhân sự tham gia.  
+6. Xuất phiếu công tác dưới dạng PDF.  
+7. Thực hiện ký duyệt theo quy định.
+
+### Bảng dữ liệu liên quan
+
+* phieu\_cong\_tac  
+* thanh\_vien\_phieu\_cong\_tac  
+* phieu\_yeu\_cau\_sua\_chua  
+* nhan\_su
+
+## 5\. Luồng thay đổi nhân sự và gia hạn phiếu công tác
+
+### Mô tả nghiệp vụ
+
+Trong quá trình thực hiện công việc, phiếu công tác có thể kéo dài sang ngày tiếp theo hoặc cần thay đổi nhân sự do hết ca làm việc.
+
+Hệ thống cần lưu lại toàn bộ lịch sử thay đổi nhằm phục vụ truy xuất sau này.
+
+### Luồng xử lý
+
+1. Kiểm tra tình trạng thực hiện phiếu.  
+2. Xác định nhu cầu gia hạn hoặc đổi người.  
+3. Thực hiện cập nhật nhân sự mới.  
+4. Ghi nhận thời điểm tham gia và rút khỏi công việc.  
+5. Nếu cần, tạo yêu cầu gia hạn phiếu.  
+6. Người có thẩm quyền phê duyệt gia hạn.
+
+### Bảng dữ liệu liên quan
+
+* thanh\_vien\_phieu\_cong\_tac  
+* gia\_han\_phieu\_cong\_tac  
+* nhat\_ky\_phieu\_cong\_tac
+
+## 6\. Luồng đánh giá kỹ thuật
+
+### Mô tả nghiệp vụ
+
+Sau khi kiểm tra thực tế thiết bị, tổ sửa chữa có thể phát hiện cần thay thế linh kiện hoặc vật tư.
+
+Khi đó phải lập biên bản đánh giá kỹ thuật để làm căn cứ xuất vật tư thay thế.
+
+### Luồng xử lý
+
+1. Tiến hành kiểm tra thiết bị.  
+2. Đánh giá nguyên nhân hư hỏng.  
+3. Lập biên bản đánh giá kỹ thuật.  
+4. Đính kèm tài liệu minh chứng.  
+5. Đề xuất vật tư cần thay thế.  
+6. Trình cấp có thẩm quyền xem xét.
+
+### Bảng dữ liệu liên quan
+
+* bien\_ban\_danh\_gia\_ky\_thuat  
+* chi\_tiet\_vat\_tu\_de\_xuat  
+* vat\_tu
+
+## 7\. Luồng quản lý vật tư
+
+### Mô tả nghiệp vụ
+
+Hệ thống quản lý hai nhóm vật tư:
+
+* Vật tư tiêu hao;  
+* Vật tư thay thế.
+
+Mọi hoạt động nhập kho, xuất kho hoặc điều chỉnh đều phải được ghi nhận.
+
+### Luồng xử lý
+
+1. Nhập vật tư vào kho.  
+2. Cập nhật số lượng tồn.  
+3. Khi có nhu cầu sử dụng:  
+   * Xuất vật tư tiêu hao trực tiếp;  
+   * Xuất vật tư thay thế dựa trên biên bản kỹ thuật.  
+4. Ghi nhận lịch sử giao dịch kho.
+
+### Bảng dữ liệu liên quan
+
+* loai\_vat\_tu  
+* vat\_tu  
+* giao\_dich\_kho  
+* bien\_ban\_danh\_gia\_ky\_thuat
+
+## 8\. Luồng quản lý công cụ dụng cụ
+
+### Mô tả nghiệp vụ
+
+Công cụ dụng cụ là tài sản dùng chung, có thể được cấp phát tạm thời và hoàn trả sau khi sử dụng.
+
+Khác với vật tư tiêu hao, công cụ dụng cụ không bị mất đi sau mỗi lần sử dụng.
+
+### Luồng xử lý
+
+1. Nhập công cụ vào kho.
+
+2. Nhân sự đăng ký mượn công cụ.  
+3. Thủ kho xác nhận giao công cụ.  
+4. Sau khi hoàn thành công việc, nhân sự trả lại công cụ.  
+5. Hệ thống cập nhật lịch sử mượn trả.
+
+### Bảng dữ liệu liên quan
+
+* cong\_cu\_dung\_cu  
+* nhat\_ky\_muon\_tra\_cong\_cu  
+* nhan\_su
+
+## 9\. Luồng bảo dưỡng định kỳ
+
+### Mô tả nghiệp vụ
+
+Bên cạnh sửa chữa sự cố, hệ thống còn hỗ trợ quản lý bảo dưỡng định kỳ cho các thiết bị cần thay dầu hoặc bôi trơn theo chu kỳ.
+
+Hệ thống sẽ tự động nhắc lịch khi đến hạn thực hiện.
+
+### Luồng xử lý
+
+1. Khai báo chu kỳ bảo dưỡng.  
+2. Xác định ngày thực hiện tiếp theo.  
+3. Hệ thống gửi thông báo khi đến hạn.  
+4. Nhân sự thực hiện bảo dưỡng.  
+5. Cập nhật kết quả thực hiện.  
+6. Sinh lịch bảo dưỡng kế tiếp.
+
+### Bảng dữ liệu liên quan
+
+* ke\_hoach\_bao\_duong\_dau\_mo  
+* lich\_su\_bao\_duong\_dau\_mo  
+* thiet\_bi
+
+## 10\. Luồng nghiệp vụ tổng thể của hệ thống
+
+Thiết bị trong nhà máy được quản lý theo từng hệ thống. Khi phát sinh sự cố, bộ phận vận hành sẽ tạo phiếu yêu cầu sửa chữa.
+
+Bộ phận sửa chữa tiếp nhận yêu cầu và lập phiếu công tác để tổ chức thực hiện. Trong quá trình sửa chữa có thể phát sinh thay đổi nhân sự, gia hạn phiếu hoặc đánh giá kỹ thuật để đề xuất vật tư thay thế.
+
+Sau khi hoàn thành công việc, vật tư sử dụng được ghi nhận, phiếu được đóng lại và toàn bộ lịch sử được lưu trữ phục vụ tra cứu.
+
+Song song với đó, hệ thống quản lý các hoạt động bảo dưỡng định kỳ nhằm hạn chế sự cố phát sinh trong quá trình vận hành nhà máy.
 

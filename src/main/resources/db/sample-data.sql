@@ -85,11 +85,11 @@ INSERT INTO parameter_unit_map (parameter_id, unit_id) VALUES
 (6, 6),
 (7, 7);
 
-INSERT INTO systems (id, name, description, is_deleted) VALUES
-(1, 'Boiler Feedwater System', 'Pumps, valves, and lines supplying boiler feedwater', false),
-(2, 'Cooling Water System', 'Circulating and auxiliary cooling water equipment', false),
-(3, 'Coal Handling System', 'Coal conveying and preparation equipment', false),
-(4, 'Electrical Distribution', 'Motors, transformers, and MCC panels', false);
+INSERT INTO systems (id, code, name, description, status, is_deleted) VALUES
+(1, 'SYS-BFW', 'Boiler Feedwater System', 'Pumps, valves, and lines supplying boiler feedwater', 'ACTIVE', false),
+(2, 'SYS-CWS', 'Cooling Water System', 'Circulating and auxiliary cooling water equipment', 'ACTIVE', false),
+(3, 'SYS-CHS', 'Coal Handling System', 'Coal conveying and preparation equipment', 'ACTIVE', false),
+(4, 'SYS-ELEC', 'Electrical Distribution', 'Motors, transformers, and MCC panels', 'ACTIVE', false);
 
 INSERT INTO equipment_types (id, name, description, is_deleted) VALUES
 (1, 'Pump', 'Centrifugal and auxiliary pumps', false),
@@ -116,20 +116,20 @@ INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, descrip
 (6, 5, 6, '1450', 'Rated fan speed', false);
 
 INSERT INTO spare_parts (
-    id, spare_part_code, name, price, manufacturer, img_path, status, is_deleted
+    id, spare_part_code, name, price, manufacturer, img_path, unit_id, status, is_deleted
 ) VALUES
-(1, 'SP-BRG-6312', 'Bearing 6312 C3', 1250000.00, 'SKF', null, 'ACTIVE', false),
-(2, 'SP-SEAL-050', 'Mechanical Seal 50mm', 3750000.00, 'EagleBurgmann', null, 'ACTIVE', false),
-(3, 'SP-MTR-CONT', 'Motor Contactor 220V', 980000.00, 'Schneider', null, 'ACTIVE', false),
-(4, 'SP-VLV-GASK', 'Valve Gasket DN100', 150000.00, 'Local Supplier', null, 'ACTIVE', false);
+(1, 'SP-BRG-6312', 'Bearing 6312 C3', 1250000.00, 'SKF', null, null, 'ACTIVE', false),
+(2, 'SP-SEAL-050', 'Mechanical Seal 50mm', 3750000.00, 'EagleBurgmann', null, null, 'ACTIVE', false),
+(3, 'SP-MTR-CONT', 'Motor Contactor 220V', 980000.00, 'Schneider', null, null, 'ACTIVE', false),
+(4, 'SP-VLV-GASK', 'Valve Gasket DN100', 150000.00, 'Local Supplier', null, null, 'ACTIVE', false);
 
 INSERT INTO consumable (
-    id, consumable_code, name, price, manufacturer, img_path, status, is_deleted
+    id, consumable_code, name, price, manufacturer, img_path, unit_id, status, is_deleted
 ) VALUES
-(1, 'CON-LUBE-68', 'Hydraulic Oil ISO VG 68', 85000.00, 'Shell', null, 'ACTIVE', false),
-(2, 'CON-GREASE-EP2', 'Grease EP2', 120000.00, 'Mobil', null, 'ACTIVE', false),
-(3, 'CON-RAG', 'Cleaning Rag', 15000.00, 'Local Supplier', null, 'ACTIVE', false),
-(4, 'CON-RP7', 'Rust Remover Spray', 65000.00, 'RP7', null, 'ACTIVE', false);
+(1, 'CON-LUBE-68', 'Hydraulic Oil ISO VG 68', 85000.00, 'Shell', null, null, 'ACTIVE', false),
+(2, 'CON-GREASE-EP2', 'Grease EP2', 120000.00, 'Mobil', null, null, 'ACTIVE', false),
+(3, 'CON-RAG', 'Cleaning Rag', 15000.00, 'Local Supplier', null, null, 'ACTIVE', false),
+(4, 'CON-RP7', 'Rust Remover Spray', 65000.00, 'RP7', null, null, 'ACTIVE', false);
 
 INSERT INTO spare_parts_inventory (
     id, spare_part_id, supplier, account_id, quantity, transaction_type, transaction_date, is_deleted
@@ -219,11 +219,11 @@ INSERT INTO tool_borrow_logs (
 (3, 4, 6, 1, 'Lockout for electrical isolation',  'APPROVED', '2026-06-15 08:15:00', '2026-06-15 08:35:00', '2026-06-15 20:00:00', null, null, 4, false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, is_deleted
+    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
 ) VALUES
-(1, 1, 3, '2026-09-10', 1, 25.00, false),
-(2, 3, 2, '2026-08-05', 2, 3.00, false),
-(3, 5, 1, '2026-07-15', 2, 1.50, false);
+(1, 1, 3, '2026-09-10', 1, 25.00, 'NOT_LUBRICATED', false),
+(2, 3, 2, '2026-08-05', 2, 3.00, 'NOT_LUBRICATED', false),
+(3, 5, 1, '2026-07-15', 2, 1.50, 'NOT_LUBRICATED', false);
 
 INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted
@@ -286,9 +286,9 @@ INSERT INTO consumable_issues (
 (4, 'CI-2026-0004', 3, 1, 'export', 8.00, 4, '2026-06-18 14:05:00', false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, is_deleted
+    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
 ) VALUES
-(4, 6, 3, '2026-09-18', 1, 20.00, false);
+(4, 6, 3, '2026-09-18', 1, 20.00, 'NOT_LUBRICATED', false);
 
 INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted
