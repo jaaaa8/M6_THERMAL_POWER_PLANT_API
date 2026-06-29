@@ -14,25 +14,41 @@ INSERT INTO roles (id, name, is_deleted) VALUES
 (5, 'WAREHOUSE_STAFF', false),
 (6, 'SAFETY_SUPERVISOR', false);
 
+INSERT INTO positions (id, position_code, name, is_deleted) VALUES
+(1, 'POS-SL', 'Shift Leader', false),
+(2, 'POS-ML', 'Maintenance Leader', false),
+(3, 'POS-ET', 'Electrical Technician', false),
+(4, 'POS-WK', 'Warehouse Keeper', false),
+(5, 'POS-MT', 'Mechanical Technician', false),
+(6, 'POS-SS', 'Safety Supervisor', false);
+
+INSERT INTO expertises (id, expertise_code, name, is_deleted) VALUES
+(1, 'EXP-BO', 'Boiler operation', false),
+(2, 'EXP-RE', 'Rotating equipment', false),
+(3, 'EXP-MM', 'Motor and MCC', false),
+(4, 'EXP-IC', 'Inventory control', false),
+(5, 'EXP-PA', 'Pump alignment', false),
+(6, 'EXP-WS', 'Work safety', false);
+
 INSERT INTO employees (
-    id, employee_code, full_name, gmail, phone, department_id, position, expertise, is_active, img_path, is_deleted
+    id, employee_code, full_name, gmail, phone, department_id, position_id, expertise_id, is_active, img_path, is_deleted
 ) VALUES
-(1, 'EMP-001', 'Nguyen Van An', 'an.nguyen@example.com', '0901000001', 1, 'Shift Leader', 'Boiler operation', true, null, false),
-(2, 'EMP-002', 'Tran Thi Binh', 'binh.tran@example.com', '0901000002', 2, 'Maintenance Leader', 'Rotating equipment', true, null, false),
-(3, 'EMP-003', 'Le Minh Cuong', 'cuong.le@example.com', '0901000003', 3, 'Electrical Technician', 'Motor and MCC', true, null, false),
-(4, 'EMP-004', 'Pham Thu Dung', 'dung.pham@example.com', '0901000004', 4, 'Warehouse Keeper', 'Inventory control', true, null, false),
-(5, 'EMP-005', 'Hoang Quoc Dat', 'dat.hoang@example.com', '0901000005', 2, 'Mechanical Technician', 'Pump alignment', true, null, false),
-(6, 'EMP-006', 'Do Hai Nam', 'nam.do@example.com', '0901000006', 1, 'Safety Supervisor', 'Work safety', true, null, false);
+(1, 'EMP-001', 'Nguyen Van An', 'an.nguyen@example.com', '0901000001', 1, 1, 1, true, null, false),
+(2, 'EMP-002', 'Tran Thi Binh', 'binh.tran@example.com', '0901000002', 2, 2, 2, true, null, false),
+(3, 'EMP-003', 'Le Minh Cuong', 'cuong.le@example.com', '0901000003', 3, 3, 3, true, null, false),
+(4, 'EMP-004', 'Pham Thu Dung', 'dung.pham@example.com', '0901000004', 4, 4, 4, true, null, false),
+(5, 'EMP-005', 'Hoang Quoc Dat', 'dat.hoang@example.com', '0901000005', 2, 5, 5, true, null, false),
+(6, 'EMP-006', 'Do Hai Nam', 'nam.do@example.com', '0901000006', 1, 6, 6, true, null, false);
 
 INSERT INTO accounts (
-    id, employee_id, username, password_hash, is_active, is_deleted
+    id, employee_id, username, password_hash, status, is_deleted
 ) VALUES
-(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
-(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false);
+(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
+(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false);
 
 INSERT INTO account_roles (account_id, role_id) VALUES
 (1, 2),
@@ -85,10 +101,10 @@ INSERT INTO equipment_types (id, name, description, is_deleted) VALUES
 INSERT INTO equipment (
     id, kks_code, name, system_id, equipment_type_id, status, description, img_path, is_deleted
 ) VALUES
-(1, '10LAC10AP001', 'Boiler Feed Pump A', 1, 1, 'OPERATING', 'Main boiler feed pump train A', null, false),
+(1, '10LAC10AP001', 'Boiler Feed Pump A', 1, 1, 'ACTIVE', 'Main boiler feed pump train A', null, false),
 (2, '10LAC10AP002', 'Boiler Feed Pump B', 1, 1, 'STANDBY', 'Main boiler feed pump train B', null, false),
-(3, '10PAB10AN001', 'Cooling Water Pump A', 2, 1, 'OPERATING', 'Cooling water circulation pump A', null, false),
-(4, '10EBA10GS001', 'MCC Panel 1', 4, 2, 'OPERATING', 'Motor control center for unit 1 auxiliaries', null, false),
+(3, '10PAB10AN001', 'Cooling Water Pump A', 2, 1, 'ACTIVE', 'Cooling water circulation pump A', null, false),
+(4, '10EBA10GS001', 'MCC Panel 1', 4, 2, 'ACTIVE', 'Motor control center for unit 1 auxiliaries', null, false),
 (5, '10HFB20AF001', 'Coal Conveyor Fan', 3, 4, 'MAINTENANCE', 'Ventilation fan for coal conveyor gallery', null, false);
 
 INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, description, is_deleted) VALUES
@@ -135,9 +151,9 @@ INSERT INTO consumable_inventory (
 INSERT INTO repair_requests (
     id, request_code, equipment_id, requester_id, incident_description, priority, status, created_at, is_deleted
 ) VALUES
-(1, 'RR-2026-0001', 1, 1, 'Abnormal vibration detected at pump drive end bearing.', 'high', 'APPROVED', '2026-06-10 07:45:00', false),
-(2, 'RR-2026-0002', 5, 1, 'Coal conveyor fan trips intermittently during startup.', 'low', 'PENDING', '2026-06-12 09:20:00', false),
-(3, 'RR-2026-0003', 4, 1, 'MCC panel temperature alarm appears during peak load.', 'high', 'IN_PROGRESS', '2026-06-14 13:10:00', false);
+(1, 'RR-2026-0001', 1, 1, 'Abnormal vibration detected at pump drive end bearing.', 'HIGH', 'APPROVED', '2026-06-10 07:45:00', false),
+(2, 'RR-2026-0002', 5, 1, 'Coal conveyor fan trips intermittently during startup.', 'LOW', 'PENDING', '2026-06-12 09:20:00', false),
+(3, 'RR-2026-0003', 4, 1, 'MCC panel temperature alarm appears during peak load.', 'HIGH', 'IN_PROGRESS', '2026-06-14 13:10:00', false);
 
 INSERT INTO work_orders (
     id, order_code, repair_request_id, leader_id, direct_supervisor_id, safety_supervisor_id,
@@ -161,10 +177,10 @@ INSERT INTO work_order_extensions (
 (1, 2, 'Need additional insulation resistance testing before energizing.', '2026-06-15 20:00:00', 1, false);
 
 INSERT INTO technical_assessments (
-    id, technical_code, work_order_id, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
 ) VALUES
-(1, 'TA-2026-0001', 1, 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
-(2, 'TA-2026-0002', 2, 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS', false);
+(1, 'TA-2026-0001', 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
+(2, 'TA-2026-0002', 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS', false);
 
 INSERT INTO spare_parts_issues (
     id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted
@@ -187,33 +203,34 @@ INSERT INTO tool_categories (
 (3, 'TOOL-SAFE', 'Safety Tools', 'Safety lockout and permit tools', false);
 
 INSERT INTO tools (
-    id, tool_code, name, tool_category_id, quantity, description, img_path, is_deleted
+    id, tool_code, name, tool_category_id, unit, quantity, quantity_borrowed, quantity_damaged, note, is_deleted
 ) VALUES
-(1, 'TL-TORQUE-001', 'Torque Wrench 20-200 Nm', 1, 4, 'Calibrated torque wrench', null, false),
-(2, 'TL-PULLER-001', 'Bearing Puller Set', 1, 2, 'Hydraulic bearing puller set', null, false),
-(3, 'TL-MEGA-001', 'Insulation Tester 1kV', 2, 3, 'Digital insulation resistance tester', null, false),
-(4, 'TL-LOCK-001', 'Lockout Tagout Kit', 3, 6, 'Electrical isolation lockout kit', null, false);
+(1, 'TL-TORQUE-001', 'Torque Wrench 20-200 Nm', 1, 'Cái', 4, 0, 0, 'Calibrated torque wrench', false),
+(2, 'TL-PULLER-001', 'Bearing Puller Set',      1, 'Bộ',  2, 0, 0, 'Hydraulic bearing puller set', false),
+(3, 'TL-MEGA-001',   'Insulation Tester 1kV',   2, 'Cái', 3, 1, 0, 'Digital insulation resistance tester', false),
+(4, 'TL-LOCK-001',   'Lockout Tagout Kit',      3, 'Bộ',  6, 1, 0, 'Electrical isolation lockout kit', false);
 
 INSERT INTO tool_borrow_logs (
-    id, tool_id, account_id, quantity, transaction_type, status, transaction_date, due_date, actual_return_date, approved_by, is_deleted
+    id, tool_id, account_id, quantity, borrow_purpose, status, transaction_date, delivered_date,
+    due_date, actual_return_date, return_note, approved_by, overdue_notified
 ) VALUES
-(1, 2, 5, 1, 'BORROW', 'RETURNED', '2026-06-10 12:30:00', '2026-06-10 19:00:00', '2026-06-10 18:10:00', 4, false),
-(2, 3, 3, 1, 'BORROW', 'APPROVED', '2026-06-15 08:10:00', '2026-06-15 20:00:00', null, 4, false),
-(3, 4, 6, 1, 'BORROW', 'APPROVED', '2026-06-15 08:15:00', '2026-06-15 20:00:00', null, 4, false);
+(1, 2, 5, 1, 'Pull bearing for pump A overhaul', 'RETURNED', '2026-06-10 12:30:00', '2026-06-10 13:00:00', '2026-06-10 19:00:00', '2026-06-10 18:10:00', 'Returned in good condition', 4, false),
+(2, 3, 3, 1, 'Insulation test on MCC panel',      'APPROVED', '2026-06-15 08:10:00', '2026-06-15 08:30:00', '2026-06-15 20:00:00', null, null, 4, false),
+(3, 4, 6, 1, 'Lockout for electrical isolation',  'APPROVED', '2026-06-15 08:15:00', '2026-06-15 08:35:00', '2026-06-15 20:00:00', null, null, 4, false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, lubricant_type, consumable_id, quantity, is_deleted
+    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, is_deleted
 ) VALUES
-(1, 1, 3, '2026-09-10', 'Hydraulic oil ISO VG 68', 1, 25.00, false),
-(2, 3, 2, '2026-08-05', 'Grease EP2', 2, 3.00, false),
-(3, 5, 1, '2026-07-15', 'Grease EP2', 2, 1.50, false);
+(1, 1, 3, '2026-09-10', 1, 25.00, false),
+(2, 3, 2, '2026-08-05', 2, 3.00, false),
+(3, 5, 1, '2026-07-15', 2, 1.50, false);
 
 INSERT INTO lubrication_history (
-    id, plan_id, performed_date, notes, is_deleted
+    id, equipment_id, performed_date, notes, is_deleted
 ) VALUES
 (1, 1, '2026-06-10', 'Oil level checked and topped up during bearing replacement.', false),
-(2, 2, '2026-06-05', 'Greased cooling water pump bearings.', false),
-(3, 3, '2026-06-15', 'Fan bearing lubrication completed before restart.', false);
+(2, 3, '2026-06-05', 'Greased cooling water pump bearings.', false),
+(3, 5, '2026-06-15', 'Fan bearing lubrication completed before restart.', false);
 
 -- ============================================================================
 -- Thiết bị MỚI NHẤT (id = 6) cùng toàn bộ cây dữ liệu liên quan.
@@ -225,7 +242,7 @@ INSERT INTO lubrication_history (
 INSERT INTO equipment (
     id, kks_code, name, system_id, equipment_type_id, status, description, img_path, is_deleted
 ) VALUES
-(6, '10LAB30AP001', 'Condensate Pump A', 1, 1, 'OPERATING', 'Condensate extraction pump train A', null, false);
+(6, '10LAB30AP001', 'Condensate Pump A', 1, 1, 'ACTIVE', 'Condensate extraction pump train A', null, false);
 
 INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, description, is_deleted) VALUES
 (7, 6, 1, '2200', 'Rated motor power', false),
@@ -234,7 +251,7 @@ INSERT INTO equipment_parameters (id, equipment_id, parameter_id, value, descrip
 INSERT INTO repair_requests (
     id, request_code, equipment_id, requester_id, incident_description, priority, status, created_at, is_deleted
 ) VALUES
-(4, 'RR-2026-0004', 6, 1, 'Condensate pump mechanical seal leakage observed during operation.', 'high', 'APPROVED', '2026-06-18 08:00:00', false);
+(4, 'RR-2026-0004', 6, 1, 'Condensate pump mechanical seal leakage observed during operation.', 'HIGH', 'APPROVED', '2026-06-18 08:00:00', false);
 
 INSERT INTO work_orders (
     id, order_code, repair_request_id, leader_id, direct_supervisor_id, safety_supervisor_id,
@@ -254,9 +271,9 @@ INSERT INTO work_order_extensions (
 (2, 3, 'Awaiting replacement mechanical seal delivery before reassembly.', '2026-06-18 22:00:00', 1, false);
 
 INSERT INTO technical_assessments (
-    id, technical_code, work_order_id, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
 ) VALUES
-(3, 'TA-2026-0003', 3, 2, 'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
+(3, 'TA-2026-0003', 2, 'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
 
 INSERT INTO spare_parts_issues (
     id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted
@@ -269,11 +286,11 @@ INSERT INTO consumable_issues (
 (4, 'CI-2026-0004', 3, 1, 'export', 8.00, 4, '2026-06-18 14:05:00', false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, lubricant_type, consumable_id, quantity, is_deleted
+    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, is_deleted
 ) VALUES
-(4, 6, 3, '2026-09-18', 'Hydraulic oil ISO VG 68', 1, 20.00, false);
+(4, 6, 3, '2026-09-18', 1, 20.00, false);
 
 INSERT INTO lubrication_history (
-    id, plan_id, performed_date, notes, is_deleted
+    id, equipment_id, performed_date, notes, is_deleted
 ) VALUES
-(4, 4, '2026-06-18', 'Oil refilled after mechanical seal replacement.', false);
+(4, 6, '2026-06-18', 'Oil refilled after mechanical seal replacement.', false);

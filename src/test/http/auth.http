@@ -1,0 +1,243 @@
+### ============================================================
+### AUTH MODULE — Test Suite
+### Trong IntelliJ: bấm ▶ ở từng request. Variables tự lưu qua biến môi trường.
+### ============================================================
+
+@host = http://localhost:8081
+@contentType = application/json
+
+### ------------------------------------------------------------
+### 1. LOGIN — happy path (admin/admin123)
+### Expect: 200 + accessToken + refreshToken
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+> {%
+    client.global.set("accessToken", response.body.data.accessToken);
+    client.global.set("refreshToken", response.body.data.refreshToken);
+    client.test("Status 200", () => client.assert(response.status === 200));
+    client.test("Has access token", () => client.assert(response.body.data.accessToken !== null));
+%}
+
+### ------------------------------------------------------------
+### 2. LOGIN — sai password
+### Expect: 401 + "Tên đăng nhập hoặc mật khẩu không đúng"
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "wrong-password"
+}
+
+> {%
+    client.test("Status 401", () => client.assert(response.status === 401));
+    client.test("Error code INVALID_CREDENTIALS", () => client.assert(response.body.errorCode === "INVALID_CREDENTIALS"));
+%}
+
+### ------------------------------------------------------------
+### 3. LOGIN — username không tồn tại
+### Expect: 401 (cùng message với sai password để không lộ info)
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "nonexistent-user-xyz",
+  "password": "whatever123"
+}
+
+> {%
+    client.test("Status 401 (không lộ user tồn tại)", () => client.assert(response.status === 401));
+%}
+
+### ------------------------------------------------------------
+### 4. LOGIN — validation: thiếu username
+### Expect: 400 + VALIDATION_ERROR
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "password": "admin123"
+}
+
+> {%
+    client.test("Status 400", () => client.assert(response.status === 400));
+    client.test("Error code VALIDATION_ERROR", () => client.assert(response.body.errorCode === "VALIDATION_ERROR"));
+%}
+
+### ------------------------------------------------------------
+### 5. PROTECTED ENDPOINT — không có token
+### Expect: 401 JSON (KHÔNG phải 403 HTML)
+### Thay /api/v1/work-orders bằng 1 endpoint protected có sẵn của bạn
+### ------------------------------------------------------------
+GET {{host}}/api/v1/accounts/create
+
+> {%
+    client.test("Status 401", () => client.assert(response.status === 401));
+    client.test("Content-Type JSON", () => client.assert(response.contentType.mimeType === "application/json"));
+    client.test("Error code UNAUTHORIZED", () => client.assert(response.body.errorCode === "UNAUTHORIZED"));
+%}
+
+### ------------------------------------------------------------
+### 6. CREATE ACCOUNT — có token ADMIN, tạo user mới
+### Expect: 201
+### ------------------------------------------------------------
+POST {{host}}/api/v1/accounts/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessToken}}
+
+{
+  "username": "user_test_01",
+  "password": "user12345",
+  "roleNames": ["USER"]
+}
+
+> {%
+    client.test("Status 201", () => client.assert(response.status === 201));
+%}
+
+### ------------------------------------------------------------
+### 7. CREATE ACCOUNT — username trùng
+### Expect: 409 + DUPLICATE_RESOURCE
+### ------------------------------------------------------------
+POST {{host}}/api/v1/accounts/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessToken}}
+
+{
+  "username": "user_test_01",
+  "password": "user12345",
+  "roleNames": ["USER"]
+}
+
+> {%
+    client.test("Status 409", () => client.assert(response.status === 409));
+    client.test("Error code DUPLICATE_RESOURCE", () => client.assert(response.body.errorCode === "DUPLICATE_RESOURCE"));
+%}
+
+### ------------------------------------------------------------
+### 8. CREATE ACCOUNT — không có role ADMIN (login bằng user vừa tạo)
+### Step 8a: login bằng user thường
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "user_test_01",
+  "password": "user12345"
+}
+
+> {%
+    client.global.set("userAccessToken", response.body.data.accessToken);
+%}
+
+### Step 8b: user thường gọi /accounts/create → 403
+POST {{host}}/api/v1/accounts/create
+Content-Type: {{contentType}}
+Authorization: Bearer {{userAccessToken}}
+
+{
+  "username": "another_user",
+  "password": "anything123",
+  "roleNames": ["USER"]
+}
+
+> {%
+    client.test("Status 403 (USER không có quyền ADMIN)", () => client.assert(response.status === 403));
+%}
+
+### ------------------------------------------------------------
+### 9. REFRESH — happy path
+### Expect: 200 + token mới
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+> {%
+    client.global.set("oldRefreshToken", client.global.get("refreshToken"));
+    client.global.set("refreshToken", response.body.data.refreshToken);
+    client.global.set("accessToken", response.body.data.accessToken);
+    client.test("Status 200", () => client.assert(response.status === 200));
+    client.test("Token mới khác token cũ (rotation)", () =>
+        client.assert(response.body.data.refreshToken !== client.global.get("oldRefreshToken")));
+%}
+
+### ------------------------------------------------------------
+### 10. REFRESH — token cũ đã bị rotate (replay attack)
+### Expect: 401 + INVALID_TOKEN
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{oldRefreshToken}}"
+}
+
+> {%
+    client.test("Status 401 (replay bị chặn)", () => client.assert(response.status === 401));
+    client.test("Error code INVALID_TOKEN", () => client.assert(response.body.errorCode === "INVALID_TOKEN"));
+%}
+
+### ------------------------------------------------------------
+### 11. REFRESH — token bịa
+### Expect: 401
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9.fake.token"
+}
+
+> {%
+    client.test("Status 401", () => client.assert(response.status === 401));
+%}
+
+### ------------------------------------------------------------
+### 12. LOGOUT — happy path
+### Expect: 200
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}
+
+> {%
+    client.test("Status 200", () => client.assert(response.status === 200));
+%}
+
+### ------------------------------------------------------------
+### 13. REFRESH sau khi logout — token đã bị revoke
+### Expect: 401
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+> {%
+    client.test("Status 401 (logout đã revoke)", () => client.assert(response.status === 401));
+%}
+
+### ------------------------------------------------------------
+### 14. LOGOUT — không có token
+### Expect: 401
+### ------------------------------------------------------------
+POST {{host}}/api/v1/auth/logout
+
+> {%
+    client.test("Status 401", () => client.assert(response.status === 401));
+%}
