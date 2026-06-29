@@ -76,8 +76,8 @@ public class MaintenanceService implements IMaintenanceService {
         List<WorkOrderMember> members = saveMembers(workOrder, request.getMembers());
 
         // Yêu cầu đã có phiếu công tác => rời khỏi danh sách "đang chờ xử lý".
-        repairRequest.setStatus(RepairRequestStatus.IN_PROGRESS);
-        repairRequestRepository.save(repairRequest);
+//        repairRequest.setStatus(RepairRequestStatus.IN_PROGRESS);
+//        repairRequestRepository.save(repairRequest);
 
         return WorkOrderDTO.from(workOrder, members);
     }
