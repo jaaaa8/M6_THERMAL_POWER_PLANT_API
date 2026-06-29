@@ -22,11 +22,12 @@ pipeline {
 
     stages {
         // ══════════════════════════════════════════════════════════
-        // STAGE 1: TEST
+        // STAGE 1: TEST (H2 in-memory DB, skip @Tag("manual") tests)
         // ══════════════════════════════════════════════════════════
         stage('Unit Test') {
             steps {
-                sh './gradlew test --no-daemon'
+                // H2 thay MySQL, @Tag("manual") tự động bị exclude qua build.gradle
+                sh './gradlew test --no-daemon -Dspring.profiles.active=test'
             }
             post {
                 always {

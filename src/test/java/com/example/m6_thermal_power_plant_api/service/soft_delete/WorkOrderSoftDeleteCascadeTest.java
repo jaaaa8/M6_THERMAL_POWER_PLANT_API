@@ -9,6 +9,7 @@ import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   - restore(WO #1) → mọi dòng trên quay lại is_deleted = false.
  */
 @SpringBootTest
+@Tag("manual")  // Chạy thủ công với MySQL thật + sample-data.sql (WO id=1). Không chạy trong CI/CD
 public class WorkOrderSoftDeleteCascadeTest {
 
     private static final int WORK_ORDER_ID = 1; // WO-2026-0001 trong sample-data.sql

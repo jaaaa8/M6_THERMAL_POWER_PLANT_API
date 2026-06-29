@@ -45,11 +45,14 @@ dependencies {
 
     // 5. Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'    // H2 in-memory DB cho integration tests trong CI/CD
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'manual'  // Bỏ qua test cần MySQL thật + sample-data.sql
+    }
     jvmArgs '-Xshare:off'
 }
