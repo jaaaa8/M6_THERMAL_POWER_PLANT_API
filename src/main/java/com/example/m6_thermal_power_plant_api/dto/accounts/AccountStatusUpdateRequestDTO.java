@@ -19,4 +19,6 @@ public class AccountStatusUpdateRequestDTO {
 
     @NotNull(message = "Status cannot be null")
     private AccountStatus status;
+
+
 }
