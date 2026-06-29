@@ -12,6 +12,7 @@ import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
 import lombok.NonNull;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * thì nạp lại sample-data.sql.
  */
 @SpringBootTest
+@Tag("manual")  // Chạy thủ công với MySQL thật + sample-data.sql. Không chạy trong CI/CD
 public class MaintenanceServiceDbTest {
 
     @Autowired

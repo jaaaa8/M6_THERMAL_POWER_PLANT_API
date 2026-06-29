@@ -1,18 +1,13 @@
 package com.example.m6_thermal_power_plant_api.exception;
 
-import jakarta.persistence.EntityNotFoundException;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.OptimisticLockingFailureException;
+import org.hibernate.ObjectNotFoundException;
+import com.example.m6_thermal_power_plant_api.dto.tool.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
@@ -24,7 +19,14 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toList());
         String errors = String.join("; ", errorList);
 
-        return ApiResponse.error(HttpStatus.BAD_REQUEST, errors, "VALIDATION_ERROR");
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler({EntityNotFoundException.class, ResourceNotFoundException.class})
