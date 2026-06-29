@@ -36,15 +36,12 @@ import java.time.LocalDateTime;
  * is_deleted = false) và ném ObjectNotFoundException. Vì vậy chỉ soft-delete
  * khi đã đảm bảo không còn tham chiếu "sống" nào cần đọc lại record đó.
  */
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @MappedSuperclass
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public abstract class BaseSoftDeleteEntity {
 
     @Column(name = "is_deleted", nullable = false)

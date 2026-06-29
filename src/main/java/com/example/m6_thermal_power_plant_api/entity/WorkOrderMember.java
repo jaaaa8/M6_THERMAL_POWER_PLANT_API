@@ -35,10 +35,10 @@ public class WorkOrderMember extends BaseSoftDeleteEntity {
     @CascadeSoftDelete
     private WorkOrder workOrder;
 
-    /** Thành viên tham gia (đăng nhập bằng tài khoản) */
+    /** Thành viên tham gia - nhân viên */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id")
-    private Account account;
+    @JoinColumn(name = "employee_id")
+    private Employee employees;
 
     /** Vai trò trong công việc (VD: Thợ vận hành, Thợ điện...) */
     @Column(name = "role_in_task", length = 255)

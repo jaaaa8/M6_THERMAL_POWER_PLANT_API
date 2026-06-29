@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,7 +31,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "technicalAssessments"})
+@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues"})
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class WorkOrder extends BaseSoftDeleteEntity {
 
@@ -42,9 +43,9 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Column(name = "order_code", nullable = false, length = 50)
     private String orderCode;
 
-    /** Quan hệ 1-1: mỗi PCT chỉ từ 1 yêu cầu duy nhất */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "repair_request_id", unique = true)
+    /** Quan hệ n-1: mỗi PCT thuộc về 1 yêu cầu. 1 yêu cầu có thể có nhiều PCT */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repair_request_id")
     @CascadeSoftDelete
     private RepairRequest repairRequest;
 
@@ -67,10 +68,12 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     private LocalDateTime startTime;
 
     @Column(name = "end_time")
-    private LocalDateTime endTime;
+    private LocalDateTime expectedEndTime;
 
+    /** Mới tạo (OPEN) / Đang thực hiện / Hoàn thành / Đã huỷ */
+    @Enumerated(EnumType.STRING)
     @Column(length = 100)
-    private String status;
+    private WorkOrderStatus status;
 
     /** Đường dẫn file PDF phiếu công tác đã xuất */
     @Column(name = "pdf_path", length = 500)
@@ -91,4 +94,5 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @JsonIgnore
     @OneToMany(mappedBy = "workOrder", fetch = FetchType.LAZY)
     private List<ConsumableIssue> consumableIssues;
+
 }

@@ -2,7 +2,7 @@ package com.example.m6_thermal_power_plant_api.service.equipment;
 
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
-import com.example.m6_thermal_power_plant_api.repository.EquipmentRepository;
+import com.example.m6_thermal_power_plant_api.repository.IEquipmentRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 class EquipmentManagementServiceTest {
 
     @Mock
-    private EquipmentRepository equipmentRepository;
+    private IEquipmentRepository equipmentRepository;
 
     @Mock
     private SoftDeleteCascadeService softDeleteCascadeService;
