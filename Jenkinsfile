@@ -58,7 +58,7 @@ pipeline {
         // ══════════════════════════════════════════════════════════
         stage('Docker Build & Push') {
             when {
-                branch 'main'
+                expression { env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main' || env.BRANCH_NAME == 'main' }
             }
             steps {
                 script {
@@ -90,7 +90,7 @@ pipeline {
         // ══════════════════════════════════════════════════════════
         stage('Deploy to ECS') {
             when {
-                branch 'main'
+                expression { env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main' || env.BRANCH_NAME == 'main' }
             }
             steps {
                 script {
