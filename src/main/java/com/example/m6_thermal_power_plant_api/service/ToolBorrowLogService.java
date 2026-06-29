@@ -10,7 +10,7 @@ import com.example.m6_thermal_power_plant_api.entity.tool.Tool;
 import com.example.m6_thermal_power_plant_api.entity.tool.ToolBorrowLog;
 import com.example.m6_thermal_power_plant_api.exception.BadRequestException;
 import com.example.m6_thermal_power_plant_api.exception.ResourceNotFoundException;
-import com.example.m6_thermal_power_plant_api.repository.IAccountRepository;
+import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.IToolBorrowLogRepository;
 import com.example.m6_thermal_power_plant_api.repository.IToolRepository;
 import com.example.m6_thermal_power_plant_api.service.impl.IToolBorrowLogService;
