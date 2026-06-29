@@ -1,7 +1,8 @@
 package com.example.m6_thermal_power_plant_api.service.equipment;
 
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
-import com.example.m6_thermal_power_plant_api.repository.EquipmentRepository;
+import com.example.m6_thermal_power_plant_api.repository.IEquipmentRepository;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,13 +28,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Vì dùng @Commit nên thay đổi được ghi thật xuống DB (không rollback sau test).
  */
 @SpringBootTest
+@Tag("manual")  // Chạy thủ công với DB thật + sample-data.sql. Không chạy trong CI/CD
 public class EquipmentManagementServiceDbTest {
 
     @Autowired
     private EquipmentManagementService equipmentManagementService;
 
     @Autowired
-    private EquipmentRepository equipmentRepository;
+    private IEquipmentRepository equipmentRepository;
 
     @Test
     @Transactional

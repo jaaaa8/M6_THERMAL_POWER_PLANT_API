@@ -1,8 +1,8 @@
 package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
-import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentStatus;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -27,6 +27,10 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false, of = "id")
+@JsonIgnoreProperties({
+        "hibernateLazyInitializer",
+        "handler"
+})
 public class TechnicalAssessment extends BaseSoftDeleteEntity {
 
     @Id
