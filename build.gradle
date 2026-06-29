@@ -24,7 +24,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
-    // implementation 'org.springframework.boot:spring-boot-starter-security'
+
 
     // 2. Database & Dev Tools
     runtimeOnly 'com.mysql:mysql-connector-j'
@@ -35,7 +35,7 @@ dependencies {
 
     // 4. Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    // testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+
 
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'

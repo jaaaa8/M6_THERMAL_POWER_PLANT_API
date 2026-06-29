@@ -61,4 +61,5 @@ public class ToolController {
                                                   @Valid @RequestBody ToolDamageRequest request) {
         return ApiResponse.success("Đã huỷ CCDC hư hỏng", toolService.markDamaged(id, request));
     }
+
 }
