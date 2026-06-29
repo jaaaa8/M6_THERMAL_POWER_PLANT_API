@@ -1,0 +1,38 @@
+# Ignore files không cần trong Docker build context
+
+# Build output
+build/
+bin/
+out/
+
+# Gradle cache
+.gradle/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Agents & docs
+.agents/
+.claude/
+.gitnexus/
+docs/
+*.md
+*.mwb
+
+# Test reports
+test-results/
+reports/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
