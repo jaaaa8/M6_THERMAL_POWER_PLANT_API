@@ -38,6 +38,11 @@ public class AccountService implements IAccountService {
                                         .name(r.getName())
                                         .build())
                                 .collect(java.util.stream.Collectors.toList()) : java.util.Collections.emptyList())
+                        .employee(a.getEmployee() != null ? AccountResponseDTO.EmployeeInfo.builder()
+                                .id(a.getEmployee().getId())
+                                .fullName(a.getEmployee().getFullName())
+                                .gmail(a.getEmployee().getGmail())
+                                .build() : null)
                         .build())
                 .collect(java.util.stream.Collectors.toList());
     }
