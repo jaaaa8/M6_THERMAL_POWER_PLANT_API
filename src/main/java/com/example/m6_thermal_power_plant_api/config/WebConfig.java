@@ -5,10 +5,10 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * WebConfig — CORS configuration for local development.
+ * WebConfig — CORS configuration for local development & Postman testing.
  *
- * Allows the Vite dev server (http://localhost:5173) to access the Spring Boot API
- * (http://localhost:8080). In production, replace with actual frontend origin or
+ * All origins allowed during development/testing.
+ * In production, restrict to actual frontend origin or
  * use a reverse proxy (e.g., Nginx) to serve both on the same domain.
  */
 @Configuration
@@ -17,13 +17,10 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(
-                        "http://localhost:5173",  // Vite dev server
-                        "http://localhost:3000"   // Alternative React dev server port
-                )
+                .allowedOrigins("*")               // <-- ALL ORIGINS for Postman testing
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true)
+                // .allowCredentials(true)          // DISABLED: credentials incompatible with allowedOrigins("*")
                 .maxAge(3600); // Cache preflight response for 1 hour
     }
 }

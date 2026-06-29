@@ -41,14 +41,14 @@ INSERT INTO employees (
 (6, 'EMP-006', 'Do Hai Nam', 'nam.do@example.com', '0901000006', 1, 6, 6, true, null, false);
 
 INSERT INTO accounts (
-    id, employee_id, username, password_hash, status, is_deleted
+    id, employee_id, username, password_hash, is_active, is_deleted
 ) VALUES
-(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false);
+(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false);
 
 INSERT INTO account_roles (account_id, role_id) VALUES
 (1, 2),
@@ -163,7 +163,7 @@ INSERT INTO work_orders (
 (2, 'WO-2026-0002', 3, 2, 1, 6, '2026-06-15 08:00:00', '2026-06-15 16:00:00', 'IN_PROGRESS', '/exports/work-orders/WO-2026-0002.pdf', false);
 
 INSERT INTO work_order_members (
-    id, work_order_id, account_id, role_in_task, joined_at, left_at, is_deleted
+    id, work_order_id, employee_id, role_in_task, joined_at, left_at, is_deleted
 ) VALUES
 (1, 1, 2, 'Work leader', '2026-06-10 13:00:00', '2026-06-10 18:00:00', false),
 (2, 1, 5, 'Mechanical technician', '2026-06-10 13:00:00', '2026-06-10 18:00:00', false),
@@ -260,7 +260,7 @@ INSERT INTO work_orders (
 (3, 'WO-2026-0003', 4, 2, 1, 6, '2026-06-18 13:00:00', '2026-06-18 17:30:00', 'COMPLETED', '/exports/work-orders/WO-2026-0003.pdf', false);
 
 INSERT INTO work_order_members (
-    id, work_order_id, account_id, role_in_task, joined_at, left_at, is_deleted
+    id, work_order_id, employee_id, role_in_task, joined_at, left_at, is_deleted
 ) VALUES
 (6, 3, 2, 'Work leader', '2026-06-18 13:00:00', '2026-06-18 17:30:00', false),
 (7, 3, 5, 'Mechanical technician', '2026-06-18 13:00:00', '2026-06-18 17:30:00', false);
