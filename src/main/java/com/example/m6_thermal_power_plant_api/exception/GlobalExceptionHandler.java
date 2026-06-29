@@ -26,8 +26,7 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(HttpStatus.BAD_REQUEST, errors, "VALIDATION_ERROR");
     }
 
-        return ApiResponse.error(HttpStatus.BAD_REQUEST, errors, "VALIDATION_ERROR");
-    }
+
 
     @ExceptionHandler({EntityNotFoundException.class, ResourceNotFoundException.class})
     public ResponseEntity<ApiResponse<Object>> handleNotFound(RuntimeException ex) {
