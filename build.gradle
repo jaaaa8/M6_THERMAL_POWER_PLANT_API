@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.1.0'
+    id 'org.springframework.boot' version '3.5.1'
     id 'io.spring.dependency-management' version '1.1.7'
     // freefair Lombok plugin improves IDE and Gradle integration for Lombok
     id 'io.freefair.lombok' version '6.6.1'
