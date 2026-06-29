@@ -44,9 +44,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Không lưu session
                 .authorizeHttpRequests(auth -> auth
                         // Mở cửa tự do cho đường dẫn đăng nhập
-                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
-                        // Mở cửa cho Swagger UI
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/api/v1/accounts/create").permitAll()
                         // Tất cả các request khác đều phải có token hợp lệ
                         .anyRequest().authenticated()
                 )
