@@ -26,6 +26,8 @@ pipeline {
         // ══════════════════════════════════════════════════════════
         stage('Unit Test') {
             steps {
+                // Cấp quyền thực thi cho gradlew trước khi chạy
+                sh 'chmod +x ./gradlew'
                 // H2 thay MySQL, @Tag("manual") tự động bị exclude qua build.gradle
                 sh './gradlew test --no-daemon -Dspring.profiles.active=test'
             }
