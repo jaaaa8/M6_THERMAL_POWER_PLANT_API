@@ -14,7 +14,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 public class SystemListDTO {
+    private int id;
     private  String code;
     private  String name;
     private EquipmentStatus status;
+    private String description;
 }
