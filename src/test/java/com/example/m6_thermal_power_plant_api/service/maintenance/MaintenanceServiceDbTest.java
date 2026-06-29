@@ -132,7 +132,7 @@ public class MaintenanceServiceDbTest {
         request.setSafetySupervisorId(6);  // safety.supervisor — giám sát an toàn
 
         CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
-        member.setAccountId(5);            // mechanic.tech
+        member.setEmployeeId(5);            // mechanic.tech
         member.setRoleInTask("Mechanical technician");
         request.setMembers(List.of(member));
         return request;
