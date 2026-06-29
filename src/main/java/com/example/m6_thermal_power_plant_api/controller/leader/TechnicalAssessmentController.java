@@ -22,8 +22,8 @@ public class TechnicalAssessmentController {
         this.technicalAssessmentService = technicalAssessmentService;
     }
     @GetMapping("")
-    public ResponseEntity<List<TechnicalAssessmentResponseDto>> getTechnicalAssessments() {
-        List<TechnicalAssessmentResponseDto> technicalAssessments = technicalAssessmentService.findAll();
+    public ResponseEntity<List<TechnicalAssessmentUpdateRequestDto>> getTechnicalAssessments() {
+        List<TechnicalAssessmentUpdateRequestDto> technicalAssessments = technicalAssessmentService.findAll();
         return ResponseEntity.ok(technicalAssessments);
     }
 

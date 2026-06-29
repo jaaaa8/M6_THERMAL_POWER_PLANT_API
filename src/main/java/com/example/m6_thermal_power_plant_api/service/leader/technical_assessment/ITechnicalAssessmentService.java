@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface ITechnicalAssessmentService {
-    List<TechnicalAssessmentResponseDto> findAll();
+    List<TechnicalAssessmentUpdateRequestDto> findAll();
     TechnicalAssessmentCreateRequestDto save(TechnicalAssessmentCreateRequestDto dto);
     TechnicalAssessmentUpdateRequestDto findByTechnicalCode(String technicalCode);
     TechnicalAssessmentUpdateRequestDto update(TechnicalAssessmentUpdateRequestDto dto, MultipartFile pdfFile);

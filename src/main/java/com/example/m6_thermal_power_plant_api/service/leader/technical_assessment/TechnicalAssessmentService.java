@@ -28,16 +28,19 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         this.technicalAssessmentRepository = technicalAssessmentRepository;
     }
     @Override
-    public List<TechnicalAssessmentResponseDto> findAll() {
-        return technicalAssessmentRepository.findAll().stream()
-                .map(technicalAssessment -> new TechnicalAssessmentResponseDto(
-                        technicalAssessment.getTechnicalCode(),
-                        technicalAssessment.getAssessor(),
-                        technicalAssessment.getAttachmentPath(),
-                        technicalAssessment.getImgPath(),
-                        technicalAssessment.getResult(),
-                        technicalAssessment.getDescription(),
-                        technicalAssessment.getCreatedAt()
+    public List<TechnicalAssessmentUpdateRequestDto> findAll() {
+        List<TechnicalAssessment> technicalAssessments = technicalAssessmentRepository.findAll();
+        return technicalAssessments.stream()
+                .map(ta -> new TechnicalAssessmentUpdateRequestDto(
+                        ta.getId(),
+                        ta.getTechnicalCode(),
+                        ta.getAssessor(),
+                        ta.getAttachmentPath(),
+                        ta.getImgPath(),
+                        ta.getResult(),
+                        ta.getDescription(),
+                        ta.getCreatedAt(),
+                        ta.getStatus()
                 ))
                 .toList();
     }
