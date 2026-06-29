@@ -23,4 +23,5 @@ public class ToolResponse {
     private Integer quantityDamaged;
     private Integer quantityAvailable;
     private String note;
+    private String imgPath;
 }

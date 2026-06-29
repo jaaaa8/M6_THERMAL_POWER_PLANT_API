@@ -20,7 +20,7 @@ public interface IToolService {
 
     ToolResponse getById(Integer id);
 
-    /** Tìm kiếm theo tên/mã (keyword) và/hoặc chủng loại (categoryId) */
+    /** Tìm kiếm theo tên (keyword) và/hoặc chủng loại (categoryId) */
     Page<ToolResponse> search(String keyword, Integer categoryId, Pageable pageable);
 
     /** Thêm số lượng CCDC vào kho (nhập kho bổ sung) */

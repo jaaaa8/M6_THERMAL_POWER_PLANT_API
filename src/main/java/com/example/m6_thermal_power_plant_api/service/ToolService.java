@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -39,6 +41,7 @@ public class ToolService implements IToolService {
                 .unit(request.getUnit())
                 .quantity(request.getQuantity() == null ? 0 : request.getQuantity())
                 .note(request.getNote())
+                .imgPath(request.getImgPath())
                 .build();
 
         return toResponse(toolRepository.save(tool));
@@ -60,6 +63,7 @@ public class ToolService implements IToolService {
         tool.setToolCategory(category);
         tool.setUnit(request.getUnit());
         tool.setNote(request.getNote());
+        tool.setImgPath(request.getImgPath());
 
         return toResponse(toolRepository.save(tool));
     }
@@ -78,7 +82,8 @@ public class ToolService implements IToolService {
 
     @Override
     public Page<ToolResponse> search(String keyword, Integer categoryId, Pageable pageable) {
-        return toolRepository.search(keyword, categoryId, pageable).map(this::toResponse);
+        String normalizedKeyword = normalize(keyword);
+        return toolRepository.search(normalizedKeyword, categoryId, pageable).map(this::toResponse);
     }
 
     @Override
@@ -111,6 +116,11 @@ public class ToolService implements IToolService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chủng loại với id: " + categoryId));
     }
 
+    private String normalize(String keyword) {
+        if (keyword == null || keyword.isBlank()) return null;
+        return Normalizer.normalize(keyword.trim(), Normalizer.Form.NFC);
+    }
+
     private ToolResponse toResponse(Tool tool) {
         return ToolResponse.builder()
                 .id(tool.getId())
@@ -124,6 +134,7 @@ public class ToolService implements IToolService {
                 .quantityDamaged(tool.getQuantityDamaged())
                 .quantityAvailable(tool.getQuantityAvailable())
                 .note(tool.getNote())
+                .imgPath(tool.getImgPath())
                 .build();
     }
 }
