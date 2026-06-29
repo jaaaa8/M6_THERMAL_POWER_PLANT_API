@@ -19,9 +19,11 @@ import java.util.List;
 @Entity
 @Table(name = "departments")
 @SQLRestriction("is_deleted = false")
-@Getter @Setter
+@Getter
+@Setter
 @SuperBuilder
-@NoArgsConstructor @AllArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @ToString(callSuper = true, exclude = "employees")
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class Department extends BaseSoftDeleteEntity {
@@ -30,7 +32,8 @@ public class Department extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
+    // composite voi cot active_flag de tao unique sau khi run sql script o thu muc
+    // db
     @Column(name = "department_code", nullable = false, length = 50)
     private String departmentCode;
 
