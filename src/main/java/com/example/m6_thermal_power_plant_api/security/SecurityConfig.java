@@ -46,6 +46,7 @@ public class SecurityConfig {
                         // Mở cửa tự do cho đường dẫn đăng nhập
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/api/v1/accounts/create").permitAll()
                         // Tất cả các request khác đều phải có token hợp lệ
                         .anyRequest().authenticated()
                 )
