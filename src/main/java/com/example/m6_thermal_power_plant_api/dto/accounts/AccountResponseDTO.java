@@ -1,15 +1,14 @@
 package com.example.m6_thermal_power_plant_api.dto.accounts;
 
 import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
 @Data
 @Builder
+@Setter
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccountResponseDTO {
