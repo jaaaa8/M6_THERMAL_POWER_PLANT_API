@@ -95,7 +95,7 @@ class MaintenanceServiceTest {
         req.setRepairRequestId(2);
         req.setLeaderId(2);
         CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
-        member.setAccountId(5);
+        member.setEmployeeId(5);
         member.setRoleInTask("Mechanical technician");
         req.setMembers(List.of(member));
 
