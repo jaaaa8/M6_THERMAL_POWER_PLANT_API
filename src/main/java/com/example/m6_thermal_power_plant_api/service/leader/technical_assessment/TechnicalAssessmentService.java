@@ -1,8 +1,11 @@
 package com.example.m6_thermal_power_plant_api.service.leader.technical_assessment;
 
-import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentRequestDto;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentCreateRequestDto;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentUpdateRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.TechnicalAssessmentResponseDto;
+import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
+import com.example.m6_thermal_power_plant_api.repository.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.ITechnicalAssessmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,7 +21,10 @@ import java.util.List;
 @Service
 public class TechnicalAssessmentService implements ITechnicalAssessmentService {
     private final ITechnicalAssessmentRepository technicalAssessmentRepository;
-    public  TechnicalAssessmentService(ITechnicalAssessmentRepository technicalAssessmentRepository) {
+    private final IAccountRepository accountRepository;
+    public  TechnicalAssessmentService(ITechnicalAssessmentRepository technicalAssessmentRepository,
+                                       IAccountRepository accountRepository) {
+        this.accountRepository = accountRepository;
         this.technicalAssessmentRepository = technicalAssessmentRepository;
     }
     @Override
@@ -37,7 +43,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
     }
 
     @Override
-    public TechnicalAssessmentRequestDto save(TechnicalAssessmentRequestDto dto) {
+    public TechnicalAssessmentCreateRequestDto save(TechnicalAssessmentCreateRequestDto dto) {
         if (dto == null) {
             throw new IllegalArgumentException("TechnicalAssessmentRequestDto cannot be null");
         }
@@ -56,30 +62,32 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
     }
 
     @Override
-    public TechnicalAssessmentResponseDto findByTechnicalCode(String technicalCode) {
+    public TechnicalAssessmentUpdateRequestDto findByTechnicalCode(String technicalCode) {
         TechnicalAssessment technicalAssessment = technicalAssessmentRepository.findByTechnicalCode(technicalCode);
         if (technicalAssessment == null) {
             throw new IllegalArgumentException("Technical assessment not found for code: " + technicalCode);
         }
-        return new TechnicalAssessmentResponseDto(
+        return new TechnicalAssessmentUpdateRequestDto(
+                technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
                 technicalAssessment.getAssessor(),
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),
                 technicalAssessment.getDescription(),
-                technicalAssessment.getCreatedAt()
+                technicalAssessment.getCreatedAt(),
+                technicalAssessment.getStatus()
         );
     }
 
     @Override
-    public TechnicalAssessmentRequestDto update(
-            TechnicalAssessmentRequestDto dto,
+    public TechnicalAssessmentUpdateRequestDto update(
+            TechnicalAssessmentUpdateRequestDto dto,
             MultipartFile pdfFile) {
 
         try {
 
-            TechnicalAssessmentResponseDto existing =
+            TechnicalAssessmentUpdateRequestDto existing =
                     findByTechnicalCode(dto.getTechnicalCode());
 
             if (existing == null) {
@@ -127,8 +135,22 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 );
             }
 
-            save(dto);
+            Account assessor = accountRepository.findById(dto.getAssessor().getId())
+                    .orElseThrow();
 
+            dto.setAssessor(assessor);
+
+            TechnicalAssessmentCreateRequestDto createDto = new TechnicalAssessmentCreateRequestDto(
+                    dto.getTechnicalCode(),
+                    dto.getAssessor(),
+                    dto.getAttachmentPath(),
+                    dto.getImgPath(),
+                    dto.getResult(),
+                    dto.getDescription(),
+                    dto.getCreatedAt(),
+                    dto.getStatus()
+            );
+            save(createDto);
             return dto;
 
         } catch (Exception e) {
@@ -137,5 +159,22 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                     e
             );
         }
+    }
+
+    @Override
+    public TechnicalAssessmentUpdateRequestDto findById(Integer id) {
+        TechnicalAssessment technicalAssessment = technicalAssessmentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Technical assessment not found for id: " + id));
+        return new TechnicalAssessmentUpdateRequestDto(
+                technicalAssessment.getId(),
+                technicalAssessment.getTechnicalCode(),
+                technicalAssessment.getAssessor(),
+                technicalAssessment.getAttachmentPath(),
+                technicalAssessment.getImgPath(),
+                technicalAssessment.getResult(),
+                technicalAssessment.getDescription(),
+                technicalAssessment.getCreatedAt(),
+                technicalAssessment.getStatus()
+        );
     }
 }

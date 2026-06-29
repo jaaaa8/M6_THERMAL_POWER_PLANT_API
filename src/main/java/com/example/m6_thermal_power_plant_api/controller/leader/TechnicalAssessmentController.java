@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.controller.leader;
 
-import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentRequestDto;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentCreateRequestDto;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentUpdateRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.TechnicalAssessmentResponseDto;
 import com.example.m6_thermal_power_plant_api.service.leader.technical_assessment.ITechnicalAssessmentService;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1/technical-assessment")
 public class TechnicalAssessmentController {
@@ -26,16 +28,16 @@ public class TechnicalAssessmentController {
     }
 
     @GetMapping("/add")
-    public ResponseEntity<TechnicalAssessmentRequestDto> getTechnicalAssessmentForm() {
-        TechnicalAssessmentRequestDto form = new TechnicalAssessmentRequestDto();
+    public ResponseEntity<TechnicalAssessmentCreateRequestDto> getTechnicalAssessmentForm() {
+        TechnicalAssessmentCreateRequestDto form = new TechnicalAssessmentCreateRequestDto();
         return ResponseEntity.ok(form);
     }
 
     @PostMapping("/add")
-    public ResponseEntity<TechnicalAssessmentRequestDto> submitTechnicalAssessmentForm(TechnicalAssessmentRequestDto dto) {
+    public ResponseEntity<TechnicalAssessmentCreateRequestDto> submitTechnicalAssessmentForm(@RequestBody TechnicalAssessmentCreateRequestDto dto) {
         try {
             dto.setCreatedAt(LocalDateTime.now());
-            TechnicalAssessmentRequestDto requestDto = technicalAssessmentService.save(dto);
+            TechnicalAssessmentCreateRequestDto requestDto = technicalAssessmentService.save(dto);
             return ResponseEntity.created(null).body(requestDto);
         }catch (Exception e){
             return ResponseEntity.badRequest().body(null);
@@ -43,29 +45,22 @@ public class TechnicalAssessmentController {
     }
 
     @GetMapping("/edit/{technicalCode}")
-    public ResponseEntity<TechnicalAssessmentRequestDto> getEditTechnicalAssessmentForm(@PathVariable("technicalCode") String technicalCode) {
-        TechnicalAssessmentResponseDto existingAssessment = technicalAssessmentService.findByTechnicalCode(technicalCode);
+    public ResponseEntity<TechnicalAssessmentUpdateRequestDto> getEditTechnicalAssessmentForm(@PathVariable("technicalCode") String technicalCode) {
+        TechnicalAssessmentUpdateRequestDto existingAssessment = technicalAssessmentService.findByTechnicalCode(technicalCode);
         if (existingAssessment == null) {
             return ResponseEntity.notFound().build();
         }
-        TechnicalAssessmentRequestDto dto = new TechnicalAssessmentRequestDto();
-        dto.setTechnicalCode(existingAssessment.getTechnicalCode());
-        dto.setAssessor(existingAssessment.getAssessor());
-        dto.setAttachmentPath(existingAssessment.getAttachmentPath());
-        dto.setImgPath(existingAssessment.getImgPath());
-        dto.setResult(existingAssessment.getResult());
-        dto.setDescription(existingAssessment.getDescription());
-        dto.setCreatedAt(existingAssessment.getCreatedAt());
-        return ResponseEntity.ok(dto);
+        return ResponseEntity.ok(existingAssessment);
     }
 
     @PostMapping(value = "/edit",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<TechnicalAssessmentRequestDto> edit(
-            @RequestPart("dto") TechnicalAssessmentRequestDto dto,
+    public ResponseEntity<TechnicalAssessmentUpdateRequestDto> edit(
+            @RequestParam("id") Integer id,
             @RequestPart(value = "pdfFile", required = false)
             MultipartFile pdfFile) {
         try {
+            TechnicalAssessmentUpdateRequestDto dto = technicalAssessmentService.findById(id);
             return ResponseEntity.ok(
                     technicalAssessmentService.update(dto, pdfFile)
             );
