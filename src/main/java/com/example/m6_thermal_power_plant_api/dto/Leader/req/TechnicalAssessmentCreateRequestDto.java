@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class TechnicalAssessmentCreateRequestDto {
     private String technicalCode;
-    private Account assessor;
+    private int assessorId;
     private String attachmentPath;
     private String imgPath;
     private String result;
@@ -20,9 +20,9 @@ public class TechnicalAssessmentCreateRequestDto {
     private LocalDateTime createdAt;
     private TechnicalAssessmentStatus status = TechnicalAssessmentStatus.PENDING;
 
-    public TechnicalAssessmentCreateRequestDto(String technicalCode, Account assessor, String imgPath, String result, String description) {
+    public TechnicalAssessmentCreateRequestDto(String technicalCode, int assessorId, String imgPath, String result, String description) {
         this.technicalCode = technicalCode;
-        this.assessor = assessor;
+        this.assessorId = assessorId;
         this.imgPath = imgPath;
         this.result = result;
         this.description = description;

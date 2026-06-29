@@ -34,7 +34,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 .map(ta -> new TechnicalAssessmentUpdateRequestDto(
                         ta.getId(),
                         ta.getTechnicalCode(),
-                        ta.getAssessor(),
+                        ta.getAssessor().getId(),
                         ta.getAttachmentPath(),
                         ta.getImgPath(),
                         ta.getResult(),
@@ -51,8 +51,12 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
             throw new IllegalArgumentException("TechnicalAssessmentRequestDto cannot be null");
         }
         TechnicalAssessment technicalAssessment = new TechnicalAssessment();
+        Account assessor = accountRepository.findById(dto.getAssessorId())
+                .orElseThrow(() -> new IllegalArgumentException("Assessor not found with id: " + dto.getAssessorId()));
         technicalAssessment.setTechnicalCode(dto.getTechnicalCode());
-        technicalAssessment.setAssessor(dto.getAssessor());
+        if (assessor != null) {
+            technicalAssessment.setAssessor(assessor);
+        }
         if(dto.getAttachmentPath() != null && !dto.getAttachmentPath().isEmpty()) {
             technicalAssessment.setAttachmentPath(dto.getAttachmentPath());
         }
@@ -73,7 +77,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         return new TechnicalAssessmentUpdateRequestDto(
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
-                technicalAssessment.getAssessor(),
+                technicalAssessment.getAssessor().getId(),
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),
@@ -89,19 +93,12 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
             MultipartFile pdfFile) {
 
         try {
-
-            TechnicalAssessmentUpdateRequestDto existing =
-                    findByTechnicalCode(dto.getTechnicalCode());
-
-            if (existing == null) {
-                throw new RuntimeException(
-                        "Technical Assessment not found: "
-                                + dto.getTechnicalCode()
-                );
-            }
-
-            dto.setTechnicalCode(existing.getTechnicalCode());
-            dto.setCreatedAt(existing.getCreatedAt());
+            TechnicalAssessment entity =
+                    technicalAssessmentRepository.findById(dto.getId())
+                            .orElseThrow(() ->
+                                    new IllegalArgumentException(
+                                            "Technical assessment not found"
+                                    ));
 
             if (pdfFile != null && !pdfFile.isEmpty()) {
 
@@ -134,26 +131,15 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 );
             } else {
                 dto.setAttachmentPath(
-                        existing.getAttachmentPath()
+                        entity.getAttachmentPath()
                 );
             }
 
-            Account assessor = accountRepository.findById(dto.getAssessor().getId())
-                    .orElseThrow();
 
-            dto.setAssessor(assessor);
 
-            TechnicalAssessmentCreateRequestDto createDto = new TechnicalAssessmentCreateRequestDto(
-                    dto.getTechnicalCode(),
-                    dto.getAssessor(),
-                    dto.getAttachmentPath(),
-                    dto.getImgPath(),
-                    dto.getResult(),
-                    dto.getDescription(),
-                    dto.getCreatedAt(),
-                    dto.getStatus()
-            );
-            save(createDto);
+            entity.setAttachmentPath(dto.getAttachmentPath());
+
+            technicalAssessmentRepository.save(entity);
             return dto;
 
         } catch (Exception e) {
@@ -171,7 +157,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         return new TechnicalAssessmentUpdateRequestDto(
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
-                technicalAssessment.getAssessor(),
+                technicalAssessment.getAssessor().getId(),
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),

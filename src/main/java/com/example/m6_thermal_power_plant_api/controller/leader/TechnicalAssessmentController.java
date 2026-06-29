@@ -13,7 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1/technical-assessment")
 public class TechnicalAssessmentController {
@@ -55,17 +54,26 @@ public class TechnicalAssessmentController {
 
     @PostMapping(value = "/edit",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<TechnicalAssessmentUpdateRequestDto> edit(
+    public ResponseEntity<?> edit(
             @RequestParam("id") Integer id,
             @RequestPart(value = "pdfFile", required = false)
             MultipartFile pdfFile) {
+
         try {
-            TechnicalAssessmentUpdateRequestDto dto = technicalAssessmentService.findById(id);
+
+            TechnicalAssessmentUpdateRequestDto dto =
+                    technicalAssessmentService.findById(id);
+
             return ResponseEntity.ok(
                     technicalAssessmentService.update(dto, pdfFile)
             );
-        }catch (Exception e){
-            return ResponseEntity.badRequest().body(null);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
         }
     }
 }
