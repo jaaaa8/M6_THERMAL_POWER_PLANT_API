@@ -7,20 +7,30 @@ INSERT INTO departments (id, department_code, name, description, is_deleted) VAL
 (4, 'WAREHOUSE', 'Warehouse', 'Spare parts, consumables, and tools warehouse', false);
 
 INSERT INTO roles (id, name, is_deleted) VALUES
-(1, 'ADMIN', false),
-(2, 'SHIFT_LEADER', false),
-(3, 'MAINTENANCE_LEADER', false),
-(4, 'TECHNICIAN', false),
-(5, 'WAREHOUSE_STAFF', false),
-(6, 'SAFETY_SUPERVISOR', false);
+(1, 'WORKER', false),
+(2, 'MATERIALS_STOREKEEPER', false),
+(3, 'TOOLS_STOREKEEPER', false),
+(4, 'WORKSHOP_FOREMAN', false),
+(5, 'SHIFT_LEADER', false),
+(6, 'CREW_LEADER', false),
+(7, 'MAINTENANCE_FOREMAN', false),
+(8, 'TEAM_LEADER', false),
+(9, 'SAFETY_SUPERVISOR', false),
+(10, 'CREW_LEADER', false),
+(11, 'ADMIN', false);
 
 INSERT INTO positions (id, position_code, name, is_deleted) VALUES
-(1, 'POS-SL', 'Shift Leader', false),
-(2, 'POS-ML', 'Maintenance Leader', false),
-(3, 'POS-ET', 'Electrical Technician', false),
-(4, 'POS-WK', 'Warehouse Keeper', false),
-(5, 'POS-MT', 'Mechanical Technician', false),
-(6, 'POS-SS', 'Safety Supervisor', false);
+(1, 'POS-WK', 'Worker', false),
+(2, 'POS-MS', 'Materials Storekeeper', false),
+(3, 'POS-TS', 'Tools Storekeeper', false),
+(4, 'POS-WF', 'Workshop Foreman', false),
+(5, 'POS-SL', 'Shift Leader', false),
+(6, 'POS-CL', 'Crew Leader', false),
+(7, 'POS-MF', 'Maintenance Foreman', false),
+(8, 'POS-TL', 'Team Leader', false),
+(9, 'POS-SS', 'Safety Supervisor', false),
+(10, 'POS-CL', 'Crew Leader', false),
+(11, 'POS-AD', 'Admin', false);
 
 INSERT INTO expertises (id, expertise_code, name, is_deleted) VALUES
 (1, 'EXP-BO', 'Boiler operation', false),
