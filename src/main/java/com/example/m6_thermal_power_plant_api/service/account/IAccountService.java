@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface IAccountService {
     List<AccountResponseDTO> getAllAccounts();
-    Account createAccount(AccountDTO dto);
-    Account grantAccount(AccountGrantRequestDTO request);
-    Account updateStatus(AccountStatusUpdateRequestDTO request);
+    AccountResponseDTO createAccount(AccountDTO dto);
+    AccountResponseDTO grantAccount(AccountGrantRequestDTO request);
+    AccountResponseDTO updateStatus(AccountStatusUpdateRequestDTO request);
 }

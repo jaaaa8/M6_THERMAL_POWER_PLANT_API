@@ -22,30 +22,35 @@ public class EmployeeService implements IEmployeeService {
     private final IEmployeeRepository employeeRepository;
     private final EntityManager entityManager;
 
+    private EmployeeResponseDTO mapToResponseDTO(Employee e) {
+        if (e == null) return null;
+        return EmployeeResponseDTO.builder()
+                .id(e.getId())
+                .employeeCode(e.getEmployeeCode())
+                .fullName(e.getFullName())
+                .gmail(e.getGmail())
+                .phone(e.getPhone())
+                .department(e.getDepartment() != null ? com.example.m6_thermal_power_plant_api.dto.employee.DepartmentDTO.builder()
+                        .departmentCode(e.getDepartment().getDepartmentCode())
+                        .name(e.getDepartment().getName())
+                        .description(e.getDepartment().getDescription())
+                        .build() : null)
+                .position(e.getPosition() != null ? com.example.m6_thermal_power_plant_api.dto.employee.PositionDTO.builder()
+                        .positionCode(e.getPosition().getPositionCode())
+                        .name(e.getPosition().getName())
+                        .build() : null)
+                .expertise(e.getExpertise() != null ? com.example.m6_thermal_power_plant_api.dto.employee.ExpertiseDTO.builder()
+                        .expertiseCode(e.getExpertise().getExpertiseCode())
+                        .name(e.getExpertise().getName())
+                        .build() : null)
+                .isActive(e.getIsActive())
+                .imgPath(e.getImgPath())
+                .build();
+    }
+
     public List<EmployeeResponseDTO> getAllEmployees() {
         return employeeRepository.findAll().stream()
-                .map(e -> EmployeeResponseDTO.builder()
-                        .id(e.getId())
-                        .employeeCode(e.getEmployeeCode())
-                        .fullName(e.getFullName())
-                        .gmail(e.getGmail())
-                        .phone(e.getPhone())
-                        .department(e.getDepartment() != null ? com.example.m6_thermal_power_plant_api.dto.employee.DepartmentDTO.builder()
-                                .departmentCode(e.getDepartment().getDepartmentCode())
-                                .name(e.getDepartment().getName())
-                                .description(e.getDepartment().getDescription())
-                                .build() : null)
-                        .position(e.getPosition() != null ? com.example.m6_thermal_power_plant_api.dto.employee.PositionDTO.builder()
-                                .positionCode(e.getPosition().getPositionCode())
-                                .name(e.getPosition().getName())
-                                .build() : null)
-                        .expertise(e.getExpertise() != null ? com.example.m6_thermal_power_plant_api.dto.employee.ExpertiseDTO.builder()
-                                .expertiseCode(e.getExpertise().getExpertiseCode())
-                                .name(e.getExpertise().getName())
-                                .build() : null)
-                        .isActive(e.getIsActive())
-                        .imgPath(e.getImgPath())
-                        .build())
+                .map(this::mapToResponseDTO)
                 .collect(java.util.stream.Collectors.toList());
     }
 
@@ -88,7 +93,7 @@ public class EmployeeService implements IEmployeeService {
     }
 
     @Transactional
-    public Employee createEmployee(EmployeeDTO dto) {
+    public EmployeeResponseDTO createEmployee(EmployeeDTO dto) {
         if (employeeRepository.existsByGmail(dto.getGmail())) {
             throw new IllegalArgumentException("Gmail already exists: " + dto.getGmail());
         }
@@ -119,6 +124,8 @@ public class EmployeeService implements IEmployeeService {
             employee.setPosition(entityManager.getReference(Position.class, dto.getPositionId()));
         }
 
-        return employeeRepository.save(employee);
+        Employee saved = employeeRepository.save(employee);
+        employeeRepository.flush();
+        return mapToResponseDTO(saved);
     }
 }

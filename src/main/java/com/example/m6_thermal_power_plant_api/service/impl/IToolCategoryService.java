@@ -16,4 +16,5 @@ public interface IToolCategoryService {
     ToolCategoryResponse getById(Integer id);
 
     List<ToolCategoryResponse> getAll();
+    List<ToolCategoryResponse> search(String categoryName, String categoryCode);
 }

@@ -7,20 +7,30 @@ INSERT INTO departments (id, department_code, name, description, is_deleted) VAL
 (4, 'WAREHOUSE', 'Warehouse', 'Spare parts, consumables, and tools warehouse', false);
 
 INSERT INTO roles (id, name, is_deleted) VALUES
-(1, 'ADMIN', false),
-(2, 'SHIFT_LEADER', false),
-(3, 'MAINTENANCE_LEADER', false),
-(4, 'TECHNICIAN', false),
-(5, 'WAREHOUSE_STAFF', false),
-(6, 'SAFETY_SUPERVISOR', false);
+(1, 'WORKER', false),
+(2, 'MATERIALS_STOREKEEPER', false),
+(3, 'TOOLS_STOREKEEPER', false),
+(4, 'WORKSHOP_FOREMAN', false),
+(5, 'SHIFT_LEADER', false),
+(6, 'CREW_LEADER', false),
+(7, 'MAINTENANCE_FOREMAN', false),
+(8, 'TEAM_LEADER', false),
+(9, 'SAFETY_SUPERVISOR', false),
+(10, 'CREW_LEADER', false),
+(11, 'ADMIN', false);
 
 INSERT INTO positions (id, position_code, name, is_deleted) VALUES
-(1, 'POS-SL', 'Shift Leader', false),
-(2, 'POS-ML', 'Maintenance Leader', false),
-(3, 'POS-ET', 'Electrical Technician', false),
-(4, 'POS-WK', 'Warehouse Keeper', false),
-(5, 'POS-MT', 'Mechanical Technician', false),
-(6, 'POS-SS', 'Safety Supervisor', false);
+(1, 'POS-WK', 'Worker', false),
+(2, 'POS-MS', 'Materials Storekeeper', false),
+(3, 'POS-TS', 'Tools Storekeeper', false),
+(4, 'POS-WF', 'Workshop Foreman', false),
+(5, 'POS-SL', 'Shift Leader', false),
+(6, 'POS-CL', 'Crew Leader', false),
+(7, 'POS-MF', 'Maintenance Foreman', false),
+(8, 'POS-TL', 'Team Leader', false),
+(9, 'POS-SS', 'Safety Supervisor', false),
+(10, 'POS-CL', 'Crew Leader', false),
+(11, 'POS-AD', 'Admin', false);
 
 INSERT INTO expertises (id, expertise_code, name, is_deleted) VALUES
 (1, 'EXP-BO', 'Boiler operation', false),
@@ -41,14 +51,14 @@ INSERT INTO employees (
 (6, 'EMP-006', 'Do Hai Nam', 'nam.do@example.com', '0901000006', 1, 6, 6, true, null, false);
 
 INSERT INTO accounts (
-    id, employee_id, username, password_hash, status, is_deleted
+    id, employee_id, username, password_hash, is_active, is_deleted
 ) VALUES
-(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false),
-(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', 'ACTIVE', false);
+(1, 1, 'shift.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(2, 2, 'maintenance.leader', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(3, 3, 'electric.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(4, 4, 'warehouse.staff', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(5, 5, 'mechanic.tech', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false),
+(6, 6, 'safety.supervisor', '$2a$10$dXJ3SW6G7P50lGmMkk4AOuC4DhJJslETKyyJ8xI2m8qCYtjq6U30G', true, false);
 
 INSERT INTO account_roles (account_id, role_id) VALUES
 (1, 2),
@@ -163,7 +173,7 @@ INSERT INTO work_orders (
 (2, 'WO-2026-0002', 3, 2, 1, 6, '2026-06-15 08:00:00', '2026-06-15 16:00:00', 'IN_PROGRESS', '/exports/work-orders/WO-2026-0002.pdf', false);
 
 INSERT INTO work_order_members (
-    id, work_order_id, account_id, role_in_task, joined_at, left_at, is_deleted
+    id, work_order_id, employee_id, role_in_task, joined_at, left_at, is_deleted
 ) VALUES
 (1, 1, 2, 'Work leader', '2026-06-10 13:00:00', '2026-06-10 18:00:00', false),
 (2, 1, 5, 'Mechanical technician', '2026-06-10 13:00:00', '2026-06-10 18:00:00', false),
@@ -260,7 +270,7 @@ INSERT INTO work_orders (
 (3, 'WO-2026-0003', 4, 2, 1, 6, '2026-06-18 13:00:00', '2026-06-18 17:30:00', 'COMPLETED', '/exports/work-orders/WO-2026-0003.pdf', false);
 
 INSERT INTO work_order_members (
-    id, work_order_id, account_id, role_in_task, joined_at, left_at, is_deleted
+    id, work_order_id, employee_id, role_in_task, joined_at, left_at, is_deleted
 ) VALUES
 (6, 3, 2, 'Work leader', '2026-06-18 13:00:00', '2026-06-18 17:30:00', false),
 (7, 3, 5, 'Mechanical technician', '2026-06-18 13:00:00', '2026-06-18 17:30:00', false);
