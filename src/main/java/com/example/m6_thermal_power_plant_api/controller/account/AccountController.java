@@ -25,20 +25,20 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<Account> createAccount(@Valid @RequestBody AccountDTO accountDTO) {
-        Account createdAccount = accountService.createAccount(accountDTO);
+    public ResponseEntity<AccountResponseDTO> createAccount(@Valid @RequestBody AccountDTO accountDTO) {
+        AccountResponseDTO createdAccount = accountService.createAccount(accountDTO);
         return new ResponseEntity<>(createdAccount, HttpStatus.CREATED);
     }
 
     @PostMapping("/grant")
-    public ResponseEntity<Account> grantAccount(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
-        Account createdAccount = accountService.grantAccount(request);
+    public ResponseEntity<AccountResponseDTO> grantAccount(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
+        AccountResponseDTO createdAccount = accountService.grantAccount(request);
         return new ResponseEntity<>(createdAccount, HttpStatus.CREATED);
     }
 
     @PatchMapping("/status")
-    public ResponseEntity<Account> updateStatus(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountStatusUpdateRequestDTO request) {
-        Account updatedAccount = accountService.updateStatus(request);
+    public ResponseEntity<AccountResponseDTO> updateStatus(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountStatusUpdateRequestDTO request) {
+        AccountResponseDTO updatedAccount = accountService.updateStatus(request);
         return ResponseEntity.ok(updatedAccount);
     }
 

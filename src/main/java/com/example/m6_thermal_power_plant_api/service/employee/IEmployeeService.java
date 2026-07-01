@@ -11,5 +11,5 @@ import java.util.List;
 public interface IEmployeeService {
     List<EmployeeResponseDTO> getAllEmployees();
     List<EmployeeAccountDTO> getAllEmployeeAccounts();
-    Employee createEmployee(EmployeeDTO dto);
+    EmployeeResponseDTO createEmployee(EmployeeDTO dto);
 }
