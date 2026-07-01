@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.security;
 
 import com.example.m6_thermal_power_plant_api.entity.Account;
+import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -36,7 +37,7 @@ public class CustomUserDetails implements UserDetails {
                 account.getId(),
                 account.getUsername(),
                 account.getPasswordHash(),
-                Boolean.TRUE.equals(account.getIsActive()),
+                account.getStatus() == AccountStatus.ACTIVE,
                 authorities
         );
     }

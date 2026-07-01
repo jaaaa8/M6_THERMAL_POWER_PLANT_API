@@ -5,7 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessment
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.TechnicalAssessmentResponseDto;
 import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
-import com.example.m6_thermal_power_plant_api.repository.IAccountRepository;
+import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.ITechnicalAssessmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
