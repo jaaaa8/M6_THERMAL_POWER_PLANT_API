@@ -10,6 +10,7 @@ import com.example.m6_thermal_power_plant_api.service.impl.IToolCategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -63,6 +64,16 @@ public class ToolCategoryService implements IToolCategoryService {
         return toolCategoryRepository.findAll().stream().map(this::toResponse).toList();
     }
 
+    @Override
+    public List<ToolCategoryResponse> search(String categoryName, String categoryCode) {
+        String safeName = StringUtils.hasText(categoryName) ? categoryName.trim() : null;
+        String safeCode = StringUtils.hasText(categoryCode) ? categoryCode.trim() : null;
+
+        return toolCategoryRepository.search(safeName, safeCode)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
     private ToolCategory getOrThrow(Integer id) {
         return toolCategoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chủng loại với id: " + id));
