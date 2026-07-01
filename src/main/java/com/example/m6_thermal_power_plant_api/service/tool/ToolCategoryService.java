@@ -1,4 +1,4 @@
-package com.example.m6_thermal_power_plant_api.service;
+package com.example.m6_thermal_power_plant_api.service.tool;
 
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolCategoryRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolCategoryResponse;
@@ -66,8 +66,8 @@ public class ToolCategoryService implements IToolCategoryService {
 
     @Override
     public List<ToolCategoryResponse> search(String categoryName, String categoryCode) {
-        String safeName = StringUtils.hasText(categoryName) ? categoryName.trim() : null;
-        String safeCode = StringUtils.hasText(categoryCode) ? categoryCode.trim() : null;
+        String safeName = StringUtils.hasText(categoryName) ? categoryName.trim() : "";
+        String safeCode = StringUtils.hasText(categoryCode) ? categoryCode.trim() : "";
 
         return toolCategoryRepository.search(safeName, safeCode)
                 .stream()

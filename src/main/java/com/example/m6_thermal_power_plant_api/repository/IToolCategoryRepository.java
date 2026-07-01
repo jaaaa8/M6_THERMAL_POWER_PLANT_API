@@ -11,13 +11,12 @@ public interface IToolCategoryRepository extends JpaRepository<ToolCategory, Int
 
     boolean existsByCategoryCode(String categoryCode);
 
-    @Query("""
-            SELECT t FROM ToolCategory t
-            WHERE (:categoryName IS NULL OR :categoryName = ''
-                   OR LOWER(t.categoryName) LIKE LOWER(CONCAT('%', :categoryName, '%')))
-              AND (:categoryCode IS NULL OR :categoryCode = ''
-                   OR LOWER(t.categoryCode) LIKE LOWER(CONCAT('%', :categoryCode, '%')))
-            """)
+    @Query(value = """
+            SELECT * FROM tool_categories t
+            WHERE t.is_deleted = false
+              AND (:categoryName = '' OR t.category_name LIKE CONCAT('%', :categoryName, '%'))
+              AND (:categoryCode = '' OR t.category_code LIKE CONCAT('%', :categoryCode, '%'))
+            """, nativeQuery = true)
     List<ToolCategory> search(@Param("categoryName") String categoryName,
                               @Param("categoryCode") String categoryCode);
 }
