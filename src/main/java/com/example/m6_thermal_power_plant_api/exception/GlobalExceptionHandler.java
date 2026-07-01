@@ -26,8 +26,6 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(HttpStatus.BAD_REQUEST, errors, "VALIDATION_ERROR");
     }
 
-
-
     @ExceptionHandler({EntityNotFoundException.class, ResourceNotFoundException.class})
     public ResponseEntity<ApiResponse<Object>> handleNotFound(RuntimeException ex) {
         log.warn("Lỗi không tìm thấy: {}", ex.getMessage());
@@ -114,5 +112,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DuplicateHumanResourceException.class)
+    public ResponseEntity<String> handleDuplicateHumanResource(DuplicateHumanResourceException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
     }
 }
