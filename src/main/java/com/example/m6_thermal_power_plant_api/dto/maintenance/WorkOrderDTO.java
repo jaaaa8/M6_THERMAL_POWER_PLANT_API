@@ -1,6 +1,6 @@
 package com.example.m6_thermal_power_plant_api.dto.maintenance;
 
-import com.example.m6_thermal_power_plant_api.entity.Account;
+import com.example.m6_thermal_power_plant_api.entity.Employee;
 import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
@@ -18,7 +18,7 @@ import java.util.List;
  * Dữ liệu hiển thị một phiếu công tác (PCT). Thông tin thiết bị được lấy từ
  * yêu cầu sửa chữa gắn với phiếu (User Story #40, row 44 — "thông tin thiết bị
  * lấy từ request"). {@code from(...)} phải được gọi TRONG transaction để các
- * quan hệ LAZY (repairRequest, equipment, account→employee) nạp được.
+ * quan hệ LAZY (repairRequest, equipment, leader/directSupervisor/safetySupervisor) nạp được.
  */
 @Getter
 @Setter
@@ -81,17 +81,11 @@ public class WorkOrderDTO {
         return b.build();
     }
 
-    private static Integer idOf(Account a) {
-        return a == null ? null : a.getId();
+    private static Integer idOf(Employee e) {
+        return e == null ? null : e.getId();
     }
 
-    private static String nameOf(Account a) {
-        if (a == null) {
-            return null;
-        }
-        if (a.getEmployee() != null && a.getEmployee().getFullName() != null) {
-            return a.getEmployee().getFullName();
-        }
-        return a.getUsername();
+    private static String nameOf(Employee e) {
+        return e == null ? null : e.getFullName();
     }
 }

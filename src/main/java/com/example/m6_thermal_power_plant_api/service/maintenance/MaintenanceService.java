@@ -29,17 +29,15 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderMemberRepository workOrderMemberRepository;
     private final EmployeeRepository employeeRepository;
-    private final AccountRepository accountRepository;
 
     public MaintenanceService(RepairRequestRepository repairRequestRepository,
                               WorkOrderRepository workOrderRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
-                              EmployeeRepository employeeRepository, AccountRepository accountRepository) {
+                              EmployeeRepository employeeRepository) {
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.employeeRepository = employeeRepository;
-        this.accountRepository = accountRepository;
     }
 
     @Override
@@ -61,9 +59,9 @@ public class MaintenanceService implements IMaintenanceService {
 
         validateActiveWorkOrderConstraints(repairRequest, request);
 
-        Account leader = loadAccount(request.getLeaderId(), "nguoi lanh dao cong viec");
-        Account directSupervisor = loadAccountOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
-        Account safetySupervisor = loadAccountOrNull(request.getSafetySupervisorId(), "nguoi giam sat an toan");
+        Employee leader = loadEmployee(request.getLeaderId(), "nguoi lanh dao cong viec");
+        Employee directSupervisor = loadEmployeeOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
+        Employee safetySupervisor = loadEmployeeOrNull(request.getSafetySupervisorId(), "nguoi giam sat an toan");
 
         WorkOrder workOrder = workOrderRepository.save(WorkOrder.builder()
                 .orderCode(generateOrderCode())
@@ -193,16 +191,16 @@ public class MaintenanceService implements IMaintenanceService {
     }
 
     /**
-     * Nem {@link DuplicateHumanResourceException} neu {@code inputAccountId} (leader /
+     * Nem {@link DuplicateHumanResourceException} neu {@code inputEmployeeId} (leader /
      * direct supervisor / safety supervisor cua phieu MOI) trung voi nguoi dang giu
      * đúng vai trò đó ở phiếu {@code live} (dang SONG cung yeu cau). Members (nhan vien
      * lam viec thuong) KHONG bi rang buoc nay, chi 3 vai tro quan ly nay moi bi cam trung.
      */
-    private void checkDuplicateRole(WorkOrder live, Integer inputAccountId,
-                                     Function<WorkOrder, Account> roleGetter, String roleLabel) {
-        Account liveAccount = roleGetter.apply(live);
-        Integer liveAccountId = liveAccount != null ? liveAccount.getId() : null;
-        if (inputAccountId != null && Objects.equals(liveAccountId, inputAccountId)) {
+    private void checkDuplicateRole(WorkOrder live, Integer inputEmployeeId,
+                                     Function<WorkOrder, Employee> roleGetter, String roleLabel) {
+        Employee liveEmployee = roleGetter.apply(live);
+        Integer liveEmployeeId = liveEmployee != null ? liveEmployee.getId() : null;
+        if (inputEmployeeId != null && Objects.equals(liveEmployeeId, inputEmployeeId)) {
             throw new DuplicateHumanResourceException(
                     roleLabel + " da duoc phan cong o phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
                             + "Cac phieu hoat dong song song khong duoc trung " + roleLabel + ", hoac hay huy phieu cu (CANCELLED).");
@@ -256,13 +254,7 @@ public class MaintenanceService implements IMaintenanceService {
                         "Khong tim thay nhan vien (" + label + ") voi id: " + employeeId));
     }
 
-    private Account loadAccount(Integer accountId, String label) {
-        return accountRepository.findById(accountId)
-                .orElseThrow(() -> new ObjectNotFoundException(
-                        "Khong tim thay tai khoan (" + label + ") voi id: " + accountId));
-    }
-
-    private Account loadAccountOrNull(Integer accountId, String label) {
-        return accountId == null ? null : loadAccount(accountId, label);
+    private Employee loadEmployeeOrNull(Integer employeeId, String label) {
+        return employeeId == null ? null : loadEmployee(employeeId, label);
     }
 }

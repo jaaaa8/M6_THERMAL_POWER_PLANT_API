@@ -91,7 +91,8 @@ public class MaintenanceServiceDbTest {
         System.out.println("Creating work order from request id=" + target.getId()
                 + " (" + target.getRequestCode() + "), equipment=" + target.getEquipmentKksCode());
 
-        // 2. Nhân sự lấy từ sample-data.sql (accounts id 1..6).
+        // 2. Nhân sự lấy từ sample-data.sql (employees id 101..106; leader/directSupervisor/
+        //    safetySupervisor tham chiếu Employee, KHÔNG phải Account).
         CreateWorkOrderRequest request = getCreateWorkOrderRequest(target);
 
         WorkOrderDTO created = maintenanceService.createWorkOrderFromRequest(request);
@@ -127,12 +128,12 @@ public class MaintenanceServiceDbTest {
     private static @NonNull CreateWorkOrderRequest getCreateWorkOrderRequest(RepairRequestDTO target) {
         CreateWorkOrderRequest request = new CreateWorkOrderRequest();
         request.setRepairRequestId(target.getId());
-        request.setLeaderId(2);            // maintenance.leader — người lãnh đạo công việc
-        request.setDirectSupervisorId(1);  // shift.leader      — chỉ huy trực tiếp
-        request.setSafetySupervisorId(6);  // safety.supervisor — giám sát an toàn
+        request.setLeaderId(102);            // Michael Davis     — người lãnh đạo công việc
+        request.setDirectSupervisorId(101);  // System Administrator — chỉ huy trực tiếp
+        request.setSafetySupervisorId(106);  // James Smith       — giám sát an toàn
 
         CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
-        member.setEmployeeId(5);            // mechanic.tech
+        member.setEmployeeId(105);            // Elena Rodriguez — nhân viên làm việc
         member.setRoleInTask("Mechanical technician");
         request.setMembers(List.of(member));
         return request;

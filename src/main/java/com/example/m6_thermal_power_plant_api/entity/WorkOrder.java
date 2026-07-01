@@ -21,9 +21,13 @@ import java.util.List;
  * {@code WorkOrdersDeletionException} ở package exception, vốn đã được tạo
  * sẵn cho đúng mục đích chặn hard-delete này ở tầng service.
  *
- * RepairRequest / Account đều đã @SQLRestriction("is_deleted = false") nên
+ * RepairRequest / Employee đều đã @SQLRestriction("is_deleted = false") nên
  * các quan hệ dưới đây KHÔNG cần khai báo lại restriction — và vẫn giữ LAZY
  * bình thường (không cần ép EAGER như cách làm với @SoftDelete).
+ *
+ * leader / directSupervisor / safetySupervisor trỏ tới Employee (KHÔNG phải
+ * Account): Employee là bảng gốc, không phải nhân viên nào cũng có tài khoản
+ * đăng nhập, nhưng vẫn phải chọn được họ vào các vai trò này.
  */
 @Entity
 @Table(name = "work_orders")
@@ -52,17 +56,17 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     /** Người lãnh đạo công việc */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "leader_id")
-    private Account leader;
+    private Employee leader;
 
     /** Chỉ huy trực tiếp */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "direct_supervisor_id")
-    private Account directSupervisor;
+    private Employee directSupervisor;
 
     /** Người giám sát an toàn */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "safety_supervisor_id")
-    private Account safetySupervisor;
+    private Employee safetySupervisor;
 
     @Column(name = "start_time")
     private LocalDateTime startTime;

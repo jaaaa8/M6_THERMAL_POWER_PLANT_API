@@ -15,7 +15,6 @@ import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
-import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
@@ -52,8 +51,6 @@ class MaintenanceServiceTest {
     @Mock
     private WorkOrderMemberRepository workOrderMemberRepository;
     @Mock
-    private AccountRepository accountRepository;
-    @Mock
     private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
     @InjectMocks
     private MaintenanceService maintenanceService;
@@ -80,14 +77,14 @@ class MaintenanceServiceTest {
     @Test
     void createWorkOrderFromRequest_createsOrderTransitionsRequestAndAttachesMembers() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.PENDING);
-        Account leader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
-        Account technician = createAccount(5, "mechanic.tech", "Hoang Quoc Dat");
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Employee technician = createEmployee(5, "mechanic.tech", "Hoang Quoc Dat");
 
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of());
-        when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
 
-        when(employeeRepository.findById(5)).thenReturn(Optional.of(technician.getEmployee()));
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(technician));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
             WorkOrder wo = inv.getArgument(0);
             wo.setId(100);
@@ -142,7 +139,7 @@ class MaintenanceServiceTest {
     void createWorkOrder_whenActiveWorkOrderHasSameDirectSupervisor_throwsConflict() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        WorkOrder live = liveWorkOrder(1, createAccount(1, "shift.leader", "Nguyen Van An"),
+        WorkOrder live = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
                 LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
 
@@ -164,11 +161,11 @@ class MaintenanceServiceTest {
     void createWorkOrder_whenActiveWorkOrderSameLeader_throwsDuplicateHumanResource() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        Account leader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
         WorkOrder live = WorkOrder.builder()
                 .id(1).orderCode("WO-live-1").status(WorkOrderStatus.IN_PROGRESS)
                 .leader(leader)
-                .directSupervisor(createAccount(1, "shift.leader", "Nguyen Van An"))
+                .directSupervisor(createEmployee(1, "shift.leader", "Nguyen Van An"))
                 .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
                 .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
                 .build();
@@ -192,11 +189,11 @@ class MaintenanceServiceTest {
     void createWorkOrder_whenActiveWorkOrderSameSafetySupervisor_throwsDuplicateHumanResource() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        Account safetySupervisor = createAccount(4, "safety.officer", "Pham Van Dat");
+        Employee safetySupervisor = createEmployee(4, "safety.officer", "Pham Van Dat");
         WorkOrder live = WorkOrder.builder()
                 .id(1).orderCode("WO-live-1").status(WorkOrderStatus.IN_PROGRESS)
-                .leader(createAccount(2, "maintenance.leader", "Tran Thi Binh"))
-                .directSupervisor(createAccount(1, "shift.leader", "Nguyen Van An"))
+                .leader(createEmployee(2, "maintenance.leader", "Tran Thi Binh"))
+                .directSupervisor(createEmployee(1, "shift.leader", "Nguyen Van An"))
                 .safetySupervisor(safetySupervisor)
                 .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
                 .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
@@ -221,7 +218,7 @@ class MaintenanceServiceTest {
     void createWorkOrder_whenActiveWorkOrderTimeOverlaps_throwsConflict() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        WorkOrder live = liveWorkOrder(1, createAccount(3, "electric.tech", "Le Minh Cuong"),
+        WorkOrder live = liveWorkOrder(1, createEmployee(3, "electric.tech", "Le Minh Cuong"),
                 LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
 
@@ -241,15 +238,15 @@ class MaintenanceServiceTest {
     @Test
     void createWorkOrder_secondTeamDifferentSupervisorAndNoOverlap_isAllowed() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
-        WorkOrder live = liveWorkOrder(1, createAccount(3, "electric.tech", "Le Minh Cuong"),
+        WorkOrder live = liveWorkOrder(1, createEmployee(3, "electric.tech", "Le Minh Cuong"),
                 LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
-        Account leader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
-        Account newDirect = createAccount(1, "shift.leader", "Nguyen Van An");
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Employee newDirect = createEmployee(1, "shift.leader", "Nguyen Van An");
 
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
-        when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
-        when(accountRepository.findById(1)).thenReturn(Optional.of(newDirect));
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(employeeRepository.findById(1)).thenReturn(Optional.of(newDirect));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
             WorkOrder wo = inv.getArgument(0);
             wo.setId(101);
@@ -273,7 +270,7 @@ class MaintenanceServiceTest {
     @Test
     void createWorkOrder_existingCancelledWorkOrderIsIgnored_allowsRecreate() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
-        Account director = createAccount(1, "shift.leader", "Nguyen Van An");
+        Employee director = createEmployee(1, "shift.leader", "Nguyen Van An");
         // Phiếu CANCELLED: cùng direct supervisor VÀ cùng khung giờ với phiếu mới,
         // nhưng vì đã huỷ nên phải bị BỎ QUA -> cho phép tạo lại.
         WorkOrder cancelled = WorkOrder.builder()
@@ -282,12 +279,12 @@ class MaintenanceServiceTest {
                 .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
                 .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
                 .build();
-        Account leader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
 
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(cancelled));
-        when(accountRepository.findById(2)).thenReturn(Optional.of(leader));
-        when(accountRepository.findById(1)).thenReturn(Optional.of(director));
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(employeeRepository.findById(1)).thenReturn(Optional.of(director));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
             WorkOrder wo = inv.getArgument(0);
             wo.setId(102);
@@ -329,7 +326,7 @@ class MaintenanceServiceTest {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         WorkOrder target = WorkOrder.builder()
                 .id(10).orderCode("WO-x").status(WorkOrderStatus.OPEN).repairRequest(request).build();
-        WorkOrder otherLive = liveWorkOrder(20, createAccount(3, "electric.tech", "Le Minh Cuong"),
+        WorkOrder otherLive = liveWorkOrder(20, createEmployee(3, "electric.tech", "Le Minh Cuong"),
                 LocalDateTime.of(2026, 7, 5, 8, 0), LocalDateTime.of(2026, 7, 5, 12, 0));
         when(workOrderRepository.findById(10)).thenReturn(Optional.of(target));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(target, otherLive));
@@ -361,7 +358,7 @@ class MaintenanceServiceTest {
     }
 
     /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + khung giờ cho trước. */
-    private static WorkOrder liveWorkOrder(int id, Account directSupervisor, LocalDateTime start, LocalDateTime end) {
+    private static WorkOrder liveWorkOrder(int id, Employee directSupervisor, LocalDateTime start, LocalDateTime end) {
         return WorkOrder.builder()
                 .id(id)
                 .orderCode("WO-live-" + id)
@@ -387,6 +384,16 @@ class MaintenanceServiceTest {
                 .incidentDescription("Abnormal vibration.")
                 .priority(RepairPriority.HIGH)
                 .status(status)
+                .build();
+    }
+
+    /** Employee dùng cho leader / directSupervisor / safetySupervisor của WorkOrder (KHÔNG phải Account). */
+    private static Employee createEmployee(int id, String code, String fullName) {
+        return Employee.builder()
+                .id(id)
+                .employeeCode("EMP-" + code)
+                .fullName(fullName)
+                .gmail(code + "@example.com")
                 .build();
     }
 
