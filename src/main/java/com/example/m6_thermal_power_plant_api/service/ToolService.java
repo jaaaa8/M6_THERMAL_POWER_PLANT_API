@@ -4,12 +4,16 @@ import com.example.m6_thermal_power_plant_api.dto.tool.ToolDamageRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolQuantityUpdateRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolResponse;
+import com.example.m6_thermal_power_plant_api.dto.tool.ToolTransactionLogResponse;
+import com.example.m6_thermal_power_plant_api.entity.enums.ToolTransactionType;
 import com.example.m6_thermal_power_plant_api.entity.tool.Tool;
 import com.example.m6_thermal_power_plant_api.entity.tool.ToolCategory;
+import com.example.m6_thermal_power_plant_api.entity.tool.ToolTransactionLog;
 import com.example.m6_thermal_power_plant_api.exception.BadRequestException;
 import com.example.m6_thermal_power_plant_api.exception.ResourceNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.IToolCategoryRepository;
 import com.example.m6_thermal_power_plant_api.repository.IToolRepository;
+import com.example.m6_thermal_power_plant_api.repository.IToolTransactionLogRepository;
 import com.example.m6_thermal_power_plant_api.service.impl.IToolService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +31,7 @@ public class ToolService implements IToolService {
 
     private final IToolRepository toolRepository;
     private final IToolCategoryRepository toolCategoryRepository;
+    private final IToolTransactionLogRepository transactionLogRepository;
 
     @Override
     public ToolResponse create(ToolRequest request) {
@@ -90,7 +96,14 @@ public class ToolService implements IToolService {
     public ToolResponse addQuantity(Integer id, ToolQuantityUpdateRequest request) {
         Tool tool = getToolOrThrow(id);
         tool.setQuantity(tool.getQuantity() + request.getQuantity());
-        return toResponse(toolRepository.save(tool));
+        toolRepository.save(tool);
+        transactionLogRepository.save(ToolTransactionLog.builder()
+                .tool(tool)
+                .type(ToolTransactionType.IMPORT)
+                .quantity(request.getQuantity())
+                .note(request.getNote())
+                .build());
+        return toResponse(tool);
     }
 
     @Override
@@ -100,10 +113,29 @@ public class ToolService implements IToolService {
             throw new BadRequestException("Số lượng hư hỏng vượt quá số lượng khả dụng hiện có");
         }
         tool.setQuantityDamaged(tool.getQuantityDamaged() + request.getQuantity());
-        if (request.getNote() != null && !request.getNote().isBlank()) {
-            tool.setNote(tool.getNote() == null ? request.getNote() : tool.getNote() + "\n" + request.getNote());
-        }
-        return toResponse(toolRepository.save(tool));
+        toolRepository.save(tool);
+        transactionLogRepository.save(ToolTransactionLog.builder()
+                .tool(tool)
+                .type(ToolTransactionType.DAMAGE)
+                .quantity(request.getQuantity())
+                .note(request.getNote())
+                .build());
+        return toResponse(tool);
+    }
+
+    @Override
+    public List<ToolTransactionLogResponse> getTransactionLogs(Integer toolId) {
+        getToolOrThrow(toolId);
+        return transactionLogRepository.findByToolIdOrderByCreatedAtDesc(toolId)
+                .stream()
+                .map(log -> ToolTransactionLogResponse.builder()
+                        .id(log.getId())
+                        .type(log.getType())
+                        .quantity(log.getQuantity())
+                        .note(log.getNote())
+                        .createdAt(log.getCreatedAt())
+                        .build())
+                .toList();
     }
 
     private Tool getToolOrThrow(Integer id) {
