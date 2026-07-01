@@ -27,6 +27,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    // Cung cấp endpoint /actuator/health cho ECS health check (ecs.tf) — trước đây healthCheck gọi endpoint này
+    // nhưng dependency chưa tồn tại, mọi container đều bị coi "unhealthy" dù app chạy bình thường
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 
     // 2. JWT
