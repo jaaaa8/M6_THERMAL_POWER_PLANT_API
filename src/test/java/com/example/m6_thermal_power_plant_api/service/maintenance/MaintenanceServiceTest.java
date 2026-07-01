@@ -12,7 +12,9 @@ import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
+import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
@@ -153,9 +155,66 @@ class MaintenanceServiceTest {
         req.setExpectedEndTime(LocalDateTime.of(2026, 7, 2, 12, 0));
 
         assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(DuplicateHumanResourceException.class);
         verify(workOrderRepository, never()).save(any(WorkOrder.class));
         verify(repairRequestRepository, never()).save(any(RepairRequest.class));
+    }
+
+    @Test
+    void createWorkOrder_whenActiveWorkOrderSameLeader_throwsDuplicateHumanResource() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
+        Account leader = createAccount(2, "maintenance.leader", "Tran Thi Binh");
+        WorkOrder live = WorkOrder.builder()
+                .id(1).orderCode("WO-live-1").status(WorkOrderStatus.IN_PROGRESS)
+                .leader(leader)
+                .directSupervisor(createAccount(1, "shift.leader", "Nguyen Van An"))
+                .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
+                .build();
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
+
+        // Cùng leader (id=2) dù khác direct supervisor và giờ không đè -> vẫn bị từ chối.
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 2, 12, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrder_whenActiveWorkOrderSameSafetySupervisor_throwsDuplicateHumanResource() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
+        Account safetySupervisor = createAccount(4, "safety.officer", "Pham Van Dat");
+        WorkOrder live = WorkOrder.builder()
+                .id(1).orderCode("WO-live-1").status(WorkOrderStatus.IN_PROGRESS)
+                .leader(createAccount(2, "maintenance.leader", "Tran Thi Binh"))
+                .directSupervisor(createAccount(1, "shift.leader", "Nguyen Van An"))
+                .safetySupervisor(safetySupervisor)
+                .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
+                .build();
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
+
+        // Cùng safety supervisor (id=4) dù khác leader/direct supervisor và giờ không đè -> vẫn bị từ chối.
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(5);
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 2, 12, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
     }
 
     @Test
@@ -175,7 +234,7 @@ class MaintenanceServiceTest {
         req.setExpectedEndTime(LocalDateTime.of(2026, 7, 1, 14, 0));
 
         assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(TimeOverlapException.class);
         verify(workOrderRepository, never()).save(any(WorkOrder.class));
     }
 

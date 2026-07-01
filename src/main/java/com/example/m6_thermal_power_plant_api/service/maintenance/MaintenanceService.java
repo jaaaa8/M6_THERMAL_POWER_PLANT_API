@@ -6,7 +6,9 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
+import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 @Service
 public class MaintenanceService implements IMaintenanceService {
@@ -143,11 +146,13 @@ public class MaintenanceService implements IMaintenanceService {
      * hoạt động bình thường.
      *
      * Với mỗi phiếu đang sống, phiếu mới bị TỪ CHỐI (409) nếu:
-     *  (a) cùng Chỉ huy trực tiếp (direct supervisor) — leader / safety supervisor
-     *      được phép trùng, riêng direct supervisor thì KHÔNG; HOẶC
-     *  (b) khung giờ [startTime, expectedEndTime] CHỒNG LẤN nhau.
+     *  (a) trùng leader, direct supervisor, HOẶC safety supervisor — nhân viên
+     *      thường (members) được phép trùng, riêng 3 vai trò này thì KHÔNG
+     *      ({@link DuplicateHumanResourceException}); HOẶC
+     *  (b) khung giờ [startTime, expectedEndTime] CHỒNG LẤN nhau
+     *      ({@link TimeOverlapException}).
      *
-     * Hai phiếu song song chỉ hợp lệ khi KHÁC direct supervisor VÀ giờ không đè.
+     * Hai phiếu song song chỉ hợp lệ khi KHÁC cả 3 vai trò trên VÀ giờ không đè.
      *
      * Để kiểm tra (b), khi đã có ít nhất 1 phiếu sống thì phiếu mới BẮT BUỘC khai
      * báo cả startTime lẫn expectedEndTime (nếu thiếu → 409, kèm gợi ý huỷ phiếu cũ).
@@ -175,17 +180,32 @@ public class MaintenanceService implements IMaintenanceService {
         }
 
         for (WorkOrder live : liveWorkOrders) {
-            Integer liveDirectId = live.getDirectSupervisor() != null ? live.getDirectSupervisor().getId() : null;
-            if (Objects.equals(liveDirectId, input.getDirectSupervisorId())) {
-                throw new IllegalStateException(
-                        "Da ton tai phieu cong tac dang hoat dong (" + live.getOrderCode() + ") cung Chi huy truc tiep. "
-                                + "Cac phieu hoat dong song song phai khac Chi huy truc tiep, hoac hay huy phieu cu (CANCELLED).");
-            }
+            checkDuplicateRole(live, input.getLeaderId(), WorkOrder::getLeader, "Nguoi lanh dao cong viec");
+            checkDuplicateRole(live, input.getDirectSupervisorId(), WorkOrder::getDirectSupervisor, "Chi huy truc tiep");
+            checkDuplicateRole(live, input.getSafetySupervisorId(), WorkOrder::getSafetySupervisor, "Nguoi giam sat an toan");
+
             if (timeOverlaps(input.getStartTime(), input.getExpectedEndTime(), live.getStartTime(), live.getExpectedEndTime())) {
-                throw new IllegalStateException(
+                throw new TimeOverlapException(
                         "Thoi gian lam viec chong lan voi phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
                                 + "Hay chon khung gio khac hoac huy phieu cu (CANCELLED).");
             }
+        }
+    }
+
+    /**
+     * Nem {@link DuplicateHumanResourceException} neu {@code inputAccountId} (leader /
+     * direct supervisor / safety supervisor cua phieu MOI) trung voi nguoi dang giu
+     * đúng vai trò đó ở phiếu {@code live} (dang SONG cung yeu cau). Members (nhan vien
+     * lam viec thuong) KHONG bi rang buoc nay, chi 3 vai tro quan ly nay moi bi cam trung.
+     */
+    private void checkDuplicateRole(WorkOrder live, Integer inputAccountId,
+                                     Function<WorkOrder, Account> roleGetter, String roleLabel) {
+        Account liveAccount = roleGetter.apply(live);
+        Integer liveAccountId = liveAccount != null ? liveAccount.getId() : null;
+        if (inputAccountId != null && Objects.equals(liveAccountId, inputAccountId)) {
+            throw new DuplicateHumanResourceException(
+                    roleLabel + " da duoc phan cong o phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
+                            + "Cac phieu hoat dong song song khong duoc trung " + roleLabel + ", hoac hay huy phieu cu (CANCELLED).");
         }
     }
 
