@@ -3,7 +3,9 @@ package com.example.m6_thermal_power_plant_api.controller.leader;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentCreateRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentUpdateRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.TechnicalAssessmentResponseDto;
+import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
 import com.example.m6_thermal_power_plant_api.service.leader.technical_assessment.ITechnicalAssessmentService;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
@@ -32,14 +34,30 @@ public class TechnicalAssessmentController {
         return ResponseEntity.ok(form);
     }
 
-    @PostMapping("/add")
-    public ResponseEntity<TechnicalAssessmentCreateRequestDto> submitTechnicalAssessmentForm(@RequestBody TechnicalAssessmentCreateRequestDto dto) {
+    @PostMapping(
+            value = "/add",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<?> submitTechnicalAssessmentForm(
+            @RequestPart("data")
+            TechnicalAssessmentCreateRequestDto dto,
+
+            @RequestPart(value = "imageFiles", required = false)
+            MultipartFile[] imageFiles
+    ) {
         try {
+
             dto.setCreatedAt(LocalDateTime.now());
-            TechnicalAssessmentCreateRequestDto requestDto = technicalAssessmentService.save(dto);
-            return ResponseEntity.created(null).body(requestDto);
-        }catch (Exception e){
-            return ResponseEntity.badRequest().body(null);
+
+            TechnicalAssessmentCreateRequestDto result =
+                    technicalAssessmentService.save(dto, imageFiles);
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
         }
     }
 
