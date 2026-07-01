@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -33,6 +34,7 @@ import java.util.List;
  *    chứng từ cũ mất khả năng resolve proxy "createdBy/issuedBy/...".
  */
 @Entity
+@JsonIgnoreProperties
 @Table(name = "accounts")
 @SQLRestriction("is_deleted = false")
 @Getter
