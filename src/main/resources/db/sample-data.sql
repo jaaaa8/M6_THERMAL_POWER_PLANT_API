@@ -357,3 +357,5 @@ INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted
 ) VALUES
     (4, 6, '2026-06-18', 'Oil refilled after mechanical seal replacement.', false);
+
+ALTER TABLE tools MODIFY COLUMN img_path MEDIUMTEXT;
