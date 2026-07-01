@@ -28,4 +28,6 @@ public class ToolRequest {
     private Integer quantity;
 
     private String note;
+
+    private String imgPath;
 }

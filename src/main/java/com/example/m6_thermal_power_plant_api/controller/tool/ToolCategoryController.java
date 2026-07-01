@@ -26,7 +26,7 @@ public class ToolCategoryController {
 
     @PutMapping("/{id}")
     public ApiResponse<ToolCategoryResponse> update(@PathVariable Integer id,
-                                                      @Valid @RequestBody ToolCategoryRequest request) {
+                                                    @Valid @RequestBody ToolCategoryRequest request) {
         return ApiResponse.success("Cập nhật chủng loại thành công", toolCategoryService.update(id, request));
     }
 
@@ -39,6 +39,13 @@ public class ToolCategoryController {
     @GetMapping("/{id}")
     public ApiResponse<ToolCategoryResponse> getById(@PathVariable Integer id) {
         return ApiResponse.success(toolCategoryService.getById(id));
+    }
+
+    @GetMapping("/search")
+    public ApiResponse<List<ToolCategoryResponse>> search(
+            @RequestParam(required = false) String categoryName,
+            @RequestParam(required = false) String categoryCode) {
+        return ApiResponse.success(toolCategoryService.search(categoryName, categoryCode));
     }
 
     @GetMapping
