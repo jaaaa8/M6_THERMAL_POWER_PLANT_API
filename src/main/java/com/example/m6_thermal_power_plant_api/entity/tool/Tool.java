@@ -61,6 +61,10 @@ public class Tool extends BaseSoftDeleteEntity {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    /** Đường dẫn file ảnh đính kèm */
+    @Column(name = "img_path", columnDefinition = "TEXT")
+    private String imgPath;
+
     @JsonIgnore
     @OneToMany(mappedBy = "tool")
     private List<ToolBorrowLog> borrowLogs;

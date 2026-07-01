@@ -5,6 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.tool.ToolDamageRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolQuantityUpdateRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolResponse;
+import com.example.m6_thermal_power_plant_api.dto.tool.ToolTransactionLogResponse;
 import com.example.m6_thermal_power_plant_api.service.impl.IToolService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/tools")
@@ -60,5 +63,10 @@ public class ToolController {
     public ApiResponse<ToolResponse> markDamaged(@PathVariable Integer id,
                                                   @Valid @RequestBody ToolDamageRequest request) {
         return ApiResponse.success("Đã huỷ CCDC hư hỏng", toolService.markDamaged(id, request));
+    }
+
+    @GetMapping("/{id}/logs")
+    public ApiResponse<List<ToolTransactionLogResponse>> getTransactionLogs(@PathVariable Integer id) {
+        return ApiResponse.success(toolService.getTransactionLogs(id));
     }
 }
