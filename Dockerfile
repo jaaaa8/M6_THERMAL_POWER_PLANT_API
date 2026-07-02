@@ -25,6 +25,11 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
+# Cài curl — ECS healthCheck (ecs.tf) gọi "curl -f http://localhost:8080/actuator/health",
+# nhưng base image "eclipse-temurin:17-jre-alpine" không có sẵn curl, khiến health check
+# luôn báo lỗi "command not found" dù ứng dụng chạy bình thường, làm ECS liên tục kill task
+RUN apk add --no-cache curl
+
 # Tạo user non-root để bảo mật
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
