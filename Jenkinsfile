@@ -20,11 +20,15 @@ pipeline {
 
     stages {
         // Test lại đúng commit vừa merge (không chỉ tin tưởng kết quả CI trên PR,
-        // phòng trường hợp merge tạo ra tổ hợp code khác với PR gốc)
+        // phòng trường hợp merge tạo ra tổ hợp code khác với PR gốc).
+        // catchError: test fail vẫn hiện đỏ để tham khảo nhưng KHÔNG chặn deploy
+        // (theo yêu cầu chủ dự án — CD không block vì unit test fail)
         stage('Unit Test') {
             steps {
                 sh 'chmod +x ./gradlew'
-                sh './gradlew test --no-daemon -Dspring.profiles.active=test'
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    sh './gradlew test --no-daemon -Dspring.profiles.active=test'
+                }
             }
             post {
                 always {
