@@ -1,5 +1,3 @@
-use m6_thermal_power_plant;
-
 INSERT INTO departments (id, department_code, name, description, is_deleted) VALUES
                                                                                  (1, 'OPS', 'Operations Department', 'Shift operators and field operation staff', false),
                                                                                  (2, 'MAINT-MECH', 'Mechanical Maintenance', 'Mechanical repair and overhaul team', false),
@@ -86,48 +84,55 @@ INSERT INTO employees (
       (129, 'EMP-129', 'Nicholas Adams', 'nadams@company.com', '0901000129', 1, 1, 1, false, null, false), -- Tương ứng tài khoản INACTIVE
       (130, 'EMP-130', 'Victoria Nelson', 'vnelson@company.com', '0901000130', 1, 1, 1, true, null, false);
 
+-- Mật khẩu (plaintext) của TẤT CẢ tài khoản dưới đây: "123456"
+-- Hash $2a$10$RvMt9/4Z... được generate và verify TRỰC TIẾP bằng chính
+-- BCryptPasswordEncoder() app đang dùng (xem SecurityConfig#passwordEncoder) —
+-- new BCryptPasswordEncoder().matches("123456", hash) => true. Đây là giá trị
+-- TĨNH, không tự sinh lại mỗi lần chạy migration (hash "khác nhau" mỗi lần gọi
+-- encode() là do salt ngẫu nhiên, nhưng verify vẫn đúng vì salt đã nhúng sẵn
+-- trong chuỗi hash — xem BCryptPasswordEncoder#matches).
 INSERT INTO accounts (id, employee_id, username, password_hash, status, is_deleted) VALUES
                                                                                         -- Admin (1)
-                                                                                        (1, 101, 'admin', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
+                                                                                        (1, 101, 'admin', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
 
                                                                                         -- Safety Supervisors (2)
-                                                                                        (2, 102, 'ssupervisor_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (3, 103, 'ssupervisor_2', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
+                                                                                        (2, 102, 'ssupervisor_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (3, 103, 'ssupervisor_2', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
 
                                                                                         -- Workshop & Maintenance Foremen (3)
-                                                                                        (4, 104, 'wforeman_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (5, 105, 'wforeman_2', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (6, 106, 'mforeman_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
+                                                                                        (4, 104, 'wforeman_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (5, 105, 'wforeman_2', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (6, 106, 'mforeman_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
 
                                                                                         -- Storekeepers (4)
-                                                                                        (7, 107, 'mstorekeeper_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (8, 108, 'mstorekeeper_2', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (9, 109, 'tstorekeeper_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (10, 110, 'tstorekeeper_2', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
+                                                                                        (7, 107, 'mstorekeeper_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (8, 108, 'mstorekeeper_2', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (9, 109, 'tstorekeeper_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (10, 110, 'tstorekeeper_2', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
 
                                                                                         -- Shift, Crew, and Team Leaders (8)
-                                                                                        (11, 111, 'sleader_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (12, 112, 'sleader_2', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (13, 113, 'cleader_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (14, 114, 'cleader_2', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (15, 115, 'cleader_3', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (16, 116, 'tleader_1', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (17, 117, 'tleader_2', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (18, 118, 'tleader_3', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'INACTIVE', false), -- Ví dụ 1 tài khoản đang bị vô hiệu hóa
+                                                                                        (11, 111, 'sleader_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (12, 112, 'sleader_2', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (13, 113, 'cleader_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (14, 114, 'cleader_2', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (15, 115, 'cleader_3', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (16, 116, 'tleader_1', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (17, 117, 'tleader_2', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (18, 118, 'tleader_3', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'INACTIVE', false), -- Ví dụ 1 tài khoản đang bị vô hiệu hóa
 
                                                                                         -- Workers (12)
-                                                                                        (19, 119, 'worker_01', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (20, 120, 'worker_02', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (21, 121, 'worker_03', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (22, 122, 'worker_04', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (23, 123, 'worker_05', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (24, 124, 'worker_06', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (25, 125, 'worker_07', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (26, 126, 'worker_08', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (27, 127, 'worker_09', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (28, 128, 'worker_10', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false),
-                                                                                        (29, 129, 'worker_11', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'INACTIVE', false), -- Ví dụ 1 tài khoản đang bị vô hiệu hóa
-                                                                                        (30, 130, 'worker_12', '$2a$10$7EqJtq98hPqEX7fNZaFWoOeR6mX1J7QxA5wP9m7J6e8iF8Y7r3G6K', 'ACTIVE', false);
+                                                                                        (19, 119, 'worker_01', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (20, 120, 'worker_02', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (21, 121, 'worker_03', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (22, 122, 'worker_04', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (23, 123, 'worker_05', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (24, 124, 'worker_06', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (25, 125, 'worker_07', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (26, 126, 'worker_08', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (27, 127, 'worker_09', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (28, 128, 'worker_10', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false),
+                                                                                        (29, 129, 'worker_11', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'INACTIVE', false), -- Ví dụ 1 tài khoản đang bị vô hiệu hóa
+                                                                                        (30, 130, 'worker_12', '$2a$10$RvMt9/4Z.howyWIIUMwzYuZHYYxzB0qaZV9J3g3FGOk81SBYrSdQ2', 'ACTIVE', false);
 
 INSERT INTO account_roles (account_id, role_id) VALUES
                                                     (1, 2),
@@ -357,5 +362,3 @@ INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted
 ) VALUES
     (4, 6, '2026-06-18', 'Oil refilled after mechanical seal replacement.', false);
-
-ALTER TABLE tools MODIFY COLUMN img_path MEDIUMTEXT;

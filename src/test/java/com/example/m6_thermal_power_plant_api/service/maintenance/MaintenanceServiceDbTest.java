@@ -31,7 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  *  - row 44: tạo phiếu công tác (PCT) từ 1 yêu cầu; thiết bị lấy từ request,
  *            gắn lãnh đạo / chỉ huy trực tiếp / giám sát an toàn / nhân viên.
  *
- * YÊU CẦU: MySQL đang chạy (xem application.properties) và đã nạp sample-data.sql.
+ * YÊU CẦU: MySQL đang chạy (xem application.properties) — dữ liệu mẫu được Flyway tự
+ * nạp lúc app khởi động (db/migration/V3__seed_sample_data.sql), không cần chạy tay.
  *
  * CÁCH CHẠY ĐỂ QUAN SÁT:
  *   1. {@link #listPendingRepairRequests_printForManualCheck()} → in ra các request
@@ -43,10 +44,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *        - repair_requests     : status của request đó chuyển PENDING -> IN_PROGRESS
  *
  * LƯU Ý: test (2) KHÔNG idempotent — sau khi chạy, request hết PENDING. Muốn chạy lại
- * thì nạp lại sample-data.sql.
+ * thì drop schema rồi khởi động lại app để Flyway nạp lại từ đầu.
  */
 @SpringBootTest
-@Tag("manual")  // Chạy thủ công với MySQL thật + sample-data.sql. Không chạy trong CI/CD
+@Tag("manual")  // Chạy thủ công với MySQL thật (Flyway đã nạp sample data). Không chạy trong CI/CD
 public class MaintenanceServiceDbTest {
 
     @Autowired
@@ -86,8 +87,8 @@ public class MaintenanceServiceDbTest {
         RepairRequestDTO target = maintenanceService.getPendingRepairRequests(PageRequest.of(0, 50)).getContent().stream()
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException(
-                        "No PENDING repair request found. Did you run sample-data.sql? "
-                                + "(RR-2026-0002 should be PENDING). Re-seed to run this test again."));
+                        "No PENDING repair request found. Drop the schema and restart the app so Flyway "
+                                + "re-seeds it (RR-2026-0002 should be PENDING) to run this test again."));
         System.out.println("Creating work order from request id=" + target.getId()
                 + " (" + target.getRequestCode() + "), equipment=" + target.getEquipmentKksCode());
 
