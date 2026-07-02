@@ -2,8 +2,9 @@
 //  Jenkins CI — Backend
 //  Chạy khi có Pull Request (qua Multibranch Pipeline "Discover PRs")
 //  Build JAR là điều kiện BẮT BUỘC để pass CI (xác nhận code compile được).
-//  Unit Test vẫn chạy để tham khảo nhưng KHÔNG chặn merge nếu fail
-//  (best-effort, không phải gate bắt buộc — theo yêu cầu chủ dự án).
+//  KHÔNG chạy Unit Test (theo yêu cầu chủ dự án — build nhanh hơn, test
+//  hiện không cần thiết cho quy mô đồ án). Vẫn có thể chạy tay
+//  "./gradlew test" khi cần, code test không bị xoá khỏi dự án.
 //  KHÔNG build Docker image, KHÔNG đụng tới ECR/ECS
 // ================================================================
 
@@ -11,25 +12,9 @@ pipeline {
     agent any
 
     stages {
-        stage('Unit Test') {
-            steps {
-                // H2 in-memory DB thay MySQL, test tag "manual" tự động bị loại (xem build.gradle)
-                sh 'chmod +x ./gradlew'
-                // catchError: test fail vẫn hiện đỏ ở stage này để tham khảo,
-                // nhưng không làm cả pipeline FAILURE — không chặn merge
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh './gradlew test --no-daemon -Dspring.profiles.active=test'
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml'
-                }
-            }
-        }
-
         stage('Build JAR') {
             steps {
+                sh 'chmod +x ./gradlew'
                 sh './gradlew bootJar -x test --no-daemon'
             }
         }

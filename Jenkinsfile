@@ -2,7 +2,10 @@
 //  Jenkins CD — Backend: Spring Boot 3.5 + Java 17 + Gradle
 //  Job này được cấu hình trong Jenkins UI để CHỈ trigger khi có commit
 //  mới trên nhánh main (sau khi PR đã pass CI và được merge)
-//  Test → Build JAR → Docker Build & Push ECR → Deploy ECS Fargate
+//  Build JAR → Docker Build & Push ECR → Deploy ECS Fargate
+//  KHÔNG chạy Unit Test (theo yêu cầu chủ dự án — build nhanh hơn, test
+//  hiện không cần thiết cho quy mô đồ án). Code test không bị xoá khỏi
+//  dự án, vẫn chạy tay "./gradlew test" được khi cần.
 // ================================================================
 
 pipeline {
@@ -19,26 +22,9 @@ pipeline {
     }
 
     stages {
-        // Test lại đúng commit vừa merge (không chỉ tin tưởng kết quả CI trên PR,
-        // phòng trường hợp merge tạo ra tổ hợp code khác với PR gốc).
-        // catchError: test fail vẫn hiện đỏ để tham khảo nhưng KHÔNG chặn deploy
-        // (theo yêu cầu chủ dự án — CD không block vì unit test fail)
-        stage('Unit Test') {
-            steps {
-                sh 'chmod +x ./gradlew'
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh './gradlew test --no-daemon -Dspring.profiles.active=test'
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml'
-                }
-            }
-        }
-
         stage('Build JAR') {
             steps {
+                sh 'chmod +x ./gradlew'
                 sh './gradlew bootJar -x test --no-daemon'
             }
             post {
