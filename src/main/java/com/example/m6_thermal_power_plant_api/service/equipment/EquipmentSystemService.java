@@ -6,7 +6,7 @@ import com.example.m6_thermal_power_plant_api.dto.equipment.response.SystemListD
 import com.example.m6_thermal_power_plant_api.entity.EquipmentSystem;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
-import com.example.m6_thermal_power_plant_api.repository.IEquipmentSystemRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentSystemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

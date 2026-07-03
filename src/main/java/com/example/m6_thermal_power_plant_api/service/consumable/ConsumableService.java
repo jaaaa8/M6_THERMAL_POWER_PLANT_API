@@ -5,7 +5,7 @@ import com.example.m6_thermal_power_plant_api.entity.Consumable;
 import com.example.m6_thermal_power_plant_api.entity.Unit;
 import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
 import com.example.m6_thermal_power_plant_api.repository.IConsumableRepository;
-import com.example.m6_thermal_power_plant_api.repository.IUnitRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IUnitRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
