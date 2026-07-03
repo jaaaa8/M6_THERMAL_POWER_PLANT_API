@@ -6,7 +6,7 @@ import com.example.m6_thermal_power_plant_api.dto.tool.ToolBorrowRejectRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolBorrowRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolBorrowReturnRequest;
 import com.example.m6_thermal_power_plant_api.entity.enums.BorrowStatus;
-import com.example.m6_thermal_power_plant_api.service.ToolBorrowOverdueNotifier;
+import com.example.m6_thermal_power_plant_api.service.tool.ToolBorrowOverdueNotifier;
 import com.example.m6_thermal_power_plant_api.service.impl.IToolBorrowLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

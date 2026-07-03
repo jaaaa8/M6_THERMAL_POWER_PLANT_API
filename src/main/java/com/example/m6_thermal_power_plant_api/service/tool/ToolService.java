@@ -1,4 +1,4 @@
-package com.example.m6_thermal_power_plant_api.service;
+package com.example.m6_thermal_power_plant_api.service.tool;
 
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolDamageRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolQuantityUpdateRequest;
