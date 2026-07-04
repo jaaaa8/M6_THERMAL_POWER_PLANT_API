@@ -1,6 +1,11 @@
 // ================================================================
-//  Jenkins Pipeline — Backend: Spring Boot 3.5.1 + Java 17 + Gradle
-//  Deploy: AWS ECR → ECS Fargate
+//  Jenkins CD — Backend: Spring Boot 3.5 + Java 17 + Gradle
+//  Job này được cấu hình trong Jenkins UI để CHỈ trigger khi có commit
+//  mới trên nhánh main (sau khi PR đã pass CI và được merge)
+//  Build JAR → Docker Build & Push ECR → Deploy ECS Fargate
+//  KHÔNG chạy Unit Test (theo yêu cầu chủ dự án — build nhanh hơn, test
+//  hiện không cần thiết cho quy mô đồ án). Code test không bị xoá khỏi
+//  dự án, vẫn chạy tay "./gradlew test" được khi cần.
 // ================================================================
 
 pipeline {
@@ -16,35 +21,11 @@ pipeline {
         ECS_SERVICE     = 'thermal-power-plant-api-service'
     }
 
-    tools {
-        jdk 'jdk17'
-    }
-
     stages {
-        // ══════════════════════════════════════════════════════════
-        // STAGE 1: TEST (H2 in-memory DB, skip @Tag("manual") tests)
-        // ══════════════════════════════════════════════════════════
-        stage('Unit Test') {
-            steps {
-                // Cấp quyền thực thi cho gradlew trước khi chạy
-                sh 'chmod +x ./gradlew'
-                // H2 thay MySQL, @Tag("manual") tự động bị exclude qua build.gradle
-                sh './gradlew test --no-daemon -Dspring.profiles.active=test'
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml'
-                }
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════
-        // STAGE 2: BUILD JAR
-        // ══════════════════════════════════════════════════════════
         stage('Build JAR') {
             steps {
+                sh 'chmod +x ./gradlew'
                 sh './gradlew bootJar -x test --no-daemon'
-                sh 'ls -lh build/libs/'
             }
             post {
                 success {
@@ -53,22 +34,14 @@ pipeline {
             }
         }
 
-        // ══════════════════════════════════════════════════════════
-        // STAGE 3: DOCKER BUILD & PUSH TO ECR
-        // ══════════════════════════════════════════════════════════
         stage('Docker Build & Push') {
-            when {
-                expression { env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main' || env.BRANCH_NAME == 'main' }
-            }
             steps {
                 script {
-                    // Login ECR
                     sh """
                         aws ecr get-login-password --region ${AWS_REGION} | \
                         docker login --username AWS --password-stdin ${ECR_REGISTRY}
                     """
 
-                    // Build Docker image
                     sh """
                         docker build \
                             --tag ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \
@@ -76,56 +49,42 @@ pipeline {
                             .
                     """
 
-                    // Push to ECR
                     sh "docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
                     sh "docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest"
-
-                    echo "✅ Image pushed → ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
 
-        // ══════════════════════════════════════════════════════════
-        // STAGE 4: DEPLOY TO ECS FARGATE
-        // ══════════════════════════════════════════════════════════
+        // Task definition (ecs.tf) trỏ tới tag ":latest" cố định, nên chỉ cần force
+        // deploy lại là ECS tự pull đúng image mới nhất vừa push ở stage trên
         stage('Deploy to ECS') {
-            when {
-                expression { env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main' || env.BRANCH_NAME == 'main' }
-            }
             steps {
-                script {
-                    // Force new deployment
-                    sh """
-                        aws ecs update-service \
-                            --cluster ${ECS_CLUSTER} \
-                            --service ${ECS_SERVICE} \
-                            --force-new-deployment \
-                            --region ${AWS_REGION}
-                    """
+                sh """
+                    aws ecs update-service \
+                        --cluster ${ECS_CLUSTER} \
+                        --service ${ECS_SERVICE} \
+                        --force-new-deployment \
+                        --region ${AWS_REGION}
+                """
 
-                    // Chờ deployment hoàn thành (tối đa 10 phút)
-                    sh """
-                        aws ecs wait services-stable \
-                            --cluster ${ECS_CLUSTER} \
-                            --services ${ECS_SERVICE} \
-                            --region ${AWS_REGION}
-                    """
-
-                    echo '✅ ECS Deployment successful!'
-                }
+                sh """
+                    aws ecs wait services-stable \
+                        --cluster ${ECS_CLUSTER} \
+                        --services ${ECS_SERVICE} \
+                        --region ${AWS_REGION}
+                """
             }
         }
     }
 
     post {
         success {
-            echo '🎉 Pipeline completed successfully!'
+            echo '🎉 Backend deployed thành công!'
         }
         failure {
-            echo '❌ Pipeline failed! Check logs above.'
+            echo '❌ Deploy thất bại! Xem log trên.'
         }
         always {
-            // Dọn dẹp Docker images để tiết kiệm disk
             sh 'docker system prune -f || true'
         }
     }
