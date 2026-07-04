@@ -1,8 +1,11 @@
 package com.example.m6_thermal_power_plant_api.service.maintenance;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.MemberHistoryEventDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
@@ -10,6 +13,7 @@ import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceEx
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -29,15 +34,18 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderMemberRepository workOrderMemberRepository;
     private final EmployeeRepository employeeRepository;
+    private final ISparePartIssuesService sparePartIssuesService;
 
     public MaintenanceService(RepairRequestRepository repairRequestRepository,
                               WorkOrderRepository workOrderRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
-                              EmployeeRepository employeeRepository) {
+                              EmployeeRepository employeeRepository,
+                              ISparePartIssuesService sparePartIssuesService) {
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.employeeRepository = employeeRepository;
+        this.sparePartIssuesService = sparePartIssuesService;
     }
 
     @Override
@@ -63,6 +71,13 @@ public class MaintenanceService implements IMaintenanceService {
         Employee directSupervisor = loadEmployeeOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
         Employee safetySupervisor = loadEmployeeOrNull(request.getSafetySupervisorId(), "nguoi giam sat an toan");
 
+        // Mô tả sửa chữa: mặc định lấy từ mô tả sự cố của yêu cầu; người tạo
+        // sửa lại được thì dùng giá trị họ gửi lên.
+        String repairDescription = (request.getRepairDescription() != null
+                && !request.getRepairDescription().isBlank())
+                ? request.getRepairDescription()
+                : repairRequest.getIncidentDescription();
+
         WorkOrder workOrder = workOrderRepository.save(WorkOrder.builder()
                 .orderCode(generateOrderCode())
                 .repairRequest(repairRequest)
@@ -71,6 +86,7 @@ public class MaintenanceService implements IMaintenanceService {
                 .safetySupervisor(safetySupervisor)
                 .startTime(request.getStartTime())
                 .expectedEndTime(request.getExpectedEndTime())
+                .repairDescription(repairDescription)
                 .status(WorkOrderStatus.OPEN)
                 .build());
 
@@ -128,7 +144,6 @@ public class MaintenanceService implements IMaintenanceService {
             saved.add(workOrderMemberRepository.save(WorkOrderMember.builder()
                     .workOrder(workOrder)
                     .employees(employee)
-                    .roleInTask(input.getRoleInTask())
                     .joinedAt(now)
                     .build()));
         }
@@ -218,6 +233,98 @@ public class MaintenanceService implements IMaintenanceService {
             List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
             return WorkOrderDTO.from(wo, members);
         });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WorkOrderDetailDTO getWorkOrderDetail(Integer workOrderId) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay phieu cong tac voi id: " + workOrderId));
+
+        List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(workOrderId);
+
+        return WorkOrderDetailDTO.builder()
+                .workOrder(WorkOrderDTO.from(workOrder, members))
+                .memberHistory(buildMemberHistory(members))
+                .sparePartsIssues(sparePartIssuesService.getByWorkOrder(workOrderId))
+                .build();
+    }
+
+    /**
+     * Dựng dòng thời gian ra/vào từ các dòng member: mỗi dòng sinh 1 sự kiện
+     * JOINED (joined_at) và, nếu đã rời, 1 sự kiện LEFT (left_at). Sắp xếp TĂNG
+     * dần theo thời gian → đọc từ trên xuống đúng thứ tự diễn biến:
+     * "A joined 08:00 → B joined 08:00 → A left 12:00 → C joined 13:00 ...".
+     * (Nhân viên rời rồi vào lại = dòng member mới → tự có thêm cặp sự kiện.)
+     */
+    private static List<MemberHistoryEventDTO> buildMemberHistory(List<WorkOrderMember> members) {
+        List<MemberHistoryEventDTO> events = new ArrayList<>();
+        for (WorkOrderMember m : members) {
+            Integer employeeId = m.getEmployees() != null ? m.getEmployees().getId() : null;
+            String fullName = m.getEmployees() != null ? m.getEmployees().getFullName() : null;
+            if (m.getJoinedAt() != null) {
+                events.add(MemberHistoryEventDTO.builder()
+                        .employeeId(employeeId).fullName(fullName).role(m.getRoleInTask())
+                        .eventType(MemberHistoryEventDTO.EventType.JOINED)
+                        .eventTime(m.getJoinedAt())
+                        .build());
+            }
+            if (m.getLeftAt() != null) {
+                events.add(MemberHistoryEventDTO.builder()
+                        .employeeId(employeeId).fullName(fullName).role(m.getRoleInTask())
+                        .eventType(MemberHistoryEventDTO.EventType.LEFT)
+                        .eventTime(m.getLeftAt())
+                        .build());
+            }
+        }
+        events.sort(Comparator.comparing(MemberHistoryEventDTO::getEventTime,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+        return events;
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderMemberDTO addMember(Integer workOrderId, CreateWorkOrderRequest.MemberInput input) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay phieu cong tac voi id: " + workOrderId));
+
+        if (!isLive(workOrder)) {
+            throw new IllegalStateException(
+                    "Phieu cong tac (" + workOrder.getOrderCode() + ") da " + workOrder.getStatus()
+                            + " — khong the them thanh vien.");
+        }
+
+        if (workOrderMemberRepository.existsByWorkOrder_IdAndEmployees_IdAndLeftAtIsNull(
+                workOrderId, input.getEmployeeId())) {
+            throw new IllegalStateException(
+                    "Nhan vien nay dang la thanh vien chua roi cua phieu cong tac ("
+                            + workOrder.getOrderCode() + ").");
+        }
+
+        Employee employee = loadEmployee(input.getEmployeeId(), "nhan vien lam viec");
+        WorkOrderMember member = workOrderMemberRepository.save(WorkOrderMember.builder()
+                .workOrder(workOrder)
+                .employees(employee)
+                .joinedAt(LocalDateTime.now())
+                .build());
+        return WorkOrderMemberDTO.from(member);
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId) {
+        WorkOrderMember member = workOrderMemberRepository.findByIdAndWorkOrder_Id(memberId, workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay thanh vien id " + memberId + " trong phieu cong tac id " + workOrderId));
+
+        // Idempotent: đã rời rồi thì trả về nguyên trạng (giống cancelWorkOrder).
+        if (member.getLeftAt() == null) {
+            member.setLeftAt(LocalDateTime.now());
+            workOrderMemberRepository.save(member);
+        }
+        return WorkOrderMemberDTO.from(member);
     }
 
     /** Phieu "song" = dang rang buoc quan he 1-n (chua huy, chua hoan thanh). */

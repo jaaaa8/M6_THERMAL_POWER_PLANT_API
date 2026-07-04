@@ -46,6 +46,8 @@ public class CreateWorkOrderRequest {
      */
     private LocalDateTime expectedEndTime;
 
+    private String repairDescription;
+
     @Valid
     private List<MemberInput> members;
 
@@ -56,7 +58,5 @@ public class CreateWorkOrderRequest {
         @NotNull(message = "employeeId của thành viên là bắt buộc")
         private Integer employeeId;
 
-        /** Vai trò trong công việc (VD: Thợ cơ khí, Thợ điện...). */
-        private String roleInTask;
     }
 }

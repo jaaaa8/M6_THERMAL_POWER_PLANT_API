@@ -243,11 +243,11 @@ INSERT INTO repair_requests (
 
 INSERT INTO work_orders (
     id, order_code, repair_request_id, leader_id, direct_supervisor_id, safety_supervisor_id,
-    start_time, end_time, status, pdf_path, is_deleted
+    start_time, end_time, status, pdf_path,repair_description, is_deleted
 ) VALUES
-      (1, 'WO-2026-0001', 1, 102, 101, 106, '2026-06-10 13:00:00', '2026-06-10 18:00:00', 'COMPLETED', '/exports/work-orders/WO-2026-0001.pdf', false),
-      (2, 'WO-2026-0002', 3, 102, 101, 106, '2026-06-15 08:00:00', '2026-06-15 16:00:00', 'IN_PROGRESS', '/exports/work-orders/WO-2026-0002.pdf', false),
-      (3, 'WO-2026-0003', 4, 102, 101, 106, '2026-06-18 13:00:00', '2026-06-18 17:30:00', 'COMPLETED', '/exports/work-orders/WO-2026-0003.pdf', false);
+      (1, 'WO-2026-0001', 1, 102, 101, 106, '2026-06-10 13:00:00', '2026-06-10 18:00:00', 'COMPLETED', '/exports/work-orders/WO-2026-0001.pdf','Abnormal vibration detected at pump drive end bearing.', false),
+      (2, 'WO-2026-0002', 3, 102, 101, 106, '2026-06-15 08:00:00', '2026-06-15 16:00:00', 'IN_PROGRESS', '/exports/work-orders/WO-2026-0002.pdf','MCC panel temperature alarm appears during peak load.', false),
+      (3, 'WO-2026-0003', 4, 102, 101, 106, '2026-06-18 13:00:00', '2026-06-18 17:30:00', 'COMPLETED', '/exports/work-orders/WO-2026-0003.pdf','Condensate pump mechanical seal leakage observed during operation.', false);
 
 INSERT INTO work_order_members (
     id, work_order_id, employee_id, role_in_task, joined_at, left_at, is_deleted

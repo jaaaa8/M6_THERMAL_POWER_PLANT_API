@@ -48,6 +48,7 @@ public class WorkOrderDTO {
     private String directSupervisorName;
     private Integer safetySupervisorId;
     private String safetySupervisorName;
+    private String repairDescription;
 
     private List<WorkOrderMemberDTO> members;
 
@@ -58,12 +59,17 @@ public class WorkOrderDTO {
                 .status(wo.getStatus())
                 .startTime(wo.getStartTime())
                 .expectedEndTime(wo.getExpectedEndTime())
-                .pdfPath(wo.getPdfPath());
+                .pdfPath(wo.getPdfPath())
+                .repairDescription(wo.getRepairDescription());
 
         RepairRequest req = wo.getRepairRequest();
         if (req != null) {
             b.repairRequestId(req.getId())
                     .requestCode(req.getRequestCode());
+            // Phiếu cũ (tạo trước khi có cột repair_description) fallback về mô tả sự cố gốc.
+            if (wo.getRepairDescription() == null) {
+                b.repairDescription(req.getIncidentDescription());
+            }
             if (req.getEquipment() != null) {
                 b.equipmentId(req.getEquipment().getId())
                         .equipmentKksCode(req.getEquipment().getKksCode())

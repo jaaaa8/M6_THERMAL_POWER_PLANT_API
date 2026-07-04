@@ -135,7 +135,6 @@ public class MaintenanceServiceDbTest {
 
         CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
         member.setEmployeeId(105);            // Elena Rodriguez — nhân viên làm việc
-        member.setRoleInTask("Mechanical technician");
         request.setMembers(List.of(member));
         return request;
     }

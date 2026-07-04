@@ -74,6 +74,9 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Column(name = "end_time")
     private LocalDateTime expectedEndTime;
 
+    @Column(name = "repair_description")
+    private String repairDescription;
+
     /** Mới tạo (OPEN) / Đang thực hiện / Hoàn thành / Đã huỷ */
     @Enumerated(EnumType.STRING)
     @Column(length = 100)

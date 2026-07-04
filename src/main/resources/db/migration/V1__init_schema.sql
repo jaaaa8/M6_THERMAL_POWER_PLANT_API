@@ -577,6 +577,7 @@ CREATE TABLE `work_orders` (
   `deleted_at` datetime(6) DEFAULT NULL,
   `end_time` datetime(6) DEFAULT NULL,
   `start_time` datetime(6) DEFAULT NULL,
+  `repair_description` text,
   `order_code` varchar(50) NOT NULL,
   `pdf_path` varchar(500) DEFAULT NULL,
   `status` enum('CANCELLED','COMPLETED','IN_PROGRESS','OPEN') DEFAULT NULL,

@@ -52,6 +52,8 @@ class MaintenanceServiceTest {
     private WorkOrderMemberRepository workOrderMemberRepository;
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService sparePartIssuesService;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -97,7 +99,6 @@ class MaintenanceServiceTest {
         req.setLeaderId(2);
         CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
         member.setEmployeeId(5);
-        member.setRoleInTask("Mechanical technician");
         req.setMembers(List.of(member));
 
         WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
