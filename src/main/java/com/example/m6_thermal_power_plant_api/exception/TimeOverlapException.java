@@ -4,4 +4,8 @@ public class TimeOverlapException extends RuntimeException {
     public TimeOverlapException() {
         super("Thoi gian overlap");
     }
+
+    public TimeOverlapException(String message) {
+        super(message);
+    }
 }

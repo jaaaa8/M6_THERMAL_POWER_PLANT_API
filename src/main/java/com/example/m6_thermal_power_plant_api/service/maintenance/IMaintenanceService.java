@@ -3,6 +3,8 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -47,4 +49,25 @@ public interface IMaintenanceService {
      * @param pageable phân trang + sắp xếp (mặc định createdAt giảm dần).
      */
     Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable);
+
+    /**
+     * Chi tiết đầy đủ một phiếu công tác: thông tin chung + danh sách thành viên
+     * + DÒNG THỜI GIAN ra/vào khu vực làm việc (JOINED/LEFT, tăng dần theo thời
+     * gian) + các phiếu cấp vật tư thay thế đã tạo cho phiếu.
+     */
+    WorkOrderDetailDTO getWorkOrderDetail(Integer workOrderId);
+
+    /**
+     * Thêm nhân viên vào phiếu công tác đang chạy (joinedAt = now, leftAt = null).
+     * Từ chối (409) nếu phiếu đã COMPLETED/CANCELLED hoặc nhân viên đang là thành
+     * viên CHƯA RỜI của chính phiếu này. Nhân viên đã rời trước đó vào lại được —
+     * tạo dòng member MỚI để lịch sử giữ đủ các cặp JOINED/LEFT.
+     */
+    WorkOrderMemberDTO addMember(Integer workOrderId, CreateWorkOrderRequest.MemberInput input);
+
+    /**
+     * Đánh dấu thành viên rời khu vực làm việc (leftAt = now). Idempotent: member
+     * đã rời rồi thì trả về nguyên trạng. 404 nếu member không thuộc phiếu này.
+     */
+    WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId);
 }
