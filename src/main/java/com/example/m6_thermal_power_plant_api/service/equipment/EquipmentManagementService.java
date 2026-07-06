@@ -2,7 +2,7 @@ package com.example.m6_thermal_power_plant_api.service.equipment;
 
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
-import com.example.m6_thermal_power_plant_api.repository.IEquipmentRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

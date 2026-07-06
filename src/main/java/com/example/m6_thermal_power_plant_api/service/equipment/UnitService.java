@@ -1,11 +1,8 @@
 package com.example.m6_thermal_power_plant_api.service.equipment;
 
-import com.example.m6_thermal_power_plant_api.dto.equipment.response.SystemListDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.response.UnitListDTO;
-import com.example.m6_thermal_power_plant_api.entity.EquipmentSystem;
 import com.example.m6_thermal_power_plant_api.entity.Unit;
-import com.example.m6_thermal_power_plant_api.repository.IEquipmentSystemRepository;
-import com.example.m6_thermal_power_plant_api.repository.IUnitRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IUnitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
