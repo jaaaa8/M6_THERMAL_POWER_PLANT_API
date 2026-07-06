@@ -13,9 +13,8 @@ public class ConsumableDTO {
 
     private Integer id;
 
-    @NotBlank(message = "Mã vật tư tiêu hao không được để trống")
     @Size(max = 30, message = "Mã vật tư tiêu hao không được vượt quá 30 ký tự")
-    @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Mã vật tư tiêu hao chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_)")
+    @Pattern(regexp = "^[a-zA-Z0-9_-]*$", message = "Mã vật tư tiêu hao chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_)")
     private String consumableCode;
 
     @NotBlank(message = "Tên vật tư tiêu hao không được để trống")
