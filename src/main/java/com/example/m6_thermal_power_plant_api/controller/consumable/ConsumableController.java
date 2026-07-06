@@ -2,13 +2,21 @@ package com.example.m6_thermal_power_plant_api.controller.consumable;
 
 
 import com.example.m6_thermal_power_plant_api.dto.consumables.ConsumableDTO;
+import com.example.m6_thermal_power_plant_api.dto.consumables.ConsumableReceiptCreateDTO;
+import com.example.m6_thermal_power_plant_api.dto.consumables.ConsumableReceiptResponseDTO;
+import com.example.m6_thermal_power_plant_api.dto.consumables.ConsumableStockDTO;
 import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
+import com.example.m6_thermal_power_plant_api.security.CustomUserDetails;
+import com.example.m6_thermal_power_plant_api.service.consumable.IConsumableInventoryService;
 import com.example.m6_thermal_power_plant_api.service.consumable.IConsumableService;
 import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +28,8 @@ import java.math.BigDecimal;
 public class ConsumableController {
 
     private final IConsumableService consumableService;
+    private final IConsumableInventoryService consumableInventoryService;
+
 
 
     @PostMapping
@@ -56,6 +66,37 @@ public class ConsumableController {
     public void delete(@PathVariable Integer id){
         consumableService.delete(id);
     }
+
+    @GetMapping("/stock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
+    public Page<ConsumableStockDTO> searchStock(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String manufacturer,
+            @RequestParam(required = false) PartStatus status,
+            Pageable pageable) {
+        return consumableInventoryService.searchStock(code, name, manufacturer, status, pageable);
+    }
+
+    @PostMapping("/receipts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
+    public ResponseEntity<?> importConsumable(
+            @Valid @RequestBody ConsumableReceiptCreateDTO dto,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            ConsumableReceiptResponseDTO response = consumableInventoryService.importConsumable(dto, userDetails.getAccountId());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/receipts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
+    public Page<ConsumableReceiptResponseDTO> getReceiptHistory(Pageable pageable) {
+        return consumableInventoryService.getReceiptHistory(pageable);
+    }
+
 
 
 
