@@ -42,22 +42,26 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // Flyway: flyway-mysql BẮT BUỘC riêng cho MySQL 8+ (Flyway 7+ tách hỗ trợ theo DB engine).
+    // 4. Flyway: flyway-mysql BẮT BUỘC riêng cho MySQL 8+
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-mysql'
 
-    // 4. Lombok
+    // 5. Cloudinary — lưu file/PDF trên cloud (thay cho ghi vào src/main/resources, vốn hỏng khi chạy jar)
+    implementation 'com.cloudinary:cloudinary-http44:1.36.0'
+
+    // 5b. PDF: Thymeleaf render HTML template -> OpenHTMLtoPDF sinh PDF.
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.40'
+
+    // 6. Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-
-    // 4. Testing
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-
 
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 
-    // 5. Testing
+    // 7. Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
