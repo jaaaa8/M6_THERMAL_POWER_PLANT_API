@@ -80,3 +80,5 @@ PROJECT_CONTEXT.md
 ### Temp / Scratch Files ###
 temp_*
 
+  
+node_modules/ 
