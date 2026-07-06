@@ -9,6 +9,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -84,8 +85,13 @@ public class Equipment extends BaseSoftDeleteEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "img_path", columnDefinition = "TEXT")
-    private String imgPath;
+
+    @OneToMany(
+            mappedBy = "equipment",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<EquipmentImage> images = new ArrayList<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "equipment", fetch = FetchType.LAZY)
