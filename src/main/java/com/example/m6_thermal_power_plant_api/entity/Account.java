@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Tài khoản đăng nhập — là "actor" thực hiện hầu hết hành vi nghiệp vụ
@@ -74,6 +75,10 @@ public class Account extends BaseSoftDeleteEntity {
     /**
      * Phân quyền.
      * Join table: account_roles (account_id, role_id)
+     *
+     * Dùng Set (KHÔNG dùng List): cho phép @EntityGraph fetch đồng thời
+     * roles + roles.permissions mà không dính MultipleBagFetchException
+     * (Hibernate cấm fetch nhiều "bag"/List cùng lúc, nhưng cho phép nhiều Set).
      */
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -81,5 +86,18 @@ public class Account extends BaseSoftDeleteEntity {
         joinColumns        = @JoinColumn(name = "account_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private List<Role> roles;
+    private Set<Role> roles;
+
+    /**
+     * Tăng dần mỗi khi tập permission hiệu lực của account này thay đổi
+     * (role bị đổi permission, hoặc account bị gán/gỡ role). Access token
+     * mang theo giá trị này lúc phát hành; jwtAuthFilter so sánh với giá trị
+     * hiện tại trong DB ở MỖI request — lệch nghĩa là permission trong token
+     * đã cũ, bắt buộc phải refresh để lấy token mới với permission mới nhất.
+     * Nhờ vậy admin đổi quyền có hiệu lực gần như ngay lập tức mà JWT vẫn
+     * không cần mang theo toàn bộ danh sách permission để so sánh.
+     */
+    @Column(name = "permission_version", nullable = false)
+    @Builder.Default
+    private Integer permissionVersion = 1;
 }
