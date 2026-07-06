@@ -30,6 +30,7 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
     private final IToolBorrowLogRepository toolBorrowLogRepository;
     private final IToolRepository toolRepository;
     private final IAccountRepository accountRepository;
+    private final NotificationService notificationService;
 
     @Override
     public ToolBorrowLogResponse createBorrowRequest(Integer accountId, ToolBorrowRequest request) {
@@ -50,7 +51,17 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
                 .dueDate(request.getDueDate())
                 .build();
 
-        return toResponse(toolBorrowLogRepository.save(log));
+        ToolBorrowLogResponse response = toResponse(toolBorrowLogRepository.save(log));
+
+        // Thông báo cho thủ kho / admin khi có yêu cầu mới
+        String borrowerName = account.getEmployee() != null ? account.getEmployee().getFullName() : account.getUsername();
+        notificationService.sendToAdmins(
+                "Yêu cầu mượn CCDC mới",
+                borrowerName + " muốn mượn " + tool.getName() + " (SL: " + request.getQuantity() + ")",
+                "/ccdc/muon-tra"
+        );
+
+        return response;
     }
 
     @Override
@@ -72,7 +83,17 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
         log.setApprovedBy(getAccountOrThrow(approvedByAccountId));
         log.setDeliveredDate(LocalDateTime.now());
 
-        return toResponse(toolBorrowLogRepository.save(log));
+        ToolBorrowLogResponse response = toResponse(toolBorrowLogRepository.save(log));
+
+        // Thông báo cho người mượn khi được duyệt
+        notificationService.send(
+                log.getAccount().getId(),
+                "Yêu cầu mượn CCDC đã được duyệt",
+                "Phiếu mượn " + log.getTool().getName() + " của bạn đã được duyệt. Vui lòng đến kho nhận.",
+                "/employee"
+        );
+
+        return response;
     }
 
     @Override
@@ -86,7 +107,17 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
         log.setApprovedBy(getAccountOrThrow(approvedByAccountId));
         log.setReturnNote(request.getReason());
 
-        return toResponse(toolBorrowLogRepository.save(log));
+        ToolBorrowLogResponse response = toResponse(toolBorrowLogRepository.save(log));
+
+        // Thông báo cho người mượn khi bị từ chối
+        notificationService.send(
+                log.getAccount().getId(),
+                "Yêu cầu mượn CCDC bị từ chối",
+                "Phiếu mượn " + log.getTool().getName() + " đã bị từ chối. Lý do: " + request.getReason(),
+                "/employee"
+        );
+
+        return response;
     }
 
     @Override

@@ -74,4 +74,11 @@ public class ToolBorrowLogController {
         int sentCount = toolBorrowOverdueNotifier.sendOverdueNotifications();
         return ApiResponse.success("Đã gửi " + sentCount + " email nhắc quá hạn", sentCount);
     }
+
+    /** Gửi email test đến địa chỉ bất kỳ để kiểm tra cấu hình SMTP */
+    @PostMapping("/test-email")
+    public ApiResponse<String> testEmail(@RequestParam String toEmail) {
+        toolBorrowOverdueNotifier.sendTestEmail(toEmail);
+        return ApiResponse.success("Đã gửi email test đến " + toEmail, toEmail);
+    }
 }

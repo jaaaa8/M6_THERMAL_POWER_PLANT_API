@@ -74,4 +74,9 @@ public class ToolBorrowLog {
     @Builder.Default
     @Column(name = "overdue_notified", nullable = false)
     private Boolean overdueNotified = false;
+
+    /** Đã gửi email nhắc sắp đến hạn (trước 1 ngày) hay chưa */
+    @Builder.Default
+    @Column(name = "due_soon_notified", nullable = false)
+    private Boolean dueSoonNotified = false;
 }

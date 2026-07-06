@@ -13,6 +13,9 @@ public interface IToolRepository extends JpaRepository<Tool, Integer> {
 
     boolean existsByToolCode(String toolCode);
 
+    @Query("SELECT MAX(t.toolCode) FROM Tool t WHERE t.toolCode LIKE 'MCCDC-%'")
+    Optional<String> findMaxToolCode();
+
     /**
      * Tìm kiếm CCDC theo tên (keyword) và/hoặc chủng loại (categoryId).
      * Truyền null cho tham số nào không cần lọc.

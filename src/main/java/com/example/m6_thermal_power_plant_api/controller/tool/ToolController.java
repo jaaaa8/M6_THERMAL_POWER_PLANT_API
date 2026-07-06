@@ -69,4 +69,9 @@ public class ToolController {
     public ApiResponse<List<ToolTransactionLogResponse>> getTransactionLogs(@PathVariable Integer id) {
         return ApiResponse.success(toolService.getTransactionLogs(id));
     }
+
+    @GetMapping("/next-code")
+    public ApiResponse<String> getNextCode() {
+        return ApiResponse.success(toolService.generateNextCode());
+    }
 }

@@ -52,4 +52,9 @@ public class ToolCategoryController {
     public ApiResponse<List<ToolCategoryResponse>> getAll() {
         return ApiResponse.success(toolCategoryService.getAll());
     }
+
+    @GetMapping("/next-code")
+    public ApiResponse<String> getNextCode() {
+        return ApiResponse.success(toolCategoryService.generateNextCode());
+    }
 }

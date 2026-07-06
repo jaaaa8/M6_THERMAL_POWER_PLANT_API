@@ -32,4 +32,8 @@ public interface IToolBorrowLogRepository extends JpaRepository<ToolBorrowLog, I
     /** Dùng cho job quét quá hạn: đã APPROVED, chưa trả, đã qua hạn, chưa gửi email */
     List<ToolBorrowLog> findByStatusAndDueDateBeforeAndActualReturnDateIsNullAndOverdueNotifiedFalse(
             BorrowStatus status, LocalDateTime now);
+
+    /** Dùng cho job nhắc sắp đến hạn: đã APPROVED, chưa trả, dueDate trong khoảng [from, to], chưa gửi email nhắc */
+    List<ToolBorrowLog> findByStatusAndDueDateBetweenAndActualReturnDateIsNullAndDueSoonNotifiedFalse(
+            BorrowStatus status, LocalDateTime from, LocalDateTime to);
 }
