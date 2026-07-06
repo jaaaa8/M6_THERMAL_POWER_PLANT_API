@@ -30,8 +30,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * KHÔNG @Commit nên tự rollback sau khi chạy → lặp lại bao nhiêu lần cũng được,
  * không làm bẩn DB và không cần re-seed.
  *
- * YÊU CẦU: MySQL đang chạy (xem application.properties) và đã nạp sample-data.sql,
- * trong đó work_order id = 1 (WO-2026-0001) còn "sống" cùng các member / issue của nó.
+ * YÊU CẦU: MySQL đang chạy (xem application.properties) — Flyway tự nạp sample data lúc
+ * app khởi động (V3__seed_sample_data.sql), trong đó work_order id = 1 (WO-2026-0001)
+ * còn "sống" cùng các member / issue của nó.
  *
  * Kịch bản:
  *   - Seed thêm 1 spare_part_export + 1 consumable_export trỏ tới issue của WO #1.
@@ -42,10 +43,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   - restore(WO #1) → mọi dòng trên quay lại is_deleted = false.
  */
 @SpringBootTest
-@Tag("manual")  // Chạy thủ công với MySQL thật + sample-data.sql (WO id=1). Không chạy trong CI/CD
+@Tag("manual")  // Chạy thủ công với MySQL thật (Flyway đã nạp WO id=1). Không chạy trong CI/CD
 public class WorkOrderSoftDeleteCascadeTest {
 
-    private static final int WORK_ORDER_ID = 1; // WO-2026-0001 trong sample-data.sql
+    private static final int WORK_ORDER_ID = 1; // WO-2026-0001, nạp bởi V3__seed_sample_data.sql
 
     @Autowired
     private SoftDeleteCascadeService cascadeService;
@@ -62,7 +63,7 @@ public class WorkOrderSoftDeleteCascadeTest {
         // ---- ARRANGE ---------------------------------------------------------
         WorkOrder wo = workOrderRepository.findById(WORK_ORDER_ID).orElseThrow(() ->
                 new RuntimeException("work_order id=" + WORK_ORDER_ID + " không tồn tại hoặc đang bị ẩn. "
-                        + "Hãy nạp lại sample-data.sql trước khi chạy test này."));
+                        + "Hãy drop schema và khởi động lại app để Flyway nạp lại sample data."));
 
         SparePartsIssue spi = firstOrThrow(wo.getSparePartsIssues(),
                 "WO #" + WORK_ORDER_ID + " không có spare_parts_issue trong sample-data.");

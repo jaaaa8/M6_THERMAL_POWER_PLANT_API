@@ -62,7 +62,7 @@ public class Tool extends BaseSoftDeleteEntity {
     private String note;
 
     /** Đường dẫn file ảnh đính kèm */
-    @Column(name = "img_path", columnDefinition = "TEXT")
+    @Column(name = "img_path", columnDefinition = "MEDIUMTEXT")
     private String imgPath;
 
     @JsonIgnore

@@ -1,13 +1,19 @@
 package com.example.m6_thermal_power_plant_api.service.maintenance;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.MemberHistoryEventDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
+import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 @Service
 public class MaintenanceService implements IMaintenanceService {
@@ -26,17 +34,18 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderMemberRepository workOrderMemberRepository;
     private final EmployeeRepository employeeRepository;
-    private final AccountRepository accountRepository;
+    private final ISparePartIssuesService sparePartIssuesService;
 
     public MaintenanceService(RepairRequestRepository repairRequestRepository,
                               WorkOrderRepository workOrderRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
-                              EmployeeRepository employeeRepository, AccountRepository accountRepository) {
+                              EmployeeRepository employeeRepository,
+                              ISparePartIssuesService sparePartIssuesService) {
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.employeeRepository = employeeRepository;
-        this.accountRepository = accountRepository;
+        this.sparePartIssuesService = sparePartIssuesService;
     }
 
     @Override
@@ -58,9 +67,16 @@ public class MaintenanceService implements IMaintenanceService {
 
         validateActiveWorkOrderConstraints(repairRequest, request);
 
-        Account leader = loadAccount(request.getLeaderId(), "nguoi lanh dao cong viec");
-        Account directSupervisor = loadAccountOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
-        Account safetySupervisor = loadAccountOrNull(request.getSafetySupervisorId(), "nguoi giam sat an toan");
+        Employee leader = loadEmployee(request.getLeaderId(), "nguoi lanh dao cong viec");
+        Employee directSupervisor = loadEmployeeOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
+        Employee safetySupervisor = loadEmployeeOrNull(request.getSafetySupervisorId(), "nguoi giam sat an toan");
+
+        // Mô tả sửa chữa: mặc định lấy từ mô tả sự cố của yêu cầu; người tạo
+        // sửa lại được thì dùng giá trị họ gửi lên.
+        String repairDescription = (request.getRepairDescription() != null
+                && !request.getRepairDescription().isBlank())
+                ? request.getRepairDescription()
+                : repairRequest.getIncidentDescription();
 
         WorkOrder workOrder = workOrderRepository.save(WorkOrder.builder()
                 .orderCode(generateOrderCode())
@@ -70,6 +86,7 @@ public class MaintenanceService implements IMaintenanceService {
                 .safetySupervisor(safetySupervisor)
                 .startTime(request.getStartTime())
                 .expectedEndTime(request.getExpectedEndTime())
+                .repairDescription(repairDescription)
                 .status(WorkOrderStatus.OPEN)
                 .build());
 
@@ -127,7 +144,6 @@ public class MaintenanceService implements IMaintenanceService {
             saved.add(workOrderMemberRepository.save(WorkOrderMember.builder()
                     .workOrder(workOrder)
                     .employees(employee)
-                    .roleInTask(input.getRoleInTask())
                     .joinedAt(now)
                     .build()));
         }
@@ -143,11 +159,13 @@ public class MaintenanceService implements IMaintenanceService {
      * hoạt động bình thường.
      *
      * Với mỗi phiếu đang sống, phiếu mới bị TỪ CHỐI (409) nếu:
-     *  (a) cùng Chỉ huy trực tiếp (direct supervisor) — leader / safety supervisor
-     *      được phép trùng, riêng direct supervisor thì KHÔNG; HOẶC
-     *  (b) khung giờ [startTime, expectedEndTime] CHỒNG LẤN nhau.
+     *  (a) trùng leader, direct supervisor, HOẶC safety supervisor — nhân viên
+     *      thường (members) được phép trùng, riêng 3 vai trò này thì KHÔNG
+     *      ({@link DuplicateHumanResourceException}); HOẶC
+     *  (b) khung giờ [startTime, expectedEndTime] CHỒNG LẤN nhau
+     *      ({@link TimeOverlapException}).
      *
-     * Hai phiếu song song chỉ hợp lệ khi KHÁC direct supervisor VÀ giờ không đè.
+     * Hai phiếu song song chỉ hợp lệ khi KHÁC cả 3 vai trò trên VÀ giờ không đè.
      *
      * Để kiểm tra (b), khi đã có ít nhất 1 phiếu sống thì phiếu mới BẮT BUỘC khai
      * báo cả startTime lẫn expectedEndTime (nếu thiếu → 409, kèm gợi ý huỷ phiếu cũ).
@@ -175,17 +193,32 @@ public class MaintenanceService implements IMaintenanceService {
         }
 
         for (WorkOrder live : liveWorkOrders) {
-            Integer liveDirectId = live.getDirectSupervisor() != null ? live.getDirectSupervisor().getId() : null;
-            if (Objects.equals(liveDirectId, input.getDirectSupervisorId())) {
-                throw new IllegalStateException(
-                        "Da ton tai phieu cong tac dang hoat dong (" + live.getOrderCode() + ") cung Chi huy truc tiep. "
-                                + "Cac phieu hoat dong song song phai khac Chi huy truc tiep, hoac hay huy phieu cu (CANCELLED).");
-            }
+            checkDuplicateRole(live, input.getLeaderId(), WorkOrder::getLeader, "Nguoi lanh dao cong viec");
+            checkDuplicateRole(live, input.getDirectSupervisorId(), WorkOrder::getDirectSupervisor, "Chi huy truc tiep");
+            checkDuplicateRole(live, input.getSafetySupervisorId(), WorkOrder::getSafetySupervisor, "Nguoi giam sat an toan");
+
             if (timeOverlaps(input.getStartTime(), input.getExpectedEndTime(), live.getStartTime(), live.getExpectedEndTime())) {
-                throw new IllegalStateException(
+                throw new TimeOverlapException(
                         "Thoi gian lam viec chong lan voi phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
                                 + "Hay chon khung gio khac hoac huy phieu cu (CANCELLED).");
             }
+        }
+    }
+
+    /**
+     * Nem {@link DuplicateHumanResourceException} neu {@code inputEmployeeId} (leader /
+     * direct supervisor / safety supervisor cua phieu MOI) trung voi nguoi dang giu
+     * đúng vai trò đó ở phiếu {@code live} (dang SONG cung yeu cau). Members (nhan vien
+     * lam viec thuong) KHONG bi rang buoc nay, chi 3 vai tro quan ly nay moi bi cam trung.
+     */
+    private void checkDuplicateRole(WorkOrder live, Integer inputEmployeeId,
+                                     Function<WorkOrder, Employee> roleGetter, String roleLabel) {
+        Employee liveEmployee = roleGetter.apply(live);
+        Integer liveEmployeeId = liveEmployee != null ? liveEmployee.getId() : null;
+        if (inputEmployeeId != null && Objects.equals(liveEmployeeId, inputEmployeeId)) {
+            throw new DuplicateHumanResourceException(
+                    roleLabel + " da duoc phan cong o phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
+                            + "Cac phieu hoat dong song song khong duoc trung " + roleLabel + ", hoac hay huy phieu cu (CANCELLED).");
         }
     }
 
@@ -200,6 +233,98 @@ public class MaintenanceService implements IMaintenanceService {
             List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
             return WorkOrderDTO.from(wo, members);
         });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WorkOrderDetailDTO getWorkOrderDetail(Integer workOrderId) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay phieu cong tac voi id: " + workOrderId));
+
+        List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(workOrderId);
+
+        return WorkOrderDetailDTO.builder()
+                .workOrder(WorkOrderDTO.from(workOrder, members))
+                .memberHistory(buildMemberHistory(members))
+                .sparePartsIssues(sparePartIssuesService.getByWorkOrder(workOrderId))
+                .build();
+    }
+
+    /**
+     * Dựng dòng thời gian ra/vào từ các dòng member: mỗi dòng sinh 1 sự kiện
+     * JOINED (joined_at) và, nếu đã rời, 1 sự kiện LEFT (left_at). Sắp xếp TĂNG
+     * dần theo thời gian → đọc từ trên xuống đúng thứ tự diễn biến:
+     * "A joined 08:00 → B joined 08:00 → A left 12:00 → C joined 13:00 ...".
+     * (Nhân viên rời rồi vào lại = dòng member mới → tự có thêm cặp sự kiện.)
+     */
+    private static List<MemberHistoryEventDTO> buildMemberHistory(List<WorkOrderMember> members) {
+        List<MemberHistoryEventDTO> events = new ArrayList<>();
+        for (WorkOrderMember m : members) {
+            Integer employeeId = m.getEmployees() != null ? m.getEmployees().getId() : null;
+            String fullName = m.getEmployees() != null ? m.getEmployees().getFullName() : null;
+            if (m.getJoinedAt() != null) {
+                events.add(MemberHistoryEventDTO.builder()
+                        .employeeId(employeeId).fullName(fullName).role(m.getRoleInTask())
+                        .eventType(MemberHistoryEventDTO.EventType.JOINED)
+                        .eventTime(m.getJoinedAt())
+                        .build());
+            }
+            if (m.getLeftAt() != null) {
+                events.add(MemberHistoryEventDTO.builder()
+                        .employeeId(employeeId).fullName(fullName).role(m.getRoleInTask())
+                        .eventType(MemberHistoryEventDTO.EventType.LEFT)
+                        .eventTime(m.getLeftAt())
+                        .build());
+            }
+        }
+        events.sort(Comparator.comparing(MemberHistoryEventDTO::getEventTime,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+        return events;
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderMemberDTO addMember(Integer workOrderId, CreateWorkOrderRequest.MemberInput input) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay phieu cong tac voi id: " + workOrderId));
+
+        if (!isLive(workOrder)) {
+            throw new IllegalStateException(
+                    "Phieu cong tac (" + workOrder.getOrderCode() + ") da " + workOrder.getStatus()
+                            + " — khong the them thanh vien.");
+        }
+
+        if (workOrderMemberRepository.existsByWorkOrder_IdAndEmployees_IdAndLeftAtIsNull(
+                workOrderId, input.getEmployeeId())) {
+            throw new IllegalStateException(
+                    "Nhan vien nay dang la thanh vien chua roi cua phieu cong tac ("
+                            + workOrder.getOrderCode() + ").");
+        }
+
+        Employee employee = loadEmployee(input.getEmployeeId(), "nhan vien lam viec");
+        WorkOrderMember member = workOrderMemberRepository.save(WorkOrderMember.builder()
+                .workOrder(workOrder)
+                .employees(employee)
+                .joinedAt(LocalDateTime.now())
+                .build());
+        return WorkOrderMemberDTO.from(member);
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId) {
+        WorkOrderMember member = workOrderMemberRepository.findByIdAndWorkOrder_Id(memberId, workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay thanh vien id " + memberId + " trong phieu cong tac id " + workOrderId));
+
+        // Idempotent: đã rời rồi thì trả về nguyên trạng (giống cancelWorkOrder).
+        if (member.getLeftAt() == null) {
+            member.setLeftAt(LocalDateTime.now());
+            workOrderMemberRepository.save(member);
+        }
+        return WorkOrderMemberDTO.from(member);
     }
 
     /** Phieu "song" = dang rang buoc quan he 1-n (chua huy, chua hoan thanh). */
@@ -236,13 +361,7 @@ public class MaintenanceService implements IMaintenanceService {
                         "Khong tim thay nhan vien (" + label + ") voi id: " + employeeId));
     }
 
-    private Account loadAccount(Integer accountId, String label) {
-        return accountRepository.findById(accountId)
-                .orElseThrow(() -> new ObjectNotFoundException(
-                        "Khong tim thay tai khoan (" + label + ") voi id: " + accountId));
-    }
-
-    private Account loadAccountOrNull(Integer accountId, String label) {
-        return accountId == null ? null : loadAccount(accountId, label);
+    private Employee loadEmployeeOrNull(Integer employeeId, String label) {
+        return employeeId == null ? null : loadEmployee(employeeId, label);
     }
 }

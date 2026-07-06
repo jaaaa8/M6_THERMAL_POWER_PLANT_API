@@ -25,29 +25,34 @@ public class AccountService implements IAccountService {
     private final org.springframework.mail.javamail.JavaMailSender mailSender;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    private AccountResponseDTO mapToResponseDTO(Account a) {
+        if (a == null) return null;
+        return AccountResponseDTO.builder()
+                .username(a.getUsername())
+                .email(a.getEmail())
+                .status(a.getStatus())
+                .roles(a.getRoles() != null ? a.getRoles().stream()
+                        .map(r -> com.example.m6_thermal_power_plant_api.dto.accounts.RoleDTO.builder()
+                                .id(r.getId())
+                                .name(r.getName())
+                                .build())
+                        .collect(java.util.stream.Collectors.toList()) : java.util.Collections.emptyList())
+                .employee(a.getEmployee() != null ? AccountResponseDTO.EmployeeInfo.builder()
+                        .id(a.getEmployee().getId())
+                        .fullName(a.getEmployee().getFullName())
+                        .gmail(a.getEmployee().getGmail())
+                        .build() : null)
+                .build();
+    }
+
     public List<AccountResponseDTO> getAllAccounts() {
         return accountRepository.findAll().stream()
-                .map(a -> AccountResponseDTO.builder()
-                        .username(a.getUsername())
-                        .email(a.getEmail())
-                        .status(a.getStatus())
-                        .roles(a.getRoles() != null ? a.getRoles().stream()
-                                .map(r -> com.example.m6_thermal_power_plant_api.dto.accounts.RoleDTO.builder()
-                                        .id(r.getId())
-                                        .name(r.getName())
-                                        .build())
-                                .collect(java.util.stream.Collectors.toList()) : java.util.Collections.emptyList())
-                        .employee(a.getEmployee() != null ? AccountResponseDTO.EmployeeInfo.builder()
-                                .id(a.getEmployee().getId())
-                                .fullName(a.getEmployee().getFullName())
-                                .gmail(a.getEmployee().getGmail())
-                                .build() : null)
-                        .build())
+                .map(this::mapToResponseDTO)
                 .collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional
-    public Account createAccount(AccountDTO dto) {
+    public AccountResponseDTO createAccount(AccountDTO dto) {
         boolean hasEmployeeId = dto.getEmployeeId() != null;
         boolean hasEmail = dto.getEmail() != null && !dto.getEmail().trim().isEmpty();
 
@@ -101,16 +106,17 @@ public class AccountService implements IAccountService {
         }
 
         Account savedAccount = accountRepository.save(account);
+        accountRepository.flush();
 
         if (account.getEmail() != null && !account.getEmail().isEmpty()) {
             sendAccountInfoEmailAsync(account.getEmail(), dto.getUsername(), plainPassword);
         }
 
-        return savedAccount;
+        return mapToResponseDTO(savedAccount);
     }
 
     @Transactional
-    public Account grantAccount(com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
+    public AccountResponseDTO grantAccount(com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
         if (accountRepository.existsByEmployeeId(request.getEmployeeId())) {
             throw new IllegalArgumentException("Employee already has an account: " + request.getEmployeeId());
         }
@@ -135,12 +141,13 @@ public class AccountService implements IAccountService {
         account.setRoles(java.util.Collections.singleton(role));
 
         Account savedAccount = accountRepository.save(account);
+        accountRepository.flush();
 
         if (username != null && !username.isEmpty()) {
             sendAccountInfoEmailAsync(username, username, plainPassword);
         }
 
-        return savedAccount;
+        return mapToResponseDTO(savedAccount);
     }
 
     private String generateRandomPassword(int length) {
@@ -190,11 +197,13 @@ public class AccountService implements IAccountService {
     }
 
     @Transactional
-    public Account updateStatus(com.example.m6_thermal_power_plant_api.dto.accounts.AccountStatusUpdateRequestDTO request) {
+    public AccountResponseDTO updateStatus(com.example.m6_thermal_power_plant_api.dto.accounts.AccountStatusUpdateRequestDTO request) {
         Account account = accountRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Account not found with username: " + request.getUsername()));
         
         account.setStatus(request.getStatus());
-        return accountRepository.save(account);
+        Account saved = accountRepository.save(account);
+        accountRepository.flush();
+        return mapToResponseDTO(saved);
     }
 }
