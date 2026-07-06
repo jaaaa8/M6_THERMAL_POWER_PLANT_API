@@ -1,7 +1,7 @@
 package com.example.m6_thermal_power_plant_api.service.equipment;
 
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
-import com.example.m6_thermal_power_plant_api.repository.IEquipmentRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
