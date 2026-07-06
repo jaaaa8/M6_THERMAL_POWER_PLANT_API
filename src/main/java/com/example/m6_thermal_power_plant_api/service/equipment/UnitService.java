@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -22,6 +25,15 @@ public class UnitService implements IUnitService{
                 .orElseThrow(()-> new RuntimeException("Không tìm thấy đơn vị"));
         return convertDTO(unit);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UnitListDTO> getAll() {
+        return unitRepository.findAll().stream()
+                .map(this::convertDTO)
+                .collect(Collectors.toList());
+    }
+
     private UnitListDTO convertDTO(Unit unit) {
         return UnitListDTO.builder()
                 .id(unit.getId())

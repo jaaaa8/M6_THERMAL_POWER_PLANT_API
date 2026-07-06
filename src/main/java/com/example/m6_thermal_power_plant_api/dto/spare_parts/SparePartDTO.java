@@ -14,9 +14,8 @@ public class SparePartDTO {
 
     private Integer id;
 
-    @NotBlank(message = "Mã vật tư thay thế không được để trống")
     @Size(max = 30, message = "Mã vật tư thay thế không được vượt quá 30 ký tự")
-    @Pattern(regexp = "^[a-zA-Z0-9_-]+$", message = "Mã vật tư thay thế chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_)")
+    @Pattern(regexp = "^[a-zA-Z0-9_-]*$", message = "Mã vật tư thay thế chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_)")
     private String sparePartCode;
 
     @NotBlank(message = "Tên vật tư thay thế không được để trống")
