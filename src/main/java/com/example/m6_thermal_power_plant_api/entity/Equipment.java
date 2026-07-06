@@ -86,12 +86,9 @@ public class Equipment extends BaseSoftDeleteEntity {
     private String description;
 
 
-    @OneToMany(
-            mappedBy = "equipment",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<EquipmentImage> images = new ArrayList<>();
+    @Lob
+    @Column(name="img_path", columnDefinition = "LONGTEXT")
+    private String imgPath;
 
     @JsonIgnore
     @OneToMany(mappedBy = "equipment", fetch = FetchType.LAZY)

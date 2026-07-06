@@ -2,7 +2,6 @@ package com.example.m6_thermal_power_plant_api.service.equipment;
 
 import com.example.m6_thermal_power_plant_api.dto.equipment.response.ListEquipmentDTO;
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
-import com.example.m6_thermal_power_plant_api.entity.EquipmentImage;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,18 +40,10 @@ public class EquipmentService implements IEquipmentService {
     }
 
     private ListEquipmentDTO convertEquipment(Equipment equipment) {
-        String imageUrl = null;
 
-        if (equipment.getImages() != null) {
-            imageUrl = equipment.getImages().stream()
-                    .sorted(Comparator.comparing(EquipmentImage::getId))
-                    .map(EquipmentImage::getImageUrl)
-                    .findFirst()
-                    .orElse(null);
-        }
         return ListEquipmentDTO.builder()
                 .id(equipment.getId())
-                .imageUrl(imageUrl)
+                .imageUrl(getFirstImage(equipment.getImgPath()))
                 .kksCode(equipment.getKksCode())
                 .name(equipment.getName())
                 .equipmentType(
@@ -61,5 +52,12 @@ public class EquipmentService implements IEquipmentService {
                 )
                 .equipmentStatus(equipment.getStatus())
                 .build();
+    }
+    private String getFirstImage(String imgPath) {
+        if (imgPath == null || imgPath.isBlank()) {
+            return null;
+        }
+
+        return imgPath.split("\\|")[0];
     }
 }
