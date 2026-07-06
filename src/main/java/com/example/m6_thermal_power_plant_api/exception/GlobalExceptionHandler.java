@@ -118,4 +118,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleDuplicateHumanResource(DuplicateHumanResourceException ex) {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
     }
+
+    /** Khung gio cua phieu cong tac moi chong lan voi phieu dang hoat dong cung yeu cau. */
+    @ExceptionHandler(TimeOverlapException.class)
+    public ResponseEntity<String> handleTimeOverlap(TimeOverlapException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.CONFLICT);
+    }
 }

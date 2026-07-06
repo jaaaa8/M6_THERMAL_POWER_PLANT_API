@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/v1/units")
 @RequiredArgsConstructor
@@ -19,5 +21,10 @@ public class UnitController {
             @PathVariable (name= "id") int id
     ){
         return  ResponseEntity.ok(unitService.getById(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<UnitListDTO>> getAll() {
+        return ResponseEntity.ok(unitService.getAll());
     }
 }
