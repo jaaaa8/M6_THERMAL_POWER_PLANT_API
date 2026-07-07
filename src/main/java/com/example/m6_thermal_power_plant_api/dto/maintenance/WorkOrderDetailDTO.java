@@ -17,6 +17,8 @@ import java.util.List;
  *  - {@code memberHistory} : dòng thời gian ra/vào, sắp xếp theo thời gian TĂNG dần
  *                            (xem {@link MemberHistoryEventDTO}).
  *  - {@code sparePartsIssues}: các phiếu cấp vật tư thay thế đã tạo cho phiếu này.
+ *  - {@code extensions}    : các lần tạm dừng cuối ngày / gia hạn (approvedBy null
+ *                            = đang chờ Trưởng ca duyệt bản giấy), theo ngày tăng dần.
  */
 @Getter
 @Setter
@@ -28,4 +30,5 @@ public class WorkOrderDetailDTO {
     private WorkOrderDTO workOrder;
     private List<MemberHistoryEventDTO> memberHistory;
     private List<SparePartsIssueDTO> sparePartsIssues;
+    private List<WorkOrderExtensionDTO> extensions;
 }

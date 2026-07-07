@@ -40,8 +40,8 @@
         table.data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 40px;
+            margin-top: 10px;
+            margin-bottom: 16px;
         }
         table.data-table th, table.data-table td {
             border: 1px solid #000;
@@ -53,12 +53,12 @@
             font-weight: bold;
         }
         table.data-table td {
-            height: 35px;
+            height: 28px;
         }
         .sign-row {
             width: 100%;
             display: table;
-            margin-top: 20px;
+            margin-top: 10px;
         }
         .sign-cell {
             display: table-cell;
@@ -68,7 +68,7 @@
         }
         .sign-cell .role {
             font-weight: bold;
-            margin-bottom: 80px;
+            margin-bottom: 40px;
         }
     </style>
 </head>
@@ -77,16 +77,18 @@
     <h1>PHIẾU ĐỀ NGHỊ CẤP PHÁT VẬT TƯ, TRANG THIẾT BỊ</h1>
 </div>
 <div class="date-row">
-    Ngày, tháng, năm
+    Ngày <span th:text="${issuedDay}">...</span>
+    tháng <span th:text="${issuedMonth}">...</span>
+    năm <span th:text="${issuedYear}">......</span>
 </div>
 
-<div class="form-row">Phòng/Bộ phận đề nghị: <i>[Tên phòng/bộ phận]</i></div>
-<div class="form-row">Kính gửi: <i>[Phòng/Bộ phận phụ trách cấp phát vật tư]</i></div>
-<div class="form-row">Tên người đề nghị: <i>[Họ và tên người đề nghị]</i></div>
-<div class="form-row">Chức vụ: <i>[Chức vụ của người đề nghị]</i></div>
-<div class="form-row">Lý do đề nghị: <i>[Nêu rõ lý do cần cấp phát vật tư]</i></div>
-<div class="form-row">Phiếu công tác: <i>[Mã công tác]</i></div>
-<div class="form-row">Mô tả sơ bộ phiếu công tác: <i>[Mô tả phiếu công tác]</i></div>
+<div class="form-row">Phòng/Bộ phận đề nghị: <span th:text="${requesterDepartment}">[Tên phòng/bộ phận]</span></div>
+<div class="form-row">Kính gửi: <span th:text="${recipientDepartment}">[Phòng/Bộ phận phụ trách cấp phát vật tư]</span></div>
+<div class="form-row">Tên người đề nghị: <span th:text="${requesterName}">[Họ và tên người đề nghị]</span></div>
+<div class="form-row">Chức vụ: <span th:text="${requesterPosition}">[Chức vụ của người đề nghị]</span></div>
+<div class="form-row">Lý do đề nghị: <span th:text="${reason}">[Nêu rõ lý do cần cấp phát vật tư]</span></div>
+<div class="form-row">Phiếu công tác: <span class="font-mono" th:text="${orderCode}">[Mã công tác]</span></div>
+<div class="form-row">Mô tả sơ bộ phiếu công tác: <span th:text="${description}">[Mô tả phiếu công tác]</span></div>
 
 <div class="form-row" style="margin-top: 15px;">Danh sách vật tư đề nghị cấp phát:</div>
 
@@ -99,10 +101,13 @@
         <th style="width: 20%;">Số lượng</th>
 
     </tr>
-    <!-- Đã gỡ 1 ô trống tương ứng cho mỗi dòng để tương thích với 7 cột -->
-    <tr><td>1</td><td></td><td></td><td></td><td></td></tr>
-    <tr><td>2</td><td></td><td></td><td></td><td></td></tr>
-    <tr><td>3</td><td></td><td></td><td></td><td></td></tr>
+    <tr th:each="row, it : ${itemRows}">
+        <td th:text="${row.name != '' ? it.count : ''}">1</td>
+        <td style="text-align: left;" th:text="${row.name}"></td>
+        <td th:text="${row.code}"></td>
+        <td th:text="${row.unit}"></td>
+        <td th:text="${row.quantity}"></td>
+    </tr>
 </table>
 
 <div class="sign-row">

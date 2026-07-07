@@ -2,6 +2,9 @@ package com.example.m6_thermal_power_plant_api.controller.work_order;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderStatusRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
@@ -92,6 +95,70 @@ public class WorkOrderController {
     @PatchMapping("/{id}/cancel")
     public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id) {
         return maintenanceService.cancelWorkOrder(id);
+    }
+
+    /**
+     * Hoàn thành phiếu công tác — endpoint cập nhật status DUY NHẤT sang
+     * COMPLETED, không sửa trường nào khác. Idempotent nếu đã COMPLETED;
+     * 409 nếu CANCELLED hoặc đang chờ duyệt gia hạn.
+     */
+    @PatchMapping("/{id}/complete")
+    public WorkOrderDTO completeWorkOrder(@PathVariable Integer id) {
+        return maintenanceService.completeWorkOrder(id);
+    }
+
+    /**
+     * Tổ trưởng gửi duyệt / tạm dừng phiếu (từ mọi trạng thái đang sống): tạo
+     * dòng gia hạn chờ duyệt + status → WAITING_FOR_APPROVAL. Bước duyệt diễn ra
+     * NGOÀI hệ thống: bản giấy PCT được đưa tận tay Trưởng ca ký.
+     */
+    @PatchMapping("/{id}/stop")
+    public WorkOrderDTO stopWorkOrder(@PathVariable Integer id,
+                                      @Valid @RequestBody StopWorkOrderRequest request) {
+        return maintenanceService.stopWorkOrder(id, request);
+    }
+
+    /**
+     * Sửa thông tin phiếu đang sống (partial update — chỉ trường khác null được
+     * ghi đè): nhân sự phụ trách, thời gian, mô tả. Hiện trường thay đổi liên
+     * tục nên KHÔNG áp ràng buộc lúc tạo; phiếu COMPLETED/CANCELLED trả 409.
+     */
+    @PatchMapping("/{id}")
+    public WorkOrderDTO updateWorkOrder(@PathVariable Integer id,
+                                        @RequestBody UpdateWorkOrderRequest request) {
+        return maintenanceService.updateWorkOrder(id, request);
+    }
+
+    /**
+     * Cập nhật trạng thái phiếu — endpoint DUY NHẤT cho modal "Cập nhật trạng
+     * thái": duyệt phiếu, bắt đầu, tạm dừng, gửi duyệt gia hạn, duyệt gia hạn,
+     * hoàn thành, huỷ. Bước chuyển không hợp lệ trả 409.
+     */
+    @PatchMapping("/{id}/status")
+    public WorkOrderDTO updateWorkOrderStatus(@PathVariable Integer id,
+                                              @Valid @RequestBody UpdateWorkOrderStatusRequest request,
+                                              java.security.Principal principal) {
+        return maintenanceService.updateWorkOrderStatus(id, request,
+                principal != null ? principal.getName() : null);
+    }
+
+    /**
+     * Ghi nhận online việc Trưởng ca ĐÃ ký duyệt bản giấy: tài khoản đang đăng
+     * nhập được lưu vào approvedBy (người bấm chịu trách nhiệm nhập đúng theo
+     * bản giấy) + status → APPROVED.
+     */
+    @PatchMapping("/{id}/approve-extension")
+    public WorkOrderDTO approveExtension(@PathVariable Integer id, java.security.Principal principal) {
+        return maintenanceService.approveExtension(id, principal.getName());
+    }
+
+    /**
+     * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc
+     * APPROVED → IN_PROGRESS (bật lại nút đã tắt hôm trước, sau khi duyệt).
+     */
+    @PatchMapping("/{id}/reopen")
+    public WorkOrderDTO reopenWorkOrder(@PathVariable Integer id) {
+        return maintenanceService.reopenWorkOrder(id);
     }
 
     /**

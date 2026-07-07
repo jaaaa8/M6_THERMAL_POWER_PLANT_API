@@ -3,10 +3,13 @@ package com.example.m6_thermal_power_plant_api.controller.work_order;
 import com.example.m6_thermal_power_plant_api.dto.supplies_issue.CreateSuppliesIssueRequest;
 import com.example.m6_thermal_power_plant_api.dto.supplies_issue.SuppliesIssueDTO;
 import com.example.m6_thermal_power_plant_api.dto.supplies_issue.SuppliesIssueHistoryDTO;
+import com.example.m6_thermal_power_plant_api.service.pdf.SuppliesIssuePdfService;
 import com.example.m6_thermal_power_plant_api.service.supplies_issue.ISuppliesIssueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +34,7 @@ import java.security.Principal;
 public class SuppliesIssueController {
 
     private final ISuppliesIssueService suppliesIssueService;
+    private final SuppliesIssuePdfService suppliesIssuePdfService;
 
     @PostMapping
     public ResponseEntity<SuppliesIssueDTO> create(@PathVariable Integer workOrderId,
@@ -44,5 +48,22 @@ public class SuppliesIssueController {
     @GetMapping
     public SuppliesIssueHistoryDTO list(@PathVariable Integer workOrderId) {
         return suppliesIssueService.getByWorkOrder(workOrderId);
+    }
+
+    /**
+     * Xuất bản in PDF "Phiếu đề nghị cấp phát vật tư" của phiếu công tác:
+     * MỘT file gom tất cả dòng vật tư (thay thế + tiêu hao) đã cấp. 409 nếu
+     * phiếu công tác chưa được cấp vật tư lần nào.
+     */
+    @GetMapping("/pdf")
+    public ResponseEntity<byte[]> exportPdf(@PathVariable Integer workOrderId) {
+        SuppliesIssuePdfService.SuppliesIssuePdf pdf = suppliesIssuePdfService.render(workOrderId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", ContentDisposition.inline()
+                        .filename("vat-tu-" + pdf.orderCode() + ".pdf")
+                        .build()
+                        .toString())
+                .body(pdf.content());
     }
 }

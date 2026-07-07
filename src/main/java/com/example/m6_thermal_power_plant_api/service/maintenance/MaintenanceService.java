@@ -3,8 +3,12 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.MemberHistoryEventDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderStatusRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderExtensionDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
@@ -13,6 +17,7 @@ import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceEx
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
@@ -33,22 +38,28 @@ public class MaintenanceService implements IMaintenanceService {
     private final RepairRequestRepository repairRequestRepository;
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderMemberRepository workOrderMemberRepository;
+    private final WorkOrderExtensionRepository workOrderExtensionRepository;
     private final EmployeeRepository employeeRepository;
     private final ISparePartIssuesService sparePartIssuesService;
     private final AccountRepository accountRepository;
+    private final WorkOrderArchiveService workOrderArchiveService;
 
     public MaintenanceService(RepairRequestRepository repairRequestRepository,
                               WorkOrderRepository workOrderRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
+                              WorkOrderExtensionRepository workOrderExtensionRepository,
                               EmployeeRepository employeeRepository,
                               ISparePartIssuesService sparePartIssuesService,
-                              AccountRepository accountRepository) {
+                              AccountRepository accountRepository,
+                              WorkOrderArchiveService workOrderArchiveService) {
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
+        this.workOrderExtensionRepository = workOrderExtensionRepository;
         this.employeeRepository = employeeRepository;
         this.sparePartIssuesService = sparePartIssuesService;
         this.accountRepository = accountRepository;
+        this.workOrderArchiveService = workOrderArchiveService;
     }
 
     @Override
@@ -133,6 +144,9 @@ public class MaintenanceService implements IMaintenanceService {
                 repairRequest.setStatus(RepairRequestStatus.PENDING);
                 repairRequestRepository.save(repairRequest);
             }
+
+            // Đóng băng bản lưu PDF (best-effort, không bao giờ ném).
+            workOrderArchiveService.archiveOnClose(workOrderId);
         }
 
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
@@ -258,6 +272,9 @@ public class MaintenanceService implements IMaintenanceService {
                 .workOrder(WorkOrderDTO.from(workOrder, members))
                 .memberHistory(buildMemberHistory(members))
                 .sparePartsIssues(sparePartIssuesService.getByWorkOrder(workOrderId))
+                .extensions(workOrderExtensionRepository
+                        .findByWorkOrder_IdOrderByExtendedUntilAsc(workOrderId)
+                        .stream().map(WorkOrderExtensionDTO::from).toList())
                 .build();
     }
 
@@ -337,9 +354,239 @@ public class MaintenanceService implements IMaintenanceService {
         return WorkOrderMemberDTO.from(member);
     }
 
-    /** Phieu "song" = dang rang buoc quan he 1-n (chua huy, chua hoan thanh). */
+    @Override
+    @Transactional
+    public WorkOrderDTO completeWorkOrder(Integer workOrderId) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+
+        // Idempotent: đã hoàn thành thì trả về nguyên trạng (giống cancelWorkOrder).
+        if (workOrder.getStatus() == WorkOrderStatus.COMPLETED) {
+            return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+        }
+        if (workOrder.getStatus() == WorkOrderStatus.CANCELLED) {
+            throw new IllegalStateException(
+                    "Khong the hoan thanh phieu cong tac da huy (" + workOrder.getOrderCode() + ").");
+        }
+        if (workOrder.getStatus() == WorkOrderStatus.WAITING_FOR_APPROVAL) {
+            throw new IllegalStateException(
+                    "Phieu cong tac (" + workOrder.getOrderCode() + ") dang cho Truong ca duyet gia han — "
+                            + "phai duyet (APPROVED) roi tiep tuc lam viec truoc khi hoan thanh.");
+        }
+
+        workOrder.setStatus(WorkOrderStatus.COMPLETED);
+        workOrderRepository.save(workOrder);
+
+        // Đóng băng bản lưu PDF cuối cùng (PCT + phiếu cấp vật tư) — best-effort,
+        // không bao giờ làm hỏng việc hoàn thành phiếu.
+        workOrderArchiveService.archiveOnClose(workOrderId);
+
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO stopWorkOrder(Integer workOrderId, StopWorkOrderRequest request) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+
+        // Môi trường làm việc thay đổi liên tục → cho gửi duyệt từ MỌI trạng thái
+        // đang sống (OPEN/IN_PROGRESS/APPROVED). Chỉ chặn phiếu đã kết thúc và
+        // phiếu ĐANG chờ duyệt (đã có dòng gia hạn treo, duyệt xong mới gửi tiếp).
+        if (!isLive(workOrder) || workOrder.getStatus() == WorkOrderStatus.WAITING_FOR_APPROVAL) {
+            throw new IllegalStateException(
+                    "Khong gui duyet duoc phieu cong tac (" + workOrder.getOrderCode()
+                            + ") dang " + workOrder.getStatus() + ".");
+        }
+
+        // Dòng gia hạn CHƯA có người duyệt = bằng chứng "đang chờ Trưởng ca ký bản
+        // giấy" — được in vào mục "Cho phép làm việc và kết thúc công tác hàng ngày"
+        // của bản PDF để đưa tay cho Trưởng ca.
+        workOrderExtensionRepository.save(WorkOrderExtension.builder()
+                .workOrder(workOrder)
+                .reason(request.getReason())
+                .extendedUntil(request.getExtendedUntil())
+                .build());
+
+        workOrder.setStatus(WorkOrderStatus.WAITING_FOR_APPROVAL);
+        workOrderRepository.save(workOrder);
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+
+        if (workOrder.getStatus() != WorkOrderStatus.WAITING_FOR_APPROVAL) {
+            throw new IllegalStateException(
+                    "Phieu cong tac (" + workOrder.getOrderCode() + ") khong o trang thai cho duyet "
+                            + "(WAITING_FOR_APPROVAL) — dang " + workOrder.getStatus() + ".");
+        }
+
+        Account approvedBy = accountRepository.findAccountByUsername(approvedByUsername)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay tai khoan dang nhap: " + approvedByUsername));
+
+        // Dòng chờ duyệt = dòng MỚI NHẤT chưa có approvedBy. Người bấm xác nhận
+        // online chịu trách nhiệm nhập đúng theo bản giấy Trưởng ca đã ký.
+        WorkOrderExtension pending = workOrderExtensionRepository
+                .findByWorkOrder_IdOrderByExtendedUntilAsc(workOrderId).stream()
+                .filter(e -> e.getApprovedBy() == null)
+                .reduce((first, second) -> second)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Phieu cong tac (" + workOrder.getOrderCode()
+                                + ") khong co dong gia han nao dang cho duyet."));
+
+        pending.setApprovedBy(approvedBy);
+        workOrderExtensionRepository.save(pending);
+
+        workOrder.setStatus(WorkOrderStatus.APPROVED);
+        workOrderRepository.save(workOrder);
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO reopenWorkOrder(Integer workOrderId) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+
+        if (workOrder.getStatus() != WorkOrderStatus.OPEN
+                && workOrder.getStatus() != WorkOrderStatus.APPROVED) {
+            throw new IllegalStateException(
+                    "Chi mo lam viec duoc phieu moi tao (OPEN) hoac da duyet gia han (APPROVED) — phieu ("
+                            + workOrder.getOrderCode() + ") dang " + workOrder.getStatus() + ".");
+        }
+
+        workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
+        workOrderRepository.save(workOrder);
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO updateWorkOrder(Integer workOrderId, UpdateWorkOrderRequest request) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+
+        // Chỉ chặn phiếu đã kết thúc (COMPLETED/CANCELLED) — bản PDF đã đóng băng
+        // làm chứng từ pháp lý, không sửa được nữa. Phiếu đang sống sửa tự do:
+        // KHÔNG kiểm tra trùng vai trò / chồng lấn giờ như lúc tạo — hiện trường
+        // thay đổi liên tục, Tổ trưởng phải chỉnh được phiếu ngay.
+        if (!isLive(workOrder)) {
+            throw new IllegalStateException(
+                    "Khong sua duoc phieu cong tac da ket thuc (" + workOrder.getOrderCode()
+                            + ") — dang " + workOrder.getStatus() + ".");
+        }
+
+        // Chỉ ghi đè trường client gửi lên (khác null) — trường bỏ trống giữ nguyên.
+        if (request.getLeaderId() != null) {
+            workOrder.setLeader(loadEmployee(request.getLeaderId(), "Nguoi lanh dao cong viec"));
+        }
+        if (request.getDirectSupervisorId() != null) {
+            workOrder.setDirectSupervisor(loadEmployee(request.getDirectSupervisorId(), "Chi huy truc tiep"));
+        }
+        if (request.getSafetySupervisorId() != null) {
+            workOrder.setSafetySupervisor(loadEmployee(request.getSafetySupervisorId(), "Nguoi giam sat an toan"));
+        }
+        if (request.getStartTime() != null) {
+            workOrder.setStartTime(request.getStartTime());
+        }
+        if (request.getExpectedEndTime() != null) {
+            workOrder.setExpectedEndTime(request.getExpectedEndTime());
+        }
+        if (request.getRepairDescription() != null && !request.getRepairDescription().isBlank()) {
+            workOrder.setRepairDescription(request.getRepairDescription());
+        }
+
+        workOrderRepository.save(workOrder);
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO updateWorkOrderStatus(Integer workOrderId, UpdateWorkOrderStatusRequest request,
+                                              String username) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+        WorkOrderStatus current = workOrder.getStatus();
+        WorkOrderStatus target = request.getTargetStatus();
+
+        // Idempotent: đã ở đúng trạng thái đích thì trả về nguyên trạng.
+        if (current == target) {
+            return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+        }
+
+        switch (target) {
+            case APPROVED -> {
+                // 2 luồng duyệt: phiếu mới (OPEN — duyệt phiếu, không cần dòng gia
+                // hạn) và duyệt gia hạn (WAITING_FOR_APPROVAL — gắn approvedBy vào
+                // dòng gia hạn đang chờ, tái dùng logic sẵn có).
+                if (current == WorkOrderStatus.WAITING_FOR_APPROVAL) {
+                    return approveExtension(workOrderId, username);
+                }
+                if (current != WorkOrderStatus.OPEN) {
+                    throw new IllegalStateException(
+                            "Chi duyet duoc phieu dang cho duyet (OPEN / WAITING_FOR_APPROVAL) — phieu ("
+                                    + workOrder.getOrderCode() + ") dang " + current + ".");
+                }
+                workOrder.setStatus(WorkOrderStatus.APPROVED);
+            }
+            case IN_PROGRESS -> {
+                // Bắt buộc duyệt trước khi làm việc (quyết định 2026-07-08).
+                if (current != WorkOrderStatus.APPROVED) {
+                    throw new IllegalStateException(
+                            "Phieu (" + workOrder.getOrderCode() + ") phai duoc duyet (APPROVED) truoc khi "
+                                    + "bat dau lam viec — dang " + current + ".");
+                }
+                workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
+            }
+            case STOPPED -> {
+                if (current != WorkOrderStatus.IN_PROGRESS) {
+                    throw new IllegalStateException(
+                            "Chi tam dung duoc phieu dang thuc hien (IN_PROGRESS) — phieu ("
+                                    + workOrder.getOrderCode() + ") dang " + current + ".");
+                }
+                workOrder.setStatus(WorkOrderStatus.STOPPED);
+            }
+            case WAITING_FOR_APPROVAL -> {
+                // Gửi duyệt gia hạn: cần lý do + ngày (in lên bản giấy) — tái dùng
+                // stopWorkOrder để tạo dòng gia hạn.
+                if (request.getReason() == null || request.getReason().isBlank()
+                        || request.getExtendedUntil() == null) {
+                    throw new IllegalArgumentException(
+                            "Gui duyet gia han can ly do (reason) va ngay xin phep (extendedUntil).");
+                }
+                return stopWorkOrder(workOrderId,
+                        new StopWorkOrderRequest(request.getReason().trim(), request.getExtendedUntil()));
+            }
+            case COMPLETED -> {
+                return completeWorkOrder(workOrderId); // giữ nguyên guard + đóng băng PDF
+            }
+            case CANCELLED -> {
+                return cancelWorkOrder(workOrderId); // giữ nguyên side effect (trả yêu cầu về hàng chờ, archive)
+            }
+            case OPEN -> throw new IllegalStateException(
+                    "Khong the dua phieu (" + workOrder.getOrderCode() + ") ve trang thai moi tao (OPEN).");
+        }
+
+        workOrderRepository.save(workOrder);
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    private WorkOrder loadWorkOrder(Integer workOrderId) {
+        return workOrderRepository.findById(workOrderId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay phieu cong tac voi id: " + workOrderId));
+    }
+
+    /**
+     * Phieu "song" = dang rang buoc quan he 1-n (chua huy, chua hoan thanh).
+     * WAITING_FOR_APPROVAL / APPROVED / STOPPED (tam dung, cho lam tiep) van la
+     * phieu song: van giu nhan su + khung gio, phai chan phieu moi trung tai nguyen.
+     */
     private static boolean isLive(WorkOrder wo) {
-        return wo.getStatus() == WorkOrderStatus.OPEN || wo.getStatus() == WorkOrderStatus.IN_PROGRESS;
+        return wo.getStatus() == WorkOrderStatus.OPEN
+                || wo.getStatus() == WorkOrderStatus.IN_PROGRESS
+                || wo.getStatus() == WorkOrderStatus.WAITING_FOR_APPROVAL
+                || wo.getStatus() == WorkOrderStatus.APPROVED
+                || wo.getStatus() == WorkOrderStatus.STOPPED;
     }
 
     /**

@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.entity.Employee;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderExtension;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderExtensionRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
@@ -64,35 +65,72 @@ public class WorkOrderPdfService {
     }
 
     /**
-     * Render PDF phiếu công tác, upload Cloudinary và lưu pdf_path.
-     * Upload lỗi (mạng/Cloudinary) KHÔNG làm hỏng việc tải phiếu — vẫn trả về
-     * nội dung PDF, chỉ log cảnh báo và giữ pdf_path cũ.
+     * Render PDF phiếu công tác cho việc XUẤT/IN.
+     *
+     * Phiếu còn sống: mỗi lần render một snapshot mới + upload đè bản Cloudinary
+     * cũ + lưu pdf_path (upload lỗi KHÔNG làm hỏng việc tải phiếu — vẫn trả về
+     * nội dung PDF, chỉ log cảnh báo và giữ pdf_path cũ).
+     *
+     * Phiếu ĐÃ KẾT THÚC (COMPLETED/CANCELLED) và đã có bản lưu: vẫn trả về bytes
+     * render mới (dữ liệu sau kết thúc bất biến — mọi thao tác ghi đều bị chặn
+     * theo status) nhưng KHÔNG upload đè — pdf_path là bản lưu ĐÓNG BĂNG do
+     * {@link #archive} ghi lúc đóng phiếu, không được trôi khỏi bản giấy đã ký.
      */
     @Transactional
     public WorkOrderPdf render(Integer workOrderId) {
-        WorkOrder workOrder = workOrderRepository.findById(workOrderId)
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+        byte[] pdf = renderBytes(workOrder);
+
+        if (isTerminal(workOrder) && workOrder.getPdfPath() != null) {
+            return new WorkOrderPdf(workOrder.getOrderCode(), pdf, workOrder.getPdfPath());
+        }
+        String url = uploadAndSave(workOrder, pdf);
+        return new WorkOrderPdf(workOrder.getOrderCode(), pdf, url);
+    }
+
+    /**
+     * ĐÓNG BĂNG bản lưu cuối cùng khi phiếu về trạng thái kết thúc: render
+     * snapshot chốt sổ + upload đè + lưu pdf_path (bỏ qua guard chống đè của
+     * {@link #render}). Chỉ gọi từ luồng complete/cancel — sau thời điểm này
+     * {@link #render} không đụng tới Cloudinary nữa.
+     */
+    @Transactional
+    public void archive(Integer workOrderId) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+        uploadAndSave(workOrder, renderBytes(workOrder));
+    }
+
+    private WorkOrder loadWorkOrder(Integer workOrderId) {
+        return workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay phieu cong tac voi id: " + workOrderId));
+    }
 
-        List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(workOrderId);
+    private byte[] renderBytes(WorkOrder workOrder) {
+        List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(workOrder.getId());
         List<WorkOrderExtension> extensions =
-                workOrderExtensionRepository.findByWorkOrder_IdOrderByExtendedUntilAsc(workOrderId);
+                workOrderExtensionRepository.findByWorkOrder_IdOrderByExtendedUntilAsc(workOrder.getId());
+        return pdfService.renderPdf("pdf/work-order", buildModel(workOrder, members, extensions));
+    }
 
-        byte[] pdf = pdfService.renderPdf("pdf/work-order", buildModel(workOrder, members, extensions));
-
-        String url = null;
+    /** Upload đè bản cũ cùng orderCode + lưu pdf_path. Trả về URL, hoặc null nếu upload lỗi. */
+    private String uploadAndSave(WorkOrder workOrder, byte[] pdf) {
         try {
             FileUploadResult uploaded =
                     fileUploadService.uploadPdf(pdf, CLOUDINARY_FOLDER, workOrder.getOrderCode());
-            url = uploaded.secureUrl();
-            workOrder.setPdfPath(url);
+            workOrder.setPdfPath(uploaded.secureUrl());
             workOrderRepository.save(workOrder);
+            return uploaded.secureUrl();
         } catch (IOException e) {
             log.warn("Upload PDF phieu cong tac {} len Cloudinary that bai — van tra ve noi dung PDF.",
                     workOrder.getOrderCode(), e);
+            return null;
         }
+    }
 
-        return new WorkOrderPdf(workOrder.getOrderCode(), pdf, url);
+    private static boolean isTerminal(WorkOrder workOrder) {
+        return workOrder.getStatus() == WorkOrderStatus.COMPLETED
+                || workOrder.getStatus() == WorkOrderStatus.CANCELLED;
     }
 
     private Map<String, Object> buildModel(WorkOrder workOrder, List<WorkOrderMember> members,

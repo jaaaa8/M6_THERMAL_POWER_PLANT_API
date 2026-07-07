@@ -2,6 +2,9 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderStatusRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
@@ -79,4 +82,59 @@ public interface IMaintenanceService {
      * đã rời rồi thì trả về nguyên trạng. 404 nếu member không thuộc phiếu này.
      */
     WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId);
+
+    /**
+     * Cập nhật trạng thái phiếu sang COMPLETED — endpoint cập nhật status DUY NHẤT
+     * cho việc hoàn thành, không sửa trường nào khác.
+     * Idempotent nếu đã COMPLETED; từ chối (409) nếu CANCELLED hoặc đang
+     * WAITING_FOR_APPROVAL (phải xử lý xong thủ tục gia hạn trước).
+     */
+    WorkOrderDTO completeWorkOrder(Integer workOrderId);
+
+    /**
+     * Tổ trưởng GỬI DUYỆT / TẠM DỪNG phiếu: tạo một dòng work_order_extensions
+     * (reason + extendedUntil, CHƯA có người duyệt) và chuyển status →
+     * WAITING_FOR_APPROVAL. Dùng cho cả 2 luồng: phiếu MỚI TẠO (OPEN) xin
+     * Trưởng ca duyệt trước khi làm, và phiếu đang chạy tạm dừng cuối ngày.
+     *
+     * Bước duyệt là THỦ CÔNG NGOÀI HỆ THỐNG: bản giấy PCT (mục "Cho phép làm việc
+     * và kết thúc công tác hàng ngày") được đưa tận tay Trưởng ca ký — môi trường
+     * làm việc nguy hiểm nên người duyệt phải chịu trách nhiệm bằng chữ ký thật.
+     * Cho phép từ mọi trạng thái đang sống trừ WAITING_FOR_APPROVAL (đang có
+     * dòng gia hạn treo).
+     */
+    WorkOrderDTO stopWorkOrder(Integer workOrderId, StopWorkOrderRequest request);
+
+    /**
+     * Sửa thông tin phiếu công tác đang sống: leader / chỉ huy trực tiếp / giám
+     * sát an toàn / thời gian / mô tả. Partial update — chỉ trường khác null
+     * được ghi đè. KHÔNG áp ràng buộc trùng vai trò / chồng lấn giờ (hiện trường
+     * thay đổi liên tục); chỉ từ chối (409) phiếu đã COMPLETED/CANCELLED.
+     */
+    WorkOrderDTO updateWorkOrder(Integer workOrderId, UpdateWorkOrderRequest request);
+
+    /**
+     * Cập nhật trạng thái phiếu theo máy trạng thái (modal "Cập nhật trạng thái"):
+     * OPEN ─duyệt phiếu─► APPROVED ─bắt đầu─► IN_PROGRESS ─không kịp─► STOPPED
+     * ─gửi duyệt lại (reason+extendedUntil, tạo dòng gia hạn)─► WAITING_FOR_APPROVAL
+     * ─duyệt gia hạn (approvedBy = username)─► APPROVED ─► ... ─► COMPLETED;
+     * mọi trạng thái sống ─► CANCELLED (side effect huỷ giữ nguyên).
+     * Idempotent khi target = trạng thái hiện tại; 409 cho bước chuyển không hợp lệ.
+     */
+    WorkOrderDTO updateWorkOrderStatus(Integer workOrderId, UpdateWorkOrderStatusRequest request, String username);
+
+    /**
+     * Ghi nhận online việc Trưởng ca ĐÃ ký duyệt bản giấy: gắn tài khoản đang
+     * đăng nhập vào approvedBy của dòng gia hạn đang chờ (người bấm chịu trách
+     * nhiệm nhập đúng theo bản giấy) và chuyển status → APPROVED.
+     * Chỉ cho phép khi phiếu đang WAITING_FOR_APPROVAL.
+     */
+    WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername);
+
+    /**
+     * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc
+     * APPROVED → IN_PROGRESS (Tổ trưởng bật lại nút đã tắt hôm trước, sau khi
+     * gia hạn được duyệt).
+     */
+    WorkOrderDTO reopenWorkOrder(Integer workOrderId);
 }
