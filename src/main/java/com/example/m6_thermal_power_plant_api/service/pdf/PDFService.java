@@ -31,7 +31,7 @@ import java.util.Map;
  * dấu tiếng Việt (đặc biệt dấu đôi như ắ ầ ậ) hiển thị lem/nhoè. Nhúng đúng file
  * Bold thật thì chữ đậm dùng glyph thật, không còn hiện tượng này.
  *
- * QUY TẮC VIẾT TEMPLATE (xem mẫu templates/pdf/sample-a4.html):
+ * QUY TẮC VIẾT TEMPLATE (xem mẫu templates/pdf/issue.html):
  *  - Phải là XHTML well-formed: mọi tag tự đóng (&lt;br/&gt;, &lt;img .../&gt;),
  *    attribute có nháy — HTML lỏng lẻo (thiếu đóng tag) sẽ ném lỗi parse.
  *  - CSS phải khai {@code font-family: 'Times New Roman'} (đúng tên đăng ký ở

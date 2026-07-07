@@ -35,17 +35,20 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderMemberRepository workOrderMemberRepository;
     private final EmployeeRepository employeeRepository;
     private final ISparePartIssuesService sparePartIssuesService;
+    private final AccountRepository accountRepository;
 
     public MaintenanceService(RepairRequestRepository repairRequestRepository,
                               WorkOrderRepository workOrderRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
                               EmployeeRepository employeeRepository,
-                              ISparePartIssuesService sparePartIssuesService) {
+                              ISparePartIssuesService sparePartIssuesService,
+                              AccountRepository accountRepository) {
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.employeeRepository = employeeRepository;
         this.sparePartIssuesService = sparePartIssuesService;
+        this.accountRepository = accountRepository;
     }
 
     @Override
@@ -60,10 +63,15 @@ public class MaintenanceService implements IMaintenanceService {
 
     @Override
     @Transactional
-    public WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request) {
+    public WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request, String createdByUsername) {
         RepairRequest repairRequest = repairRequestRepository.findById(request.getRepairRequestId())
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay yeu cau sua chua voi id: " + request.getRepairRequestId()));
+
+        Account createdBy = createdByUsername == null ? null
+                : accountRepository.findAccountByUsername(createdByUsername)
+                        .orElseThrow(() -> new ObjectNotFoundException(
+                                "Khong tim thay tai khoan dang nhap: " + createdByUsername));
 
         validateActiveWorkOrderConstraints(repairRequest, request);
 
@@ -88,6 +96,8 @@ public class MaintenanceService implements IMaintenanceService {
                 .expectedEndTime(request.getExpectedEndTime())
                 .repairDescription(repairDescription)
                 .status(WorkOrderStatus.OPEN)
+                .createdAt(request.getCreatedAt() != null ? request.getCreatedAt() : LocalDateTime.now())
+                .createdBy(createdBy)
                 .build());
 
         List<WorkOrderMember> members = saveMembers(workOrder, request.getMembers());

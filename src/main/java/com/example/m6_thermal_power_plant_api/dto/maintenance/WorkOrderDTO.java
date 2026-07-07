@@ -42,6 +42,7 @@ public class WorkOrderDTO {
     private String equipmentKksCode;
     private String equipmentName;
 
+
     private Integer leaderId;
     private String leaderName;
     private Integer directSupervisorId;
@@ -49,6 +50,8 @@ public class WorkOrderDTO {
     private Integer safetySupervisorId;
     private String safetySupervisorName;
     private String repairDescription;
+
+    private LocalDateTime createdAt;
 
     private List<WorkOrderMemberDTO> members;
 
@@ -74,6 +77,11 @@ public class WorkOrderDTO {
                 b.equipmentId(req.getEquipment().getId())
                         .equipmentKksCode(req.getEquipment().getKksCode())
                         .equipmentName(req.getEquipment().getName());
+            }
+            if(req.getCreatedAt() != null) {
+                b.createdAt(req.getCreatedAt());
+            }else{
+                b.createdAt(LocalDateTime.now());
             }
         }
 

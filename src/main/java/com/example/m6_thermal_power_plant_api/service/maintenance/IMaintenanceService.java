@@ -24,8 +24,17 @@ public interface IMaintenanceService {
      * User Story #40 (row 44): tạo một phiếu công tác (PCT) từ 1 yêu cầu sửa chữa.
      * Thông tin thiết bị lấy từ request; gắn người lãnh đạo công việc, chỉ huy
      * trực tiếp, người giám sát an toàn và các nhân viên làm việc.
+     *
+     * @param createdByUsername username tài khoản đăng nhập đang thao tác — lưu vào
+     *                          created_by làm "Người cấp phiếu" trên bản in PCT
+     *                          (null = không ghi nhận người cấp).
      */
-    WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request);
+    WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request, String createdByUsername);
+
+    /** Như trên nhưng KHÔNG ghi nhận người cấp phiếu (giữ tương thích test/luồng cũ). */
+    default WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request) {
+        return createWorkOrderFromRequest(request, null);
+    }
 
     /**
      * Huỷ một phiếu công tác: đặt status = CANCELLED (KHÔNG hard-delete vì PCT là

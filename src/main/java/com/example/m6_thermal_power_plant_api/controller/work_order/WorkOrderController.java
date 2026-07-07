@@ -6,8 +6,11 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.service.maintenance.IMaintenanceService;
+import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderPdfService;
 import com.example.m6_thermal_power_plant_api.util.UniqueCodeRetryExecutor;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.MediaType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -34,11 +37,14 @@ public class WorkOrderController {
 
     private final IMaintenanceService maintenanceService;
     private final UniqueCodeRetryExecutor codeRetryExecutor;
+    private final WorkOrderPdfService workOrderPdfService;
 
     public WorkOrderController(IMaintenanceService maintenanceService,
-                               UniqueCodeRetryExecutor codeRetryExecutor) {
+                               UniqueCodeRetryExecutor codeRetryExecutor,
+                               WorkOrderPdfService workOrderPdfService) {
         this.maintenanceService = maintenanceService;
         this.codeRetryExecutor = codeRetryExecutor;
+        this.workOrderPdfService = workOrderPdfService;
     }
 
 
@@ -52,10 +58,29 @@ public class WorkOrderController {
      * transaction rollback sạch, executor sinh lại mã + chạy lại toàn bộ thao tác.
      */
     @PostMapping
-    public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request) {
+    public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request,
+                                                        java.security.Principal principal) {
+        String createdByUsername = principal != null ? principal.getName() : null;
         WorkOrderDTO created = codeRetryExecutor.execute(
-                () -> maintenanceService.createWorkOrderFromRequest(request));
+                () -> maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /**
+     * Xuất bản in PDF của phiếu công tác theo mẫu giấy (snapshot dữ liệu hiện
+     * tại: nhân sự, vào/ra vị trí, gia hạn). Đồng thời upload lên Cloudinary
+     * (đè bản cũ cùng orderCode) và lưu URL vào pdf_path.
+     */
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> exportPdf(@PathVariable Integer id) {
+        WorkOrderPdfService.WorkOrderPdf pdf = workOrderPdfService.render(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", ContentDisposition.inline()
+                        .filename(pdf.orderCode() + ".pdf")
+                        .build()
+                        .toString())
+                .body(pdf.content());
     }
 
     /**

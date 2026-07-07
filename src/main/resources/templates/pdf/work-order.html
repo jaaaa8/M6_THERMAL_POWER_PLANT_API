@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Phiếu Công Tác</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 1.5cm;
+        }
+        body {
+            font-family: 'Times New Roman';
+            font-size: 13px;
+            line-height: 1.45;
+            color: #000;
+        }
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .header-table td { vertical-align: top; }
+        .issuer { font-weight: bold; text-transform: uppercase; font-size: 12px; }
+        .national { text-align: center; }
+        .national .motto { font-weight: bold; font-size: 12px; }
+        .national .underline { font-size: 12px; }
+        h1 {
+            text-align: center;
+            font-size: 18px;
+            text-transform: uppercase;
+            margin: 12px 0 2px 0;
+        }
+        .order-no { text-align: center; margin: 0 0 14px 0; }
+        .section { margin: 5px 0; }
+        .label { font-weight: bold; }
+        table.grid { width: 100%; border-collapse: collapse; margin: 6px 0 10px 0; }
+        table.grid th, table.grid td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-size: 12px;
+        }
+        table.grid th { text-align: center; font-weight: bold; }
+        table.grid td { min-height: 18px; height: 18px; }
+        .center { text-align: center; }
+        .sig-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        .sig-table td { width: 50%; text-align: center; vertical-align: top; padding-top: 6px; }
+        .sig-role { font-weight: bold; }
+        .sig-note { font-style: italic; font-size: 11px; }
+        .sig-space { height: 55px; }
+        .manual { /* mục Trưởng ca điền tay */ }
+        .small-note { font-style: italic; font-size: 11px; }
+    </style>
+</head>
+<body>
+
+<table class="header-table">
+    <tr>
+        <td style="width: 45%;">
+            <div class="issuer" th:text="${issuerDepartment}">TÊN ĐƠN VỊ CẤP PHIẾU</div>
+        </td>
+        <td style="width: 55%;" class="national">
+            <div class="motto">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+            <div class="underline">Độc lập - Tự do - Hạnh phúc</div>
+            <div>---------------</div>
+        </td>
+    </tr>
+</table>
+
+<h1>Phiếu Công Tác</h1>
+<p class="order-no">Số: <span th:text="${orderCode}">WO-000000000000-000</span></p>
+
+<div class="section">1. <span class="label">Người lãnh đạo công việc:</span>
+    <span th:text="${leaderName}">..........</span></div>
+
+<div class="section">2. <span class="label">Người chỉ huy trực tiếp:</span>
+    <span th:text="${directSupervisorName}">..........</span></div>
+
+<div class="section">3. <span class="label">Người giám sát an toàn điện:</span>
+    <span th:text="${safetySupervisorName}">..........</span></div>
+
+<div class="section">4. <span class="label">Nhân viên đơn vị công tác:</span>
+    <span th:text="${memberCount}">0</span> người</div>
+
+<div class="section">5. <span class="label">Địa điểm công tác:</span>
+    <span th:text="${location}">..........</span></div>
+
+<div class="section">6. <span class="label">Nội dung công tác:</span>
+    <span th:text="${description}">..........</span></div>
+
+<div class="section">7. <span class="label">Thời gian theo kế hoạch:</span>
+    từ <span th:text="${plannedFrom}">..........</span>
+    đến <span th:text="${plannedTo}">..........</span></div>
+
+<div class="section">
+    Phiếu công tác cấp ngày <span th:text="${issuedDay}">...</span>
+    tháng <span th:text="${issuedMonth}">...</span>
+    năm <span th:text="${issuedYear}">......</span>
+</div>
+
+<table class="sig-table">
+    <tr>
+        <td>
+            <div class="sig-role">Người cấp phiếu</div>
+            <div class="sig-note">(Ký/xác nhận điện tử)</div>
+            <div class="sig-space"></div>
+            <div>Họ và tên: <span th:text="${issuerName}">..........</span></div>
+            <div>Chức vụ: <span th:text="${issuerPosition}">..........</span></div>
+        </td>
+        <td>
+            <div class="sig-role">Người cho phép</div>
+            <div class="sig-note">(Trưởng ca trực vận hành ký khi cho phép làm việc)</div>
+            <div class="sig-space"></div>
+            <div>Họ và tên: ...............................</div>
+            <div>Chức vụ: ...............................</div>
+        </td>
+    </tr>
+</table>
+
+<div class="section manual">
+    Cho phép đơn vị công tác bắt đầu làm việc lúc ...... giờ ...... phút,
+    ngày ...... tháng ...... năm ............
+    <span class="small-note">(Trưởng ca ghi)</span>
+</div>
+
+<div class="section">
+    Bắt đầu tiến hành công việc lúc <span th:text="${actualStartHour}">...</span> giờ
+    <span th:text="${actualStartMinute}">...</span> phút,
+    ngày <span th:text="${actualStartDay}">...</span>
+    tháng <span th:text="${actualStartMonth}">...</span>
+    năm <span th:text="${actualStartYear}">......</span>
+</div>
+
+<div class="section">
+    <span class="label">Người giám sát an toàn điện (ký/xác nhận điện tử - nếu có):</span>
+    Họ và tên: <span th:text="${safetySupervisorName}">..........</span>
+</div>
+
+<div class="section label">Danh sách vào/ra vị trí làm việc của nhân viên đơn vị công tác:</div>
+<table class="grid">
+    <thead>
+    <tr>
+        <th style="width: 6%;">STT</th>
+        <th style="width: 30%;">Họ và tên</th>
+        <th style="width: 20%;">Vai trò</th>
+        <th style="width: 22%;">Vào vị trí làm việc<br />Thời gian (giờ, ngày, tháng)</th>
+        <th style="width: 22%;">Ra khỏi vị trí làm việc<br />Thời gian (giờ, ngày, tháng)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="row, it : ${memberRows}">
+        <td class="center" th:text="${it.count}">1</td>
+        <td th:text="${row.name}"></td>
+        <td th:text="${row.role}"></td>
+        <td class="center" th:text="${row.joinedAt}"></td>
+        <td class="center" th:text="${row.leftAt}"></td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="section label">Cho phép làm việc và kết thúc công tác hàng ngày, di chuyển nơi làm việc:</div>
+<div class="small-note">
+    Giờ bắt đầu / kết thúc từng ngày do Trưởng ca trực ghi và ký khi cho phép
+    đơn vị công tác tiếp tục làm việc.
+</div>
+<table class="grid">
+    <thead>
+    <tr>
+        <th style="width: 6%;">STT</th>
+        <th style="width: 17%;">Cho phép đến ngày</th>
+        <th style="width: 25%;">Lý do</th>
+        <th style="width: 16%;">Bắt đầu lúc<br />(giờ, ngày, tháng)</th>
+        <th style="width: 16%;">Kết thúc lúc<br />(giờ, ngày, tháng)</th>
+        <th style="width: 20%;">Người cho phép<br />(ký, họ tên)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="row, it : ${extensionRows}">
+        <td class="center" th:text="${it.count}">1</td>
+        <td class="center" th:text="${row.allowedUntil}"></td>
+        <td th:text="${row.reason}"></td>
+        <td></td>
+        <td></td>
+        <td class="center" th:text="${row.approvedBy}"></td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
