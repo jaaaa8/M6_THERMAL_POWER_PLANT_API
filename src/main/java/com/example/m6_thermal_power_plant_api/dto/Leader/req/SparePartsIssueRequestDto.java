@@ -20,10 +20,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SparePartsIssueRequestDto {
-    private String sparePartCode;
-    private WorkOrder workOrder;
-    private Account issuedBy;
+
+    private Integer id;
+
+    private String issueCode;
+
+    private Integer workOrderId;
+
+    private Integer issuedById;
+
     private LocalDateTime issuedAt;
-    private List<SparePartsIssueDetail> details;
-    private List<SparePartExport> exports;
+
+    private List<SparePartsIssueDetailRequestDto> details;
 }
