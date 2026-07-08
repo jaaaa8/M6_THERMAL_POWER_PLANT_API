@@ -5,13 +5,14 @@ import com.example.m6_thermal_power_plant_api.entity.Consumable;
 import com.example.m6_thermal_power_plant_api.entity.Unit;
 import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
 import com.example.m6_thermal_power_plant_api.repository.IConsumableRepository;
-import com.example.m6_thermal_power_plant_api.repository.IUnitRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IUnitRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 
 import java.math.BigDecimal;
 
@@ -28,8 +29,12 @@ public class ConsumableService implements IConsumableService{
     @Override
     public ConsumableDTO create(ConsumableDTO dto) {
         String code = normalize(dto.getConsumableCode());
-        if (consumableRepository.existsByConsumableCode(code)){
-            throw new IllegalStateException("Mã vật tư tiêu hao đã tồn tại");
+
+        if(code == null || code.isBlank()){
+            code = TimeStampCodeGenerator.generate(Consumable.class);
+        }
+        if(consumableRepository.existsByConsumableCode(code)){
+              throw new IllegalStateException("Mã vật tư tiêu hao đã tồn tại");
         }
 
         Consumable consumable = toEntity(dto);

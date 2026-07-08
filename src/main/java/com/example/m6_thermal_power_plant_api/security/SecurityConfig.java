@@ -20,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Bật tính năng @PreAuthorize trên Controller
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -50,6 +50,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/api/v1/accounts/create").permitAll()
+                        // ECS health check gọi endpoint này không kèm JWT token — phải permitAll,
+                        // nếu không container sẽ luôn bị coi "unhealthy" (401) dù app chạy bình thường
+                        .requestMatchers("/actuator/health").permitAll()
                         // Tất cả các request khác đều phải có token hợp lệ
                         .anyRequest().authenticated()
                 )

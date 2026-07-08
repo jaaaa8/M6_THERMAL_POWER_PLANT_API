@@ -1,0 +1,31 @@
+// ================================================================
+//  Jenkins CI — Backend
+//  Chạy khi có Pull Request (qua Multibranch Pipeline "Discover PRs")
+//  Build JAR là điều kiện BẮT BUỘC để pass CI (xác nhận code compile được).
+//  KHÔNG chạy Unit Test (theo yêu cầu chủ dự án — build nhanh hơn, test
+//  hiện không cần thiết cho quy mô đồ án). Vẫn có thể chạy tay
+//  "./gradlew test" khi cần, code test không bị xoá khỏi dự án.
+//  KHÔNG build Docker image, KHÔNG đụng tới ECR/ECS
+// ================================================================
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Build JAR') {
+            steps {
+                sh 'chmod +x ./gradlew'
+                sh './gradlew bootJar -x test --no-daemon'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ CI passed — code hợp lệ, có thể merge'
+        }
+        failure {
+            echo '❌ CI failed — build JAR không thành công, xem log stage Build JAR'
+        }
+    }
+}

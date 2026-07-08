@@ -1,7 +1,7 @@
 package com.example.m6_thermal_power_plant_api.service.equipment;
 
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
-import com.example.m6_thermal_power_plant_api.repository.IEquipmentRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Kiểm tra thủ công cơ chế soft-delete / restore CASCADE trực tiếp trên database thật.
  *
  * Cả hai test đều thao tác trên "thiết bị mới nhất" (id lớn nhất trong bảng equipment,
- * kể cả bản ghi đã bị xoá mềm) — tức là dòng equipment mới nhất trong sample-data.sql
- * cùng toàn bộ dữ liệu liên quan (equipment_parameters, repair_requests, work_orders,
- * lubrication_plans, ...).
+ * kể cả bản ghi đã bị xoá mềm) — tức là dòng equipment mới nhất do Flyway nạp qua
+ * V3__seed_sample_data.sql, cùng toàn bộ dữ liệu liên quan (equipment_parameters,
+ * repair_requests, work_orders, lubrication_plans, ...).
  *
  * CÁCH CHẠY ĐỂ QUAN SÁT:
  *   1. Chạy {@link #deleteLatestEquipment_andCommitToDatabase()} → mở DB kiểm tra:
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Vì dùng @Commit nên thay đổi được ghi thật xuống DB (không rollback sau test).
  */
 @SpringBootTest
-@Tag("manual")  // Chạy thủ công với DB thật + sample-data.sql. Không chạy trong CI/CD
+@Tag("manual")  // Chạy thủ công với DB thật (Flyway đã nạp sample data). Không chạy trong CI/CD
 public class EquipmentManagementServiceDbTest {
 
     @Autowired
@@ -43,7 +43,7 @@ public class EquipmentManagementServiceDbTest {
     void deleteLatestEquipment_andCommitToDatabase() {
         // 1. Lấy thiết bị mới nhất (id lớn nhất), kể cả khi đã bị xoá mềm.
         Equipment latest = equipmentRepository.findLatestIncludingDeleted()
-                .orElseThrow(() -> new RuntimeException("No equipment found. Did you run sample-data.sql?"));
+                .orElseThrow(() -> new RuntimeException("No equipment found. Drop the schema and restart the app so Flyway re-seeds it."));
         Integer latestId = latest.getId();
         System.out.println("Soft-deleting latest equipment id = " + latestId + " (" + latest.getName() + ")");
 
@@ -65,7 +65,7 @@ public class EquipmentManagementServiceDbTest {
     void restoreLatestEquipment_andCommitToDatabase() {
         // 1. Lấy lại đúng thiết bị mới nhất (kể cả khi đang bị ẩn vì is_deleted = true).
         Equipment latest = equipmentRepository.findLatestIncludingDeleted()
-                .orElseThrow(() -> new RuntimeException("No equipment found. Did you run sample-data.sql?"));
+                .orElseThrow(() -> new RuntimeException("No equipment found. Drop the schema and restart the app so Flyway re-seeds it."));
         Integer latestId = latest.getId();
         System.out.println("Restoring latest equipment id = " + latestId + " (" + latest.getName() + ")");
 

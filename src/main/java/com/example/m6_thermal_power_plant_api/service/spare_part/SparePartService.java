@@ -5,8 +5,9 @@ import com.example.m6_thermal_power_plant_api.entity.SparePart;
 import com.example.m6_thermal_power_plant_api.entity.Unit;
 import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartRepository;
-import com.example.m6_thermal_power_plant_api.repository.IUnitRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IUnitRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +27,9 @@ public class SparePartService implements ISparePartService{
     @Override
     public SparePartDTO create(SparePartDTO dto) {
         String code = normalize(dto.getSparePartCode());
+        if (code == null || code.isBlank()) {
+            code = TimeStampCodeGenerator.generate(SparePart.class);
+        }
         if (sparePartRepository.existsBySparePartCode(code)) {
             throw new IllegalStateException("Mã vật tư thay thế đã tồn tại");
         }
