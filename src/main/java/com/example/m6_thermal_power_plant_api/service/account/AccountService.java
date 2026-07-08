@@ -349,9 +349,9 @@ public class AccountService implements IAccountService {
 
         // Update roles
         if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
-            java.util.List<com.example.m6_thermal_power_plant_api.entity.Role> roles = dto.getRoleIds().stream()
+            java.util.Set<com.example.m6_thermal_power_plant_api.entity.Role> roles = dto.getRoleIds().stream()
                     .map(roleId -> entityManager.getReference(com.example.m6_thermal_power_plant_api.entity.Role.class, roleId))
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(java.util.stream.Collectors.toSet());
             account.setRoles(roles);
         }
 
