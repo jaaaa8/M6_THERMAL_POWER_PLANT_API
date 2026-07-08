@@ -8,7 +8,6 @@ import lombok.Setter;
 @Setter
 public class ToolCategoryRequest {
 
-    @NotBlank(message = "Mã chủng loại không được để trống")
     private String categoryCode;
 
     @NotBlank(message = "Tên chủng loại không được để trống")

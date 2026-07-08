@@ -7,15 +7,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface IAccountRepository extends JpaRepository<Account, Integer> {
     boolean existsByUsername(String username);
     boolean existsByEmployeeId(Integer employeeId);
     boolean existsByEmail(String email);
-    java.util.Optional<Account> findByUsername(String username);
+    Optional<Account> findByUsername(String username);
+
+    @Query("SELECT DISTINCT a FROM Account a JOIN a.roles r WHERE r.name IN :roleNames")
+    List<Account> findByRoleNames(@Param("roleNames") List<String> roleNames);
 
     @Query("select a.permissionVersion from Account a where a.id = :id")
-    java.util.Optional<Integer> findPermissionVersionById(@Param("id") Integer id);
+    Optional<Integer> findPermissionVersionById(@Param("id") Integer id);
 
     @Modifying
     @Query("update Account a set a.permissionVersion = a.permissionVersion + 1 " +

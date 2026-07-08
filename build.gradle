@@ -28,8 +28,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
-    // Cung cấp endpoint /actuator/health cho ECS health check (ecs.tf) — trước đây healthCheck gọi endpoint này
-    // nhưng dependency chưa tồn tại, mọi container đều bị coi "unhealthy" dù app chạy bình thường
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 
@@ -45,6 +44,9 @@ dependencies {
     // Flyway: flyway-mysql BẮT BUỘC riêng cho MySQL 8+ (Flyway 7+ tách hỗ trợ theo DB engine).
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-mysql'
+
+    // Apache POI: đọc/ghi file Excel (.xlsx) cho chức năng import CCDC hàng loạt
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
     // 4. Lombok
     compileOnly 'org.projectlombok:lombok'

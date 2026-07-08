@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccountResponseDTO {
+    private Integer id;
     private String username;
     private String email;
     private AccountStatus status;
