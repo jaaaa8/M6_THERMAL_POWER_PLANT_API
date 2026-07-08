@@ -185,7 +185,7 @@ CREATE TABLE `equipment` (
   `deleted_at` datetime(6) DEFAULT NULL,
   `kks_code` varchar(50) NOT NULL,
   `description` text,
-  `img_path` text,
+  `img_path` longtext,
   `manufacturer` varchar(255) DEFAULT NULL,
   `model` varchar(255) DEFAULT NULL,
   `name` varchar(255) NOT NULL,

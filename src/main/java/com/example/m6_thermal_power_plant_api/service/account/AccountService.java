@@ -99,9 +99,9 @@ public class AccountService implements IAccountService {
         }
 
         if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
-            java.util.List<com.example.m6_thermal_power_plant_api.entity.Role> roles = dto.getRoleIds().stream()
+            java.util.Set<com.example.m6_thermal_power_plant_api.entity.Role> roles = dto.getRoleIds().stream()
                     .map(id -> entityManager.getReference(com.example.m6_thermal_power_plant_api.entity.Role.class, id))
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(java.util.stream.Collectors.toSet());
             account.setRoles(roles);
         }
 
@@ -138,7 +138,7 @@ public class AccountService implements IAccountService {
         account.setPasswordHash(passwordEncoder.encode(plainPassword));
         account.setEmployee(employee);
         account.setStatus(com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus.ACTIVE);
-        account.setRoles(java.util.Collections.singletonList(role));
+        account.setRoles(java.util.Collections.singleton(role));
 
         Account savedAccount = accountRepository.save(account);
         accountRepository.flush();
