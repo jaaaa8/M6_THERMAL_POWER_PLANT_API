@@ -238,7 +238,7 @@ public class EmployeeSearchServiceDbTest {
                 .passwordHash("hashedpassword")
                 .email("an@gmail.com")
                 .status(com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus.ACTIVE)
-                .roles(java.util.List.of(role))
+                .roles(java.util.Set.of(role))
                 .build();
         account = accountRepository.save(account);
 
@@ -286,7 +286,7 @@ public class EmployeeSearchServiceDbTest {
                 .passwordHash("hashedpwd")
                 .email("admin@gmail.com")
                 .status(com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus.ACTIVE)
-                .roles(java.util.List.of(role))
+                .roles(java.util.Set.of(role))
                 .build();
         account = accountRepository.save(account);
 
