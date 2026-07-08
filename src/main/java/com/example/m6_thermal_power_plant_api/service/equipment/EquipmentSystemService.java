@@ -6,11 +6,13 @@ import com.example.m6_thermal_power_plant_api.dto.equipment.response.SystemListD
 import com.example.m6_thermal_power_plant_api.entity.EquipmentSystem;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
-import com.example.m6_thermal_power_plant_api.repository.IEquipmentSystemRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentSystemRepository;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +26,12 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
     private final IEquipmentSystemRepository equipmentSystemRepository;
     @Override
     public Page<SystemListDTO> getSystem(String name,EquipmentStatus status, int page, int size) {
-        Pageable pageable = PageRequest.of(page,size);
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "id")
+        );
+
         Page<EquipmentSystem> result = equipmentSystemRepository.search(
                 (name == null || name.isBlank()) ? null : name,
                 status,
@@ -56,7 +63,7 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
         if(equipmentSystemRepository.existsByNameIgnoreCase(dto.getName())){
             throw new RuntimeException("Hệ thống đã tồn tại !!!");
         }
-        String code = generateCode();
+        String code =TimeStampCodeGenerator.generate(System.class);
 
         EquipmentSystem system= EquipmentSystem.builder()
                 .code(code)
@@ -73,7 +80,8 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
     public SystemListDTO updateSystem(int id, UpdateSystemDTO dto) {
         EquipmentSystem system =equipmentSystemRepository.findById(id)
                 .orElseThrow(()-> new ObjectNotFoundException("Không tìm thấy hệ thống."));
-        if(equipmentSystemRepository.existsByNameIgnoreCaseAndIdNot(dto.getName(),id)){
+        String name = dto.getName().trim();
+        if(equipmentSystemRepository.existsByNameIgnoreCaseAndIdNot(name,id)){
             throw  new RuntimeException("Tên hệ thống đã tồn tại.");
         }
         system.setName(dto.getName().trim());

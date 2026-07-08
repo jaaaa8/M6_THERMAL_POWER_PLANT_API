@@ -1,0 +1,107 @@
+package com.example.m6_thermal_power_plant_api.service.tool;
+
+import com.example.m6_thermal_power_plant_api.dto.tool.ToolCategoryRequest;
+import com.example.m6_thermal_power_plant_api.dto.tool.ToolCategoryResponse;
+import com.example.m6_thermal_power_plant_api.entity.tool.ToolCategory;
+import com.example.m6_thermal_power_plant_api.exception.BadRequestException;
+import com.example.m6_thermal_power_plant_api.exception.ResourceNotFoundException;
+import com.example.m6_thermal_power_plant_api.repository.IToolCategoryRepository;
+import com.example.m6_thermal_power_plant_api.service.impl.IToolCategoryService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class ToolCategoryService implements IToolCategoryService {
+
+    private final IToolCategoryRepository toolCategoryRepository;
+
+    @Override
+    public String generateNextCode() {
+        return toolCategoryRepository.findMaxCategoryCode()
+                .map(max -> {
+                    try {
+                        int num = Integer.parseInt(max.substring(2));
+                        return String.format("TC%03d", num + 1);
+                    } catch (NumberFormatException e) {
+                        return "TC001";
+                    }
+                })
+                .orElse("TC001");
+    }
+
+    @Override
+    public ToolCategoryResponse create(ToolCategoryRequest request) {
+        String code = (request.getCategoryCode() == null || request.getCategoryCode().isBlank())
+                ? generateNextCode()
+                : request.getCategoryCode().trim();
+        if (toolCategoryRepository.existsByCategoryCode(code)) {
+            throw new BadRequestException("Mã chủng loại đã tồn tại: " + code);
+        }
+        ToolCategory category = ToolCategory.builder()
+                .categoryCode(code)
+                .categoryName(request.getCategoryName())
+                .description(request.getDescription())
+                .build();
+        return toResponse(toolCategoryRepository.save(category));
+    }
+
+    @Override
+    public ToolCategoryResponse update(Integer id, ToolCategoryRequest request) {
+        ToolCategory category = getOrThrow(id);
+        if (!category.getCategoryCode().equals(request.getCategoryCode())
+                && toolCategoryRepository.existsByCategoryCode(request.getCategoryCode())) {
+            throw new BadRequestException("Mã chủng loại đã tồn tại: " + request.getCategoryCode());
+        }
+        category.setCategoryCode(request.getCategoryCode());
+        category.setCategoryName(request.getCategoryName());
+        category.setDescription(request.getDescription());
+        return toResponse(toolCategoryRepository.save(category));
+    }
+
+    @Override
+    public void delete(Integer id) {
+        ToolCategory category = getOrThrow(id);
+        category.softDelete();
+        toolCategoryRepository.save(category);
+    }
+
+    @Override
+    public ToolCategoryResponse getById(Integer id) {
+        return toResponse(getOrThrow(id));
+    }
+
+    @Override
+    public List<ToolCategoryResponse> getAll() {
+        return toolCategoryRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    public List<ToolCategoryResponse> search(String categoryName, String categoryCode) {
+        String safeName = StringUtils.hasText(categoryName) ? categoryName.trim() : "";
+        String safeCode = StringUtils.hasText(categoryCode) ? categoryCode.trim() : "";
+
+        return toolCategoryRepository.search(safeName, safeCode)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+    private ToolCategory getOrThrow(Integer id) {
+        return toolCategoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chủng loại với id: " + id));
+    }
+
+    private ToolCategoryResponse toResponse(ToolCategory category) {
+        return ToolCategoryResponse.builder()
+                .id(category.getId())
+                .categoryCode(category.getCategoryCode())
+                .categoryName(category.getCategoryName())
+                .description(category.getDescription())
+                .build();
+    }
+}

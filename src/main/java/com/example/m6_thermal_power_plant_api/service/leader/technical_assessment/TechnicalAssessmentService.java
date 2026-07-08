@@ -1,18 +1,22 @@
 package com.example.m6_thermal_power_plant_api.service.leader.technical_assessment;
 
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.AccountDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentCreateRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentUpdateRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.TechnicalAssessmentResponseDto;
+import com.example.m6_thermal_power_plant_api.dto.accounts.AccountDTO;
 import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
 import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.ITechnicalAssessmentRepository;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.UUID;
 
 
@@ -34,7 +38,9 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 .map(ta -> new TechnicalAssessmentUpdateRequestDto(
                         ta.getId(),
                         ta.getTechnicalCode(),
-                        ta.getAssessor().getId(),
+                        new AccountDto(ta.getAssessor().getUsername(),
+                                ta.getAssessor().getEmail(),
+                                ta.getAssessor().getEmployee().getFullName()),
                         ta.getAttachmentPath(),
                         ta.getImgPath(),
                         ta.getResult(),
@@ -46,26 +52,140 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
     }
 
     @Override
-    public TechnicalAssessmentCreateRequestDto save(TechnicalAssessmentCreateRequestDto dto) {
+    public TechnicalAssessmentCreateRequestDto save(
+            TechnicalAssessmentCreateRequestDto dto,
+            MultipartFile[] imageFiles) {
+
         if (dto == null) {
-            throw new IllegalArgumentException("TechnicalAssessmentRequestDto cannot be null");
+            throw new IllegalArgumentException(
+                    "TechnicalAssessmentRequestDto cannot be null"
+            );
         }
-        TechnicalAssessment technicalAssessment = new TechnicalAssessment();
-        Account assessor = accountRepository.findById(dto.getAssessorId())
-                .orElseThrow(() -> new IllegalArgumentException("Assessor not found with id: " + dto.getAssessorId()));
-        technicalAssessment.setTechnicalCode(dto.getTechnicalCode());
-        if (assessor != null) {
-            technicalAssessment.setAssessor(assessor);
+
+        TechnicalAssessment technicalAssessment =
+                new TechnicalAssessment();
+
+        Account assessor =
+                accountRepository.findByUsername(dto.getAssessor().getUsername())
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Assessor not found with username: "
+                                                + dto.getAssessor().getUsername()
+                                ));
+
+        technicalAssessment.setAssessor(
+                assessor
+        );
+        String technicalCode = TimeStampCodeGenerator.generate(TechnicalAssessment.class);
+        technicalAssessment.setTechnicalCode(technicalCode);
+
+        if (dto.getAttachmentPath() != null
+                && !dto.getAttachmentPath().isEmpty()) {
+
+            technicalAssessment.setAttachmentPath(
+                    dto.getAttachmentPath()
+            );
         }
-        if(dto.getAttachmentPath() != null && !dto.getAttachmentPath().isEmpty()) {
-            technicalAssessment.setAttachmentPath(dto.getAttachmentPath());
+
+        // Upload nhiều ảnh
+        if (imageFiles != null && imageFiles.length > 0) {
+
+            String uploadDir =
+                    "src/main/resources/img/technical-assessment";
+
+            Path uploadPath =
+                    Paths.get(uploadDir);
+
+            try {
+
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                List<String> imagePaths = new ArrayList<>();
+
+                int index = 1;
+
+                for (MultipartFile file : imageFiles) {
+
+                    if (file.isEmpty()) {
+                        continue;
+                    }
+
+                    String originalFileName = file.getOriginalFilename();
+
+                    String extension = "";
+
+                    if (originalFileName != null
+                            && originalFileName.contains(".")) {
+
+                        extension = originalFileName.substring(
+                                originalFileName.lastIndexOf(".")
+                        );
+                    }
+
+                    String fileName = String.format(
+                            "%s-%03d%s",
+                            technicalCode,
+                            index++,
+                            extension
+                    );
+
+                    Path filePath = uploadPath.resolve(fileName);
+
+                    Files.copy(
+                            file.getInputStream(),
+                            filePath,
+                            StandardCopyOption.REPLACE_EXISTING
+                    );
+
+                    imagePaths.add(
+                            "/img/technical-assessment/" + fileName
+                    );
+                }
+
+                technicalAssessment.setImgPath(
+                        String.join(";", imagePaths)
+                );
+
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Upload image failed",
+                        e
+                );
+            }
         }
-        technicalAssessment.setImgPath(dto.getImgPath());
-        technicalAssessment.setResult(dto.getResult());
-        technicalAssessment.setDescription(dto.getDescription());
-        technicalAssessment.setCreatedAt(dto.getCreatedAt());
-        technicalAssessmentRepository.save(technicalAssessment);
-        return dto;
+
+        technicalAssessment.setResult(
+                dto.getResult()
+        );
+
+        technicalAssessment.setDescription(
+                dto.getDescription()
+        );
+
+        technicalAssessment.setCreatedAt(
+                dto.getCreatedAt()
+        );
+
+        technicalAssessment.setStatus(
+                dto.getStatus()
+        );
+
+        TechnicalAssessment saved =
+                technicalAssessmentRepository.save(technicalAssessment);
+
+        TechnicalAssessmentCreateRequestDto responseDto =
+                new TechnicalAssessmentCreateRequestDto();
+
+        responseDto.setTechnicalCode(saved.getTechnicalCode());
+        responseDto.setAssessor(dto.getAssessor());
+        responseDto.setResult(saved.getResult());
+        responseDto.setDescription(saved.getDescription());
+        responseDto.setStatus(saved.getStatus());
+        responseDto.setCreatedAt(saved.getCreatedAt());
+
+        return responseDto;
     }
 
     @Override
@@ -77,7 +197,11 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         return new TechnicalAssessmentUpdateRequestDto(
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
-                technicalAssessment.getAssessor().getId(),
+                technicalAssessment.getAssessor() != null ? new AccountDto(
+                        technicalAssessment.getAssessor().getUsername(),
+                        technicalAssessment.getAssessor().getEmail(),
+                        technicalAssessment.getAssessor().getEmployee().getFullName()
+                ) : null,
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),
@@ -110,13 +234,9 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 if (!Files.exists(uploadPath)) {
                     Files.createDirectories(uploadPath);
                 }
+                String fileName = pdfFile.getOriginalFilename();
 
-                String originalName =
-                        pdfFile.getOriginalFilename();
-
-                String fileName =
-                        UUID.randomUUID() + "_" + originalName;
-
+                assert fileName != null;
                 Path filePath =
                         uploadPath.resolve(fileName);
 
@@ -157,7 +277,11 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         return new TechnicalAssessmentUpdateRequestDto(
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
-                technicalAssessment.getAssessor().getId(),
+                technicalAssessment.getAssessor() != null ? new AccountDto(
+                        technicalAssessment.getAssessor().getUsername(),
+                        technicalAssessment.getAssessor().getEmail(),
+                        technicalAssessment.getAssessor().getEmployee().getFullName()
+                ) : null,
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),

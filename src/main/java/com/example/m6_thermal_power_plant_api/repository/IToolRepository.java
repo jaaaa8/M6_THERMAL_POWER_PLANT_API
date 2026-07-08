@@ -13,16 +13,26 @@ public interface IToolRepository extends JpaRepository<Tool, Integer> {
 
     boolean existsByToolCode(String toolCode);
 
+    @Query("SELECT MAX(t.toolCode) FROM Tool t WHERE t.toolCode LIKE 'MCCDC-%'")
+    Optional<String> findMaxToolCode();
+
     /**
      * Tìm kiếm CCDC theo tên (keyword) và/hoặc chủng loại (categoryId).
      * Truyền null cho tham số nào không cần lọc.
      */
-    @Query("""
-            SELECT t FROM Tool t
-            WHERE (:keyword IS NULL OR :keyword = ''
-                   OR LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
-              AND (:categoryId IS NULL OR t.toolCategory.id = :categoryId)
-            """)
+    @Query(value = """
+            SELECT * FROM tools t
+            WHERE t.is_deleted = false
+              AND (:keyword IS NULL OR LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (:categoryId IS NULL OR t.tool_category_id = :categoryId)
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM tools t
+            WHERE t.is_deleted = false
+              AND (:keyword IS NULL OR LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (:categoryId IS NULL OR t.tool_category_id = :categoryId)
+            """,
+            nativeQuery = true)
     Page<Tool> search(@Param("keyword") String keyword,
                       @Param("categoryId") Integer categoryId,
                       Pageable pageable);

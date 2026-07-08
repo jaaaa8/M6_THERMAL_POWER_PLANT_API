@@ -2,6 +2,8 @@ package com.example.m6_thermal_power_plant_api.controller.account;
 
 import com.example.m6_thermal_power_plant_api.dto.accounts.AccountDTO;
 import com.example.m6_thermal_power_plant_api.dto.accounts.AccountResponseDTO;
+import com.example.m6_thermal_power_plant_api.dto.accounts.WorkerAccountRequest;
+import com.example.m6_thermal_power_plant_api.dto.accounts.WorkerAccountResponse;
 import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.service.account.IAccountService;
 import jakarta.validation.Valid;
@@ -34,6 +36,11 @@ public class AccountController {
     public ResponseEntity<AccountResponseDTO> grantAccount(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
         AccountResponseDTO createdAccount = accountService.grantAccount(request);
         return new ResponseEntity<>(createdAccount, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/worker")
+    public ResponseEntity<WorkerAccountResponse> createWorkerAccount(@Valid @RequestBody WorkerAccountRequest req) {
+        return new ResponseEntity<>(accountService.createWorkerAccount(req), HttpStatus.CREATED);
     }
 
     @PatchMapping("/status")

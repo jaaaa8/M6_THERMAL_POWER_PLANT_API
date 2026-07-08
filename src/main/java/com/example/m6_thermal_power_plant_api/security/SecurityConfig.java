@@ -20,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Bật tính năng @PreAuthorize trên Controller
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
@@ -51,6 +51,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/api/v1/accounts/create").permitAll()
                         .requestMatchers("/api/images/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/api/v1/tool-borrow-logs/notify-overdue").permitAll()
+                        .requestMatchers("/api/v1/tool-borrow-logs/test-email").permitAll()
                         // Tất cả các request khác đều phải có token hợp lệ
                         .anyRequest().authenticated()
                 )

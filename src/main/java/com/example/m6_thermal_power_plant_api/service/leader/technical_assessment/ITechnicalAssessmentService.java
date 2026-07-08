@@ -9,7 +9,10 @@ import java.util.List;
 
 public interface ITechnicalAssessmentService {
     List<TechnicalAssessmentUpdateRequestDto> findAll();
-    TechnicalAssessmentCreateRequestDto save(TechnicalAssessmentCreateRequestDto dto);
+    TechnicalAssessmentCreateRequestDto save(
+            TechnicalAssessmentCreateRequestDto dto,
+            MultipartFile[] imageFiles
+    );
     TechnicalAssessmentUpdateRequestDto findByTechnicalCode(String technicalCode);
     TechnicalAssessmentUpdateRequestDto update(TechnicalAssessmentUpdateRequestDto dto, MultipartFile pdfFile);
 

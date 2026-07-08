@@ -2,8 +2,11 @@ package com.example.m6_thermal_power_plant_api.service.account;
 
 import com.example.m6_thermal_power_plant_api.dto.accounts.AccountDTO;
 import com.example.m6_thermal_power_plant_api.dto.accounts.AccountResponseDTO;
+import com.example.m6_thermal_power_plant_api.dto.accounts.WorkerAccountRequest;
+import com.example.m6_thermal_power_plant_api.dto.accounts.WorkerAccountResponse;
 import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.Employee;
+import com.example.m6_thermal_power_plant_api.entity.Role;
 import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ public class AccountService implements IAccountService {
 
     private final IAccountRepository accountRepository;
     private final com.example.m6_thermal_power_plant_api.repository.employee.IEmployeeRepository employeeRepository;
+    private final com.example.m6_thermal_power_plant_api.repository.RoleRepository roleRepository;
     private final EntityManager entityManager;
     private final org.springframework.mail.javamail.JavaMailSender mailSender;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -122,9 +126,9 @@ public class AccountService implements IAccountService {
         }
 
         if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
-            java.util.List<com.example.m6_thermal_power_plant_api.entity.Role> roles = dto.getRoleIds().stream()
+            java.util.Set<com.example.m6_thermal_power_plant_api.entity.Role> roles = dto.getRoleIds().stream()
                     .map(id -> entityManager.getReference(com.example.m6_thermal_power_plant_api.entity.Role.class, id))
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(java.util.stream.Collectors.toSet());
             account.setRoles(roles);
         }
 
@@ -161,7 +165,7 @@ public class AccountService implements IAccountService {
         account.setPasswordHash(passwordEncoder.encode(plainPassword));
         account.setEmployee(employee);
         account.setStatus(com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus.ACTIVE);
-        account.setRoles(java.util.Collections.singletonList(role));
+        account.setRoles(java.util.Collections.singleton(role));
 
         Account savedAccount = accountRepository.save(account);
         accountRepository.flush();
@@ -217,6 +221,51 @@ public class AccountService implements IAccountService {
                 System.err.println("Failed to send email to " + to + ": " + e.getMessage());
             }
         });
+    }
+
+    @Transactional
+    public WorkerAccountResponse createWorkerAccount(WorkerAccountRequest req) {
+        if (accountRepository.existsByUsername(req.getUsername())) {
+            throw new IllegalArgumentException("Username đã tồn tại: " + req.getUsername());
+        }
+
+        // Tạo employee record
+        long empCount = employeeRepository.count();
+        Employee emp = new Employee();
+        emp.setFullName(req.getFullName());
+        String gmail = (req.getEmail() != null && !req.getEmail().isBlank())
+            ? req.getEmail() : req.getUsername() + "@demo.local";
+        emp.setGmail(gmail);
+        emp.setIsActive(true);
+        emp.setEmployeeCode("NS" + String.format("%03d", empCount + 1));
+        Employee savedEmp = employeeRepository.save(emp);
+
+        // Tìm hoặc tạo role WORKER
+        Role workerRole = roleRepository.findByName("WORKER").orElseGet(() -> {
+            Role r = new Role();
+            r.setName("WORKER");
+            r.setIsDeleted(false);
+            return roleRepository.save(r);
+        });
+
+        // Tạo account
+        Account account = new Account();
+        account.setUsername(req.getUsername());
+        account.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        account.setEmployee(savedEmp);
+        account.setStatus(com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus.ACTIVE);
+        account.setIsDeleted(false);
+        account.setRoles(new java.util.HashSet<>(java.util.List.of(workerRole)));
+        Account savedAccount = accountRepository.save(account);
+        accountRepository.flush();
+
+        return WorkerAccountResponse.builder()
+            .accountId(savedAccount.getId())
+            .username(req.getUsername())
+            .password(req.getPassword())
+            .fullName(req.getFullName())
+            .email(gmail)
+            .build();
     }
 
     @Transactional

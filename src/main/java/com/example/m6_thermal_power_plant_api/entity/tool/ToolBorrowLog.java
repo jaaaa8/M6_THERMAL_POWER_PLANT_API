@@ -31,9 +31,14 @@ public class ToolBorrowLog {
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
 
-    /** Số lượng mượn */
+    /** Số lượng mượn (gốc, không đổi khi trả từng phần) */
     @Column(nullable = false)
     private Integer quantity;
+
+    /** Số lượng đã trả tích lũy — cho phép trả nhiều lần, mỗi lần một ít */
+    @Builder.Default
+    @Column(name = "returned_quantity", nullable = false)
+    private Integer returnedQuantity = 0;
 
     /** Lý do mượn */
     @Column(name = "borrow_purpose", columnDefinition = "TEXT")
@@ -74,4 +79,9 @@ public class ToolBorrowLog {
     @Builder.Default
     @Column(name = "overdue_notified", nullable = false)
     private Boolean overdueNotified = false;
+
+    /** Đã gửi email nhắc sắp đến hạn (trước 1 ngày) hay chưa */
+    @Builder.Default
+    @Column(name = "due_soon_notified", nullable = false)
+    private Boolean dueSoonNotified = false;
 }

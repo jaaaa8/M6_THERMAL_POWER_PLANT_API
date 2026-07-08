@@ -6,7 +6,7 @@ import com.example.m6_thermal_power_plant_api.dto.tool.ToolBorrowRejectRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolBorrowRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolBorrowReturnRequest;
 import com.example.m6_thermal_power_plant_api.entity.enums.BorrowStatus;
-import com.example.m6_thermal_power_plant_api.service.ToolBorrowOverdueNotifier;
+import com.example.m6_thermal_power_plant_api.service.tool.ToolBorrowOverdueNotifier;
 import com.example.m6_thermal_power_plant_api.service.impl.IToolBorrowLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -73,5 +73,12 @@ public class ToolBorrowLogController {
     public ApiResponse<Integer> notifyOverdueNow() {
         int sentCount = toolBorrowOverdueNotifier.sendOverdueNotifications();
         return ApiResponse.success("Đã gửi " + sentCount + " email nhắc quá hạn", sentCount);
+    }
+
+    /** Gửi email test đến địa chỉ bất kỳ để kiểm tra cấu hình SMTP */
+    @PostMapping("/test-email")
+    public ApiResponse<String> testEmail(@RequestParam String toEmail) {
+        toolBorrowOverdueNotifier.sendTestEmail(toEmail);
+        return ApiResponse.success("Đã gửi email test đến " + toEmail, toEmail);
     }
 }

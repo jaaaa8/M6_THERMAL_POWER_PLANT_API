@@ -3,6 +3,8 @@ package com.example.m6_thermal_power_plant_api.controller.work_order;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.service.maintenance.IMaintenanceService;
 import com.example.m6_thermal_power_plant_api.util.UniqueCodeRetryExecutor;
 import jakarta.validation.Valid;
@@ -79,5 +81,32 @@ public class WorkOrderController {
             @RequestParam(required = false) String search,
             @PageableDefault(size = 20) Pageable pageable) {
         return new PagedModel<>(maintenanceService.listWorkOrders(search, pageable));
+    }
+
+    /**
+     * Chi tiết một phiếu công tác: thông tin chung + thành viên hiện tại
+     * (leftAt null = đang trong khu vực làm việc) + DÒNG THỜI GIAN ra/vào
+     * (JOINED/LEFT tăng dần theo thời gian) + các phiếu cấp vật tư thay thế.
+     */
+    @GetMapping("/{id}")
+    public WorkOrderDetailDTO getWorkOrderDetail(@PathVariable Integer id) {
+        return maintenanceService.getWorkOrderDetail(id);
+    }
+
+    /**
+     * Thêm nhân viên vào phiếu đang chạy (join). Nhân viên từng rời có thể vào
+     * lại — tạo dòng member mới nên lịch sử giữ đủ các cặp JOINED/LEFT.
+     */
+    @PostMapping("/{id}/members")
+    public ResponseEntity<WorkOrderMemberDTO> addMember(
+            @PathVariable Integer id,
+            @Valid @RequestBody CreateWorkOrderRequest.MemberInput input) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(maintenanceService.addMember(id, input));
+    }
+
+    /** Đánh dấu thành viên rời khu vực làm việc (set leftAt = now, idempotent). */
+    @PatchMapping("/{id}/members/{memberId}/leave")
+    public WorkOrderMemberDTO leaveMember(@PathVariable Integer id, @PathVariable Integer memberId) {
+        return maintenanceService.leaveMember(id, memberId);
     }
 }
