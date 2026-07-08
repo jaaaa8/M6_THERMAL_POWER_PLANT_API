@@ -21,6 +21,8 @@ public class UserInfoDTO {
     /** Tên hiển thị (từ employees.full_name). Fallback về username nếu account không gắn employee. */
     private String fullName;
     private List<String> roles;
+    /** Permission code gộp từ mọi role của account — FE dùng để ẩn/hiện menu, nút chức năng. */
+    private List<String> permissions;
 
     // Optional — null nếu account không có employee
     private String employeeCode;
