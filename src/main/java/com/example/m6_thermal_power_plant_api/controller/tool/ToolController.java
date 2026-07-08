@@ -2,17 +2,23 @@ package com.example.m6_thermal_power_plant_api.controller.tool;
 
 import com.example.m6_thermal_power_plant_api.dto.tool.ApiResponse;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolDamageRequest;
+import com.example.m6_thermal_power_plant_api.dto.tool.ToolImportResult;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolQuantityUpdateRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolRequest;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolResponse;
 import com.example.m6_thermal_power_plant_api.dto.tool.ToolTransactionLogResponse;
+import com.example.m6_thermal_power_plant_api.service.tool.ToolExcelService;
 import com.example.m6_thermal_power_plant_api.service.impl.IToolService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -22,6 +28,7 @@ import java.util.List;
 public class ToolController {
 
     private final IToolService toolService;
+    private final ToolExcelService toolExcelService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -73,5 +80,29 @@ public class ToolController {
     @GetMapping("/next-code")
     public ApiResponse<String> getNextCode() {
         return ApiResponse.success(toolService.generateNextCode());
+    }
+
+    /** Tải file Excel mẫu để nhập CCDC hàng loạt */
+    @GetMapping("/import/template")
+    public ResponseEntity<byte[]> downloadTemplate() {
+        byte[] file = toolExcelService.buildTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mau-nhap-ccdc.xlsx\"")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    /** Xem trước dữ liệu import (chưa lưu) — trả về kết quả kiểm tra từng dòng */
+    @PostMapping(value = "/import/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ToolImportResult> previewImport(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.success(toolExcelService.preview(file));
+    }
+
+    /** Xác nhận import — all-or-nothing, chỉ lưu khi tất cả dòng hợp lệ */
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ToolImportResult> importTools(@RequestParam("file") MultipartFile file) {
+        ToolImportResult result = toolExcelService.importTools(file);
+        return ApiResponse.success("Đã nhập thành công " + result.getValidCount() + " CCDC", result);
     }
 }

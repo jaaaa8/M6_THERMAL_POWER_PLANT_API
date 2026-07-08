@@ -127,19 +127,32 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
             throw new BadRequestException("Chỉ có thể trả CCDC đang ở trạng thái đã duyệt và chưa trả");
         }
 
+        int alreadyReturned = log.getReturnedQuantity() == null ? 0 : log.getReturnedQuantity();
+        int remaining = log.getQuantity() - alreadyReturned;
+
+        int returnQuantity = request.getReturnQuantity() == null ? remaining : request.getReturnQuantity();
+        if (returnQuantity > remaining) {
+            throw new BadRequestException("Số lượng trả không thể vượt quá số còn đang mượn (" + remaining + ")");
+        }
+
         Integer damagedQuantity = request.getDamagedQuantity() == null ? 0 : request.getDamagedQuantity();
-        if (damagedQuantity > log.getQuantity()) {
-            throw new BadRequestException("Số lượng hư hỏng không thể vượt quá số lượng đã mượn");
+        if (damagedQuantity > returnQuantity) {
+            throw new BadRequestException("Số lượng hư hỏng không thể vượt quá số lượng trả");
         }
 
         Tool tool = log.getTool();
-        tool.setQuantityBorrowed(tool.getQuantityBorrowed() - log.getQuantity());
+        tool.setQuantityBorrowed(tool.getQuantityBorrowed() - returnQuantity);
         tool.setQuantityDamaged(tool.getQuantityDamaged() + damagedQuantity);
         toolRepository.save(tool);
 
-        log.setStatus(BorrowStatus.RETURNED);
-        log.setActualReturnDate(LocalDateTime.now());
+        log.setReturnedQuantity(alreadyReturned + returnQuantity);
         log.setReturnNote(request.getReturnNote());
+
+        // Chỉ đóng phiếu (RETURNED) khi đã trả đủ; còn thiếu thì vẫn "đang mượn"
+        if (log.getReturnedQuantity() >= log.getQuantity()) {
+            log.setStatus(BorrowStatus.RETURNED);
+            log.setActualReturnDate(LocalDateTime.now());
+        }
 
         return toResponse(toolBorrowLogRepository.save(log));
     }
@@ -187,6 +200,7 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
                 .accountId(log.getAccount().getId())
                 .accountName(accountDisplayName(log.getAccount()))
                 .quantity(log.getQuantity())
+                .returnedQuantity(log.getReturnedQuantity())
                 .borrowPurpose(log.getBorrowPurpose())
                 .status(log.getStatus())
                 .transactionDate(log.getTransactionDate())

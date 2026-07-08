@@ -45,6 +45,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-mysql'
 
+    // Apache POI: đọc/ghi file Excel (.xlsx) cho chức năng import CCDC hàng loạt
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
+
     // 4. Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

@@ -12,6 +12,9 @@ public interface IToolCategoryRepository extends JpaRepository<ToolCategory, Int
 
     boolean existsByCategoryCode(String categoryCode);
 
+    /** Tìm chủng loại theo tên (không phân biệt hoa thường) — dùng khi import Excel map tên → id */
+    Optional<ToolCategory> findFirstByCategoryNameIgnoreCase(String categoryName);
+
     @Query("SELECT MAX(c.categoryCode) FROM ToolCategory c WHERE c.categoryCode LIKE 'TC%'")
     Optional<String> findMaxCategoryCode();
 
