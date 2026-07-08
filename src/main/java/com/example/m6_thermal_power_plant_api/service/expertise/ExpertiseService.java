@@ -17,7 +17,9 @@ public class ExpertiseService implements IExpertiseService {
     @Override
     public List<ExpertiseDTO> getAllExpertises() {
         return expertiseRepository.findAll().stream()
+                .filter(e -> !Boolean.TRUE.equals(e.getIsDeleted()))
                 .map(e -> ExpertiseDTO.builder()
+                        .id(e.getId())
                         .expertiseCode(e.getExpertiseCode())
                         .name(e.getName())
                         .build())

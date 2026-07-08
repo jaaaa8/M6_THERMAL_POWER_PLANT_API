@@ -4,14 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ExpertiseDTO {
-    private Integer id;
-    private String expertiseCode;
+public class EmployeeSearchRequestDTO {
     private String name;
+    private String phone;
+    private String gmail;
+    private Integer departmentId;
+    private Boolean isActive;
 }

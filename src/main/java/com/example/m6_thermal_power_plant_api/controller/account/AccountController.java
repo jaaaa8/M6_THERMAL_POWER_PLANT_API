@@ -49,4 +49,32 @@ public class AccountController {
         return ResponseEntity.ok(updatedAccount);
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<org.springframework.data.domain.Page<AccountResponseDTO>> searchAccounts(
+            @ModelAttribute com.example.m6_thermal_power_plant_api.dto.accounts.AccountSearchRequestDTO searchRequest,
+            org.springframework.data.domain.Pageable pageable
+    ) {
+        return ResponseEntity.ok(accountService.searchAccounts(searchRequest, pageable));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AccountResponseDTO> getAccountById(@PathVariable Integer id) {
+        return ResponseEntity.ok(accountService.getAccountById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<AccountResponseDTO> updateAccount(
+            @PathVariable Integer id,
+            @Valid @RequestBody AccountDTO accountDTO
+    ) {
+        AccountResponseDTO updated = accountService.updateAccount(id, accountDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/{id}/reset-password")
+    public ResponseEntity<Void> resetPassword(@PathVariable Integer id) {
+        accountService.resetPassword(id);
+        return ResponseEntity.ok().build();
+    }
+
 }

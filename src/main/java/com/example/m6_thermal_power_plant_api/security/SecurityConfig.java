@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/api/v1/accounts/create").permitAll()
+                        .requestMatchers("/api/images/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/v1/tool-borrow-logs/test-email").permitAll()
