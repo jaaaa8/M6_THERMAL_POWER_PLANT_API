@@ -16,10 +16,16 @@ public class CorsConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
+        // Dùng AllowedOriginPatterns (không phải AllowedOrigins) vì có
+        // setAllowCredentials(true) — pattern cho phép wildcard, và để trình
+        // duyệt gọi qua CloudFront không bị chặn CORS (403) rồi CloudFront biến
+        // 403 thành index.html khiến frontend không parse được → login lỗi.
+        configuration.setAllowedOriginPatterns(
                 List.of(
                         "http://localhost:5173",
-                        "http://localhost:5174"
+                        "http://localhost:5174",
+                        "https://ddvn9usdc5uus.cloudfront.net",
+                        "https://*.cloudfront.net"
                 )
         );
 
