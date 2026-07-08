@@ -34,14 +34,31 @@ public class ToolService implements IToolService {
     private final IToolTransactionLogRepository transactionLogRepository;
 
     @Override
+    public String generateNextCode() {
+        return toolRepository.findMaxToolCode()
+                .map(max -> {
+                    try {
+                        int num = Integer.parseInt(max.substring(6)); // "MCCDC-0001" → 1
+                        return String.format("MCCDC-%04d", num + 1);
+                    } catch (NumberFormatException e) {
+                        return "MCCDC-0001";
+                    }
+                })
+                .orElse("MCCDC-0001");
+    }
+
+    @Override
     public ToolResponse create(ToolRequest request) {
-        if (toolRepository.existsByToolCode(request.getToolCode())) {
-            throw new BadRequestException("Mã CCDC đã tồn tại: " + request.getToolCode());
+        String code = (request.getToolCode() == null || request.getToolCode().isBlank())
+                ? generateNextCode()
+                : request.getToolCode().trim();
+        if (toolRepository.existsByToolCode(code)) {
+            throw new BadRequestException("Mã CCDC đã tồn tại: " + code);
         }
         ToolCategory category = getCategoryOrThrow(request.getToolCategoryId());
 
         Tool tool = Tool.builder()
-                .toolCode(request.getToolCode())
+                .toolCode(code)
                 .name(request.getName())
                 .toolCategory(category)
                 .unit(request.getUnit())

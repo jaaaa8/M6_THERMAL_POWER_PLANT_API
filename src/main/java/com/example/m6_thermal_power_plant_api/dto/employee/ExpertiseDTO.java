@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExpertiseDTO {
+    private Integer id;
     private String expertiseCode;
     private String name;
 }

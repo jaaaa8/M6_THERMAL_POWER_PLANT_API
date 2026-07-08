@@ -17,4 +17,5 @@ public interface IToolCategoryService {
 
     List<ToolCategoryResponse> getAll();
     List<ToolCategoryResponse> search(String categoryName, String categoryCode);
+    String generateNextCode();
 }

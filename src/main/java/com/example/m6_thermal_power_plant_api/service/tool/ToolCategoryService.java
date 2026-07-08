@@ -22,12 +22,29 @@ public class ToolCategoryService implements IToolCategoryService {
     private final IToolCategoryRepository toolCategoryRepository;
 
     @Override
+    public String generateNextCode() {
+        return toolCategoryRepository.findMaxCategoryCode()
+                .map(max -> {
+                    try {
+                        int num = Integer.parseInt(max.substring(2));
+                        return String.format("TC%03d", num + 1);
+                    } catch (NumberFormatException e) {
+                        return "TC001";
+                    }
+                })
+                .orElse("TC001");
+    }
+
+    @Override
     public ToolCategoryResponse create(ToolCategoryRequest request) {
-        if (toolCategoryRepository.existsByCategoryCode(request.getCategoryCode())) {
-            throw new BadRequestException("Mã chủng loại đã tồn tại: " + request.getCategoryCode());
+        String code = (request.getCategoryCode() == null || request.getCategoryCode().isBlank())
+                ? generateNextCode()
+                : request.getCategoryCode().trim();
+        if (toolCategoryRepository.existsByCategoryCode(code)) {
+            throw new BadRequestException("Mã chủng loại đã tồn tại: " + code);
         }
         ToolCategory category = ToolCategory.builder()
-                .categoryCode(request.getCategoryCode())
+                .categoryCode(code)
                 .categoryName(request.getCategoryName())
                 .description(request.getDescription())
                 .build();

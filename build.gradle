@@ -54,6 +54,10 @@ dependencies {
     implementation 'io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.40'
 
     // 6. Lombok
+    // Apache POI: đọc/ghi file Excel (.xlsx) cho chức năng import CCDC hàng loạt
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
+
+    // 4. Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
