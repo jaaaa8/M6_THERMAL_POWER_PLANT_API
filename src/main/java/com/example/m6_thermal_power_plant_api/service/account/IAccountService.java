@@ -16,4 +16,8 @@ public interface IAccountService {
     AccountResponseDTO grantAccount(AccountGrantRequestDTO request);
     AccountResponseDTO updateStatus(AccountStatusUpdateRequestDTO request);
     WorkerAccountResponse createWorkerAccount(WorkerAccountRequest req);
+    org.springframework.data.domain.Page<AccountResponseDTO> searchAccounts(com.example.m6_thermal_power_plant_api.dto.accounts.AccountSearchRequestDTO searchRequest, org.springframework.data.domain.Pageable pageable);
+    AccountResponseDTO getAccountById(Integer id);
+    AccountResponseDTO updateAccount(Integer id, AccountDTO dto);
+    void resetPassword(Integer id);
 }
