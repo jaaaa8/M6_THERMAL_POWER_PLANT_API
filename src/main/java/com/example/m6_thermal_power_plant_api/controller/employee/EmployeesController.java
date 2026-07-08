@@ -25,6 +25,7 @@ public class EmployeesController {
     public ResponseEntity<ApiResponse<List<EmployeeDTO>>> findAll() {
         List<Employee> employees = employeeRepository.findAll();
         List<EmployeeDTO> dtos = employees.stream()
+                .filter(e -> !Boolean.TRUE.equals(e.getIsDeleted()))
                 .map(EmployeeDTO::from)
                 .collect(Collectors.toList());
         return ApiResponse.success(dtos);
