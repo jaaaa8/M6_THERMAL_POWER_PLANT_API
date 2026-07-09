@@ -18,6 +18,7 @@ public class AccountResponseDTO {
     private AccountStatus status;
     private List<RoleDTO> roles;
     private EmployeeInfo employee;
+    private String image;
 
     @Data
     @Builder
