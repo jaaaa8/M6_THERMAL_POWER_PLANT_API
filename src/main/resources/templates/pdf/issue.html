@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Phiếu Đề Nghị Cấp Phát Vật Tư</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 2cm 1.5cm;
+            background-color: #ffffff;
+        }
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 13pt;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            font-size: 16pt;
+            text-transform: uppercase;
+            margin: 0 0 5px 0;
+        }
+        .date-row {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .form-row {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 16px;
+        }
+        table.data-table th, table.data-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        table.data-table th {
+            font-weight: bold;
+        }
+        table.data-table td {
+            height: 28px;
+        }
+        .sign-row {
+            width: 100%;
+            display: table;
+            margin-top: 10px;
+        }
+        .sign-cell {
+            display: table-cell;
+            width: 33.33%;
+            text-align: center;
+            vertical-align: top;
+        }
+        .sign-cell .role {
+            font-weight: bold;
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>PHIẾU ĐỀ NGHỊ CẤP PHÁT VẬT TƯ, TRANG THIẾT BỊ</h1>
+</div>
+<div class="date-row">
+    Ngày <span th:text="${issuedDay}">...</span>
+    tháng <span th:text="${issuedMonth}">...</span>
+    năm <span th:text="${issuedYear}">......</span>
+</div>
+
+<div class="form-row">Phòng/Bộ phận đề nghị: <span th:text="${requesterDepartment}">[Tên phòng/bộ phận]</span></div>
+<div class="form-row">Kính gửi: <span th:text="${recipientDepartment}">[Phòng/Bộ phận phụ trách cấp phát vật tư]</span></div>
+<div class="form-row">Tên người đề nghị: <span th:text="${requesterName}">[Họ và tên người đề nghị]</span></div>
+<div class="form-row">Chức vụ: <span th:text="${requesterPosition}">[Chức vụ của người đề nghị]</span></div>
+<div class="form-row">Lý do đề nghị: <span th:text="${reason}">[Nêu rõ lý do cần cấp phát vật tư]</span></div>
+<div class="form-row">Phiếu công tác: <span class="font-mono" th:text="${orderCode}">[Mã công tác]</span></div>
+<div class="form-row">Mô tả sơ bộ phiếu công tác: <span th:text="${description}">[Mô tả phiếu công tác]</span></div>
+
+<div class="form-row" style="margin-top: 15px;">Danh sách vật tư đề nghị cấp phát:</div>
+
+<table class="data-table">
+    <tr>
+        <th style="width: 5%;">STT</th>
+        <th style="width: 25%;">Tên vật tư, thiết bị</th>
+        <th style="width: 10%;">Mã số</th>
+        <th style="width: 10%;">Đơn vị tính</th>
+        <th style="width: 20%;">Số lượng</th>
+
+    </tr>
+    <tr th:each="row, it : ${itemRows}">
+        <td th:text="${row.name != '' ? it.count : ''}">1</td>
+        <td style="text-align: left;" th:text="${row.name}"></td>
+        <td th:text="${row.code}"></td>
+        <td th:text="${row.unit}"></td>
+        <td th:text="${row.quantity}"></td>
+    </tr>
+</table>
+
+<div class="sign-row">
+    <div class="sign-cell">
+        <div class="role">Người đề nghị</div>
+    </div>
+
+    <div class="sign-cell">
+        <div class="role">Phòng/Bộ phận cấp phát vật tư</div>
+    </div>
+</div>
+</body>
+</html>

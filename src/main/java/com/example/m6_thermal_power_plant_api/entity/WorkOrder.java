@@ -82,9 +82,26 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Column(length = 100)
     private WorkOrderStatus status;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    /** Người cấp phiếu — tài khoản đăng nhập đã tạo PCT (in lên bản PDF).
+     *  Account đã @SQLRestriction nên không cần khai báo lại restriction. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private Account createdBy;
+
     /** Đường dẫn file PDF phiếu công tác đã xuất */
     @Column(name = "pdf_path", length = 500)
     private String pdfPath;
+
+    /**
+     * Bản lưu ĐÓNG BĂNG của "Phiếu đề nghị cấp phát vật tư" — chỉ ghi MỘT lần
+     * khi phiếu về trạng thái kết thúc (COMPLETED/CANCELLED). Phiếu còn sống thì
+     * PDF vật tư luôn render mới theo yêu cầu, không cache URL.
+     */
+    @Column(name = "supplies_pdf_path", length = 500)
+    private String suppliesPdfPath;
 
     @JsonIgnore
     @OneToMany(mappedBy = "workOrder", fetch = FetchType.LAZY)

@@ -2,11 +2,7 @@ package com.example.m6_thermal_power_plant_api.service.spare_part;
 
 import com.example.m6_thermal_power_plant_api.dto.spare_parts.CreateSparePartsIssueRequest;
 import com.example.m6_thermal_power_plant_api.dto.spare_parts.SparePartsIssueDTO;
-import com.example.m6_thermal_power_plant_api.entity.Account;
-import com.example.m6_thermal_power_plant_api.entity.SparePart;
-import com.example.m6_thermal_power_plant_api.entity.SparePartsIssue;
-import com.example.m6_thermal_power_plant_api.entity.SparePartsIssueDetail;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
+import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
@@ -19,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +39,7 @@ public class SparePartIssuesService implements ISparePartIssuesService {
     @Override
     @Transactional
     public SparePartsIssueDTO createForWorkOrder(Integer workOrderId, CreateSparePartsIssueRequest request,
-                                                 String issuedByUsername) {
+                                                 String issuedByUsername, SuppliesIssue suppliesIssue) {
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay phieu cong tac voi id: " + workOrderId));
@@ -62,13 +57,11 @@ public class SparePartIssuesService implements ISparePartIssuesService {
                         "Khong tim thay tai khoan dang nhap: " + issuedByUsername));
 
         LocalDateTime now = LocalDateTime.now();
-        BigDecimal total = request.getItems().stream()
-                .map(CreateSparePartsIssueRequest.Line::getQuantity)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         SparePartsIssue issue = issueRepository.save(SparePartsIssue.builder()
                 .issueCode(TimeStampCodeGenerator.generate(SparePartsIssue.class))
                 .workOrder(workOrder)
+                .suppliesIssue(suppliesIssue)
                 .issuedBy(issuedBy)
                 .issuedAt(now)
                 .build());
@@ -81,6 +74,7 @@ public class SparePartIssuesService implements ISparePartIssuesService {
             details.add(detailRepository.save(SparePartsIssueDetail.builder()
                     .issue(issue)
                     .sparePart(sparePart)
+                    .quantity(line.getQuantity())
                     .build()));
         }
 
