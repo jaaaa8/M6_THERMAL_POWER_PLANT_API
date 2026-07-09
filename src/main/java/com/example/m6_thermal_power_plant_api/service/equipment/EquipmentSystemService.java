@@ -80,7 +80,8 @@ public class EquipmentSystemService  implements IEquipmentSystemService{
     public SystemListDTO updateSystem(int id, UpdateSystemDTO dto) {
         EquipmentSystem system =equipmentSystemRepository.findById(id)
                 .orElseThrow(()-> new ObjectNotFoundException("Không tìm thấy hệ thống."));
-        if(equipmentSystemRepository.existsByNameIgnoreCaseAndIdNot(dto.getName(),id)){
+        String name = dto.getName().trim();
+        if(equipmentSystemRepository.existsByNameIgnoreCaseAndIdNot(name,id)){
             throw  new RuntimeException("Tên hệ thống đã tồn tại.");
         }
         system.setName(dto.getName().trim());

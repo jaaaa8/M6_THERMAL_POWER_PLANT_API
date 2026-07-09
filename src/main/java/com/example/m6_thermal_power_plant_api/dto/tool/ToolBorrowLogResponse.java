@@ -26,6 +26,7 @@ public class ToolBorrowLogResponse {
     private String accountName;
 
     private Integer quantity;
+    private Integer returnedQuantity;
     private String borrowPurpose;
     private BorrowStatus status;
 

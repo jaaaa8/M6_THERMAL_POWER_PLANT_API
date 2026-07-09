@@ -17,7 +17,9 @@ public class PositionService implements IPositionService {
     @Override
     public List<PositionDTO> getAllPositions() {
         return positionRepository.findAll().stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getIsDeleted()))
                 .map(p -> PositionDTO.builder()
+                        .id(p.getId())
                         .positionCode(p.getPositionCode())
                         .name(p.getName())
                         .build())

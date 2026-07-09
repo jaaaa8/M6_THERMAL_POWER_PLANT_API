@@ -11,7 +11,6 @@ import lombok.Setter;
 @Setter
 public class ToolRequest {
 
-    @NotBlank(message = "Mã CCDC không được để trống")
     private String toolCode;
 
     @NotBlank(message = "Tên CCDC không được để trống")

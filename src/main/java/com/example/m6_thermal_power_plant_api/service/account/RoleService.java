@@ -16,6 +16,7 @@ public class RoleService implements IRoleService {
     @Override
     public List<RoleDTO> getAllRoles() {
         return roleRepository.findAll().stream()
+                .filter(r -> !Boolean.TRUE.equals(r.getIsDeleted()))
                 .map(r -> RoleDTO.builder()
                         .id(r.getId())
                         .name(r.getName())

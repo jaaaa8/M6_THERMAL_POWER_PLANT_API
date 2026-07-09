@@ -1,0 +1,2 @@
+ALTER TABLE `tool_borrow_logs`
+  ADD COLUMN `returned_quantity` int NOT NULL DEFAULT 0;
