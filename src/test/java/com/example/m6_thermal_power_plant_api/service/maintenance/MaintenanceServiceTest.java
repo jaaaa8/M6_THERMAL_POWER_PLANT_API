@@ -54,6 +54,8 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
     @Mock
     private com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService sparePartIssuesService;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService workOrderArchiveService;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -110,11 +112,13 @@ class MaintenanceServiceTest {
         assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
         assertThat(result.getEquipmentKksCode()).isEqualTo("10LAC10AP001");
         assertThat(result.getMembers()).hasSize(1);
-        assertThat(result.getMembers().get(0).getRoleInTask()).isEqualTo("Mechanical technician");
+        // MemberInput hiện chỉ nhận employeeId — roleInTask không truyền lúc tạo phiếu.
+        assertThat(result.getMembers().get(0).getRoleInTask()).isNull();
 
-        // Request rời khỏi danh sách chờ xử lý.
-        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.IN_PROGRESS);
-        verify(repairRequestRepository).save(request);
+        // Chuyển trạng thái PENDING -> IN_PROGRESS đang TẮT trong service
+        // (khối comment ở createWorkOrderFromRequest) — request giữ nguyên trạng thái.
+        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.PENDING);
+        verify(repairRequestRepository, never()).save(request);
 
         ArgumentCaptor<WorkOrder> woCaptor = ArgumentCaptor.forClass(WorkOrder.class);
         verify(workOrderRepository).save(woCaptor.capture());

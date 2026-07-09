@@ -5,6 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.LoginResponseDTO;
 import com.example.m6_thermal_power_plant_api.dto.RefreshTokenRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.RefreshTokenResponseDTO;
 import com.example.m6_thermal_power_plant_api.dto.UserInfoDTO;
+import com.example.m6_thermal_power_plant_api.dto.ChangePasswordRequestDTO;
 import com.example.m6_thermal_power_plant_api.exception.ApiResponse;
 import com.example.m6_thermal_power_plant_api.security.CustomUserDetails;
 import com.example.m6_thermal_power_plant_api.service.impl.IAuthService;
@@ -52,5 +53,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserInfoDTO>> getMe(@AuthenticationPrincipal CustomUserDetails me) {
         UserInfoDTO info = authService.getMe(me.getAccountId());
         return ApiResponse.success(info);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<String>> changePassword(
+            @AuthenticationPrincipal CustomUserDetails me,
+            @Valid @RequestBody ChangePasswordRequestDTO request) {
+        authService.changePassword(me.getAccountId(), request);
+        return ApiResponse.success("Đổi mật khẩu thành công!");
     }
 }

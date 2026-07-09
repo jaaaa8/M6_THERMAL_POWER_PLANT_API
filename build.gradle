@@ -28,9 +28,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
-    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    // Cung cấp endpoint /actuator/health cho ECS health check (ecs.tf) — trước đây healthCheck gọi endpoint này
+    // nhưng dependency chưa tồn tại, mọi container đều bị coi "unhealthy" dù app chạy bình thường
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     // 2. JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
@@ -41,10 +42,18 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // Flyway: flyway-mysql BẮT BUỘC riêng cho MySQL 8+ (Flyway 7+ tách hỗ trợ theo DB engine).
+    // 4. Flyway: flyway-mysql BẮT BUỘC riêng cho MySQL 8+
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-mysql'
 
+    // 5. Cloudinary — lưu file/PDF trên cloud (thay cho ghi vào src/main/resources, vốn hỏng khi chạy jar)
+    implementation 'com.cloudinary:cloudinary-http44:1.36.0'
+
+    // 5b. PDF: Thymeleaf render HTML template -> OpenHTMLtoPDF sinh PDF.
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.40'
+
+    // 6. Lombok
     // Apache POI: đọc/ghi file Excel (.xlsx) cho chức năng import CCDC hàng loạt
     implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
@@ -54,7 +63,8 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 
-    // 5. Testing
+    // 7. Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

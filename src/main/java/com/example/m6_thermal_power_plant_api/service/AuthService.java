@@ -17,6 +17,9 @@ import com.example.m6_thermal_power_plant_api.security.CustomUserDetails;
 import com.example.m6_thermal_power_plant_api.security.JwtUtils;
 import com.example.m6_thermal_power_plant_api.security.TokenHasher;
 import com.example.m6_thermal_power_plant_api.service.account.IPermissionService;
+import com.example.m6_thermal_power_plant_api.dto.ChangePasswordRequestDTO;
+import com.example.m6_thermal_power_plant_api.exception.BadRequestException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.example.m6_thermal_power_plant_api.service.impl.IAuthService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -46,6 +49,7 @@ public class AuthService implements IAuthService {
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final IPermissionService permissionService;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${scms.jwt.refresh-token-expiration}")
     private long refreshExpiration;
@@ -193,5 +197,26 @@ public class AuthService implements IAuthService {
                 .expiresAt(new Date(System.currentTimeMillis() + refreshExpiration))
                 .build();
         refreshTokenRepository.saveAndFlush(entity);
+    }
+
+    @Override
+    public void changePassword(Integer accountId, ChangePasswordRequestDTO request) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tài khoản không tồn tại"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), account.getPasswordHash())) {
+            throw new BadRequestException("Mật khẩu cũ không chính xác");
+        }
+
+        if (request.getOldPassword().equals(request.getNewPassword())) {
+            throw new BadRequestException("Mật khẩu mới không được trùng với mật khẩu cũ");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        account.setPermissionVersion(account.getPermissionVersion() + 1);
+        accountRepository.save(account);
+
+        refreshTokenRepository.deleteByAccount(account);
+        refreshTokenRepository.flush();
     }
 }

@@ -2,12 +2,18 @@ package com.example.m6_thermal_power_plant_api.controller.work_order;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderStatusRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.service.maintenance.IMaintenanceService;
+import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderPdfService;
 import com.example.m6_thermal_power_plant_api.util.UniqueCodeRetryExecutor;
 import jakarta.validation.Valid;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.MediaType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -34,11 +40,14 @@ public class WorkOrderController {
 
     private final IMaintenanceService maintenanceService;
     private final UniqueCodeRetryExecutor codeRetryExecutor;
+    private final WorkOrderPdfService workOrderPdfService;
 
     public WorkOrderController(IMaintenanceService maintenanceService,
-                               UniqueCodeRetryExecutor codeRetryExecutor) {
+                               UniqueCodeRetryExecutor codeRetryExecutor,
+                               WorkOrderPdfService workOrderPdfService) {
         this.maintenanceService = maintenanceService;
         this.codeRetryExecutor = codeRetryExecutor;
+        this.workOrderPdfService = workOrderPdfService;
     }
 
 
@@ -52,10 +61,29 @@ public class WorkOrderController {
      * transaction rollback sạch, executor sinh lại mã + chạy lại toàn bộ thao tác.
      */
     @PostMapping
-    public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request) {
+    public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request,
+                                                        java.security.Principal principal) {
+        String createdByUsername = principal != null ? principal.getName() : null;
         WorkOrderDTO created = codeRetryExecutor.execute(
-                () -> maintenanceService.createWorkOrderFromRequest(request));
+                () -> maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /**
+     * Xuất bản in PDF của phiếu công tác theo mẫu giấy (snapshot dữ liệu hiện
+     * tại: nhân sự, vào/ra vị trí, gia hạn). Đồng thời upload lên Cloudinary
+     * (đè bản cũ cùng orderCode) và lưu URL vào pdf_path.
+     */
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> exportPdf(@PathVariable Integer id) {
+        WorkOrderPdfService.WorkOrderPdf pdf = workOrderPdfService.render(id);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", ContentDisposition.inline()
+                        .filename(pdf.orderCode() + ".pdf")
+                        .build()
+                        .toString())
+                .body(pdf.content());
     }
 
     /**
@@ -70,6 +98,70 @@ public class WorkOrderController {
     }
 
     /**
+     * Hoàn thành phiếu công tác — endpoint cập nhật status DUY NHẤT sang
+     * COMPLETED, không sửa trường nào khác. Idempotent nếu đã COMPLETED;
+     * 409 nếu CANCELLED hoặc đang chờ duyệt gia hạn.
+     */
+    @PatchMapping("/{id}/complete")
+    public WorkOrderDTO completeWorkOrder(@PathVariable Integer id) {
+        return maintenanceService.completeWorkOrder(id);
+    }
+
+    /**
+     * Tổ trưởng gửi duyệt / tạm dừng phiếu (từ mọi trạng thái đang sống): tạo
+     * dòng gia hạn chờ duyệt + status → WAITING_FOR_APPROVAL. Bước duyệt diễn ra
+     * NGOÀI hệ thống: bản giấy PCT được đưa tận tay Trưởng ca ký.
+     */
+    @PatchMapping("/{id}/stop")
+    public WorkOrderDTO stopWorkOrder(@PathVariable Integer id,
+                                      @Valid @RequestBody StopWorkOrderRequest request) {
+        return maintenanceService.stopWorkOrder(id, request);
+    }
+
+    /**
+     * Sửa thông tin phiếu đang sống (partial update — chỉ trường khác null được
+     * ghi đè): nhân sự phụ trách, thời gian, mô tả. Hiện trường thay đổi liên
+     * tục nên KHÔNG áp ràng buộc lúc tạo; phiếu COMPLETED/CANCELLED trả 409.
+     */
+    @PatchMapping("/{id}")
+    public WorkOrderDTO updateWorkOrder(@PathVariable Integer id,
+                                        @RequestBody UpdateWorkOrderRequest request) {
+        return maintenanceService.updateWorkOrder(id, request);
+    }
+
+    /**
+     * Cập nhật trạng thái phiếu — endpoint DUY NHẤT cho modal "Cập nhật trạng
+     * thái": duyệt phiếu, bắt đầu, tạm dừng, gửi duyệt gia hạn, duyệt gia hạn,
+     * hoàn thành, huỷ. Bước chuyển không hợp lệ trả 409.
+     */
+    @PatchMapping("/{id}/status")
+    public WorkOrderDTO updateWorkOrderStatus(@PathVariable Integer id,
+                                              @Valid @RequestBody UpdateWorkOrderStatusRequest request,
+                                              java.security.Principal principal) {
+        return maintenanceService.updateWorkOrderStatus(id, request,
+                principal != null ? principal.getName() : null);
+    }
+
+    /**
+     * Ghi nhận online việc Trưởng ca ĐÃ ký duyệt bản giấy: tài khoản đang đăng
+     * nhập được lưu vào approvedBy (người bấm chịu trách nhiệm nhập đúng theo
+     * bản giấy) + status → APPROVED.
+     */
+    @PatchMapping("/{id}/approve-extension")
+    public WorkOrderDTO approveExtension(@PathVariable Integer id, java.security.Principal principal) {
+        return maintenanceService.approveExtension(id, principal.getName());
+    }
+
+    /**
+     * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc
+     * APPROVED → IN_PROGRESS (bật lại nút đã tắt hôm trước, sau khi duyệt).
+     */
+    @PatchMapping("/{id}/reopen")
+    public WorkOrderDTO reopenWorkOrder(@PathVariable Integer id) {
+        return maintenanceService.reopenWorkOrder(id);
+    }
+
+    /**
      * Danh sach phieu cong tac, CO PHAN TRANG + TIM KIEM.
      * Tham so query: {@code ?page=0&size=20&sort=createdAt,desc&search=...}
      * Mac dinh trang 20 dong, sap xep createdAt giam dan.
@@ -81,6 +173,19 @@ public class WorkOrderController {
             @RequestParam(required = false) String search,
             @PageableDefault(size = 20) Pageable pageable) {
         return new PagedModel<>(maintenanceService.listWorkOrders(search, pageable));
+    }
+
+    /**
+     * Id nhân viên ĐANG BẬN ở một phiếu công tác sống bất kỳ (giữ vai trò phụ
+     * trách hoặc là thành viên chưa rời) — UI dùng để ẩn khỏi gợi ý khi thêm
+     * nhân sự. Chỉ là bộ lọc hiển thị, backend KHÔNG chặn thêm (permissive).
+     *
+     * @param excludeWorkOrderId bỏ qua phiếu này khi xét (thao tác trên chính nó).
+     */
+    @GetMapping("/busy-employees")
+    public java.util.List<Integer> getBusyEmployees(
+            @RequestParam(required = false) Integer excludeWorkOrderId) {
+        return maintenanceService.getBusyEmployeeIds(excludeWorkOrderId);
     }
 
     /**
