@@ -46,6 +46,7 @@ public class AccountService implements IAccountService {
             }
         }
 
+        String image = null;
         AccountResponseDTO.EmployeeInfo employeeInfo = null;
         try {
             Employee emp = a.getEmployee();
@@ -56,6 +57,7 @@ public class AccountService implements IAccountService {
                         .fullName(emp.getFullName())
                         .gmail(emp.getGmail())
                         .build();
+                image = emp.getImgPath();
             }
         } catch (jakarta.persistence.EntityNotFoundException ex) {
             // ignore soft-deleted employee
@@ -68,6 +70,7 @@ public class AccountService implements IAccountService {
                 .status(a.getStatus())
                 .roles(roleDTOs)
                 .employee(employeeInfo)
+                .image(image)
                 .build();
     }
 

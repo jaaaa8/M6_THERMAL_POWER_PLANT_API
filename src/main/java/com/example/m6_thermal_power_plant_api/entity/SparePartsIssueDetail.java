@@ -45,5 +45,5 @@ public class SparePartsIssueDetail extends BaseSoftDeleteEntity {
     @CascadeSoftDelete
     private SparePart sparePart;
 
-    private BigDecimal quantity;
+    private Integer quantity;
 }
