@@ -57,6 +57,15 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
     @CascadeSoftDelete
     private WorkOrder workOrder;
 
+    /**
+     * LẦN cấp vật tư (bảng cha supplies_issues, V9) mà phiếu này thuộc về — gom
+     * cặp phiếu thay thế + tiêu hao tạo trong cùng một hành động. NULL không xảy
+     * ra sau backfill V9, nhưng code đọc vẫn nên phòng thủ.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplies_issue_id")
+    private SuppliesIssue suppliesIssue;
+
     /** Vật tư thay thế được cấp (tham chiếu danh mục) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "spare_part_id")

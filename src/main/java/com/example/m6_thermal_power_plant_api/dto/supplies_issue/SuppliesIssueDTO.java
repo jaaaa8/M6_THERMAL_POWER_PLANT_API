@@ -22,8 +22,11 @@ import lombok.Setter;
 @AllArgsConstructor
 public class SuppliesIssueDTO {
 
+    /** Id LẦN cấp vật tư vừa tạo (dòng supplies_issues — thực thể cha, V9). */
+    private Integer id;
     private Integer workOrderId;
     private String orderCode;
+    private java.time.LocalDateTime issuedAt;
 
     /** Phiếu cấp vật tư thay thế vừa tạo — null nếu request không gửi dòng nào. */
     private SparePartsIssueDTO sparePartsIssue;

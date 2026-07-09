@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.Consumable;
 import com.example.m6_thermal_power_plant_api.entity.ConsumableIssue;
 import com.example.m6_thermal_power_plant_api.entity.ConsumableIssueDetail;
+import com.example.m6_thermal_power_plant_api.entity.SuppliesIssue;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
@@ -44,7 +45,7 @@ public class ConsumableIssuesService implements IConsumableIssuesService {
     @Override
     @Transactional
     public ConsumableIssueDTO createForWorkOrder(Integer workOrderId, CreateConsumableIssueRequest request,
-                                                  String issuedByUsername) {
+                                                  String issuedByUsername, SuppliesIssue suppliesIssue) {
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay phieu cong tac voi id: " + workOrderId));
@@ -69,6 +70,7 @@ public class ConsumableIssuesService implements IConsumableIssuesService {
         ConsumableIssue issue = issueRepository.save(ConsumableIssue.builder()
                 .consumableCode(TimeStampCodeGenerator.generate(ConsumableIssue.class))
                 .workOrder(workOrder)
+                .suppliesIssue(suppliesIssue)
                 .transactionType("export")
                 .quantity(total)
                 .issuedBy(issuedBy)

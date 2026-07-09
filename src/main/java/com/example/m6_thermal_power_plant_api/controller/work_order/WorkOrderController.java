@@ -176,6 +176,19 @@ public class WorkOrderController {
     }
 
     /**
+     * Id nhân viên ĐANG BẬN ở một phiếu công tác sống bất kỳ (giữ vai trò phụ
+     * trách hoặc là thành viên chưa rời) — UI dùng để ẩn khỏi gợi ý khi thêm
+     * nhân sự. Chỉ là bộ lọc hiển thị, backend KHÔNG chặn thêm (permissive).
+     *
+     * @param excludeWorkOrderId bỏ qua phiếu này khi xét (thao tác trên chính nó).
+     */
+    @GetMapping("/busy-employees")
+    public java.util.List<Integer> getBusyEmployees(
+            @RequestParam(required = false) Integer excludeWorkOrderId) {
+        return maintenanceService.getBusyEmployeeIds(excludeWorkOrderId);
+    }
+
+    /**
      * Chi tiết một phiếu công tác: thông tin chung + thành viên hiện tại
      * (leftAt null = đang trong khu vực làm việc) + DÒNG THỜI GIAN ra/vào
      * (JOINED/LEFT tăng dần theo thời gian) + các phiếu cấp vật tư thay thế.

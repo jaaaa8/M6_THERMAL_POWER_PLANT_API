@@ -3,6 +3,7 @@ package com.example.m6_thermal_power_plant_api.service.pdf;
 import com.example.m6_thermal_power_plant_api.dto.consumables.ConsumableIssueDTO;
 import com.example.m6_thermal_power_plant_api.dto.file.FileUploadResult;
 import com.example.m6_thermal_power_plant_api.dto.spare_parts.SparePartsIssueDTO;
+import com.example.m6_thermal_power_plant_api.dto.supplies_issue.SuppliesIssueBatchDTO;
 import com.example.m6_thermal_power_plant_api.dto.supplies_issue.SuppliesIssueHistoryDTO;
 import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
@@ -59,6 +60,33 @@ public class SuppliesIssuePdfService {
     }
 
     /**
+     * Bản in của MỘT LẦN cấp vật tư (dòng supplies_issues) — chỉ gồm các dòng vật
+     * tư của đúng lần đó, ngày trên phiếu = ngày cấp của lần đó. Lần cấp là dữ
+     * liệu bất biến sau khi tạo nên client có thể cache kết quả theo id.
+     */
+    @Transactional(readOnly = true)
+    public SuppliesIssuePdf renderInstance(Integer workOrderId, Integer suppliesIssueId) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+        SuppliesIssueBatchDTO batch = suppliesIssueService.getByWorkOrder(workOrderId).getIssues().stream()
+                .filter(b -> suppliesIssueId.equals(b.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay lan cap vat tu id " + suppliesIssueId
+                                + " thuoc phieu cong tac (" + workOrder.getOrderCode() + ")."));
+
+        List<Map<String, String>> itemRows = new ArrayList<>();
+        appendSparePartsRows(itemRows, batch.getSparePartsIssue());
+        appendConsumableRows(itemRows, batch.getConsumableIssue());
+        while (itemRows.size() < MIN_ITEM_ROWS) {
+            itemRows.add(Map.of("name", "", "code", "", "unit", "", "quantity", ""));
+        }
+
+        LocalDate issuedDate = batch.getIssuedAt() != null ? batch.getIssuedAt().toLocalDate() : LocalDate.now();
+        byte[] pdf = pdfService.renderPdf("pdf/issue", buildModel(workOrder, itemRows, issuedDate));
+        return new SuppliesIssuePdf(workOrder.getOrderCode() + "-lan-" + batch.getSeq(), pdf);
+    }
+
+    /**
      * ĐÓNG BĂNG bản lưu cuối cùng khi phiếu về trạng thái kết thúc: render +
      * upload + lưu supplies_pdf_path. PCT chưa từng được cấp vật tư thì bỏ qua
      * lặng lẽ (không có gì để lưu); upload lỗi chỉ log cảnh báo — việc đóng
@@ -103,7 +131,7 @@ public class SuppliesIssuePdfService {
         while (itemRows.size() < MIN_ITEM_ROWS) {
             itemRows.add(Map.of("name", "", "code", "", "unit", "", "quantity", ""));
         }
-        return pdfService.renderPdf("pdf/issue", buildModel(workOrder, itemRows));
+        return pdfService.renderPdf("pdf/issue", buildModel(workOrder, itemRows, LocalDate.now()));
     }
 
     /** Gộp mọi dòng chi tiết: vật tư thay thế trước, vật tư tiêu hao sau. */
@@ -111,21 +139,35 @@ public class SuppliesIssuePdfService {
         List<Map<String, String>> rows = new ArrayList<>();
         if (history.getSparePartsIssues() != null) {
             for (SparePartsIssueDTO issue : history.getSparePartsIssues()) {
-                for (SparePartsIssueDTO.LineDTO line : issue.getDetails()) {
-                    rows.add(itemRow(line.getSparePartName(), line.getSparePartCode(),
-                            line.getUnitName(), line.getQuantity()));
-                }
+                appendSparePartsRows(rows, issue);
             }
         }
         if (history.getConsumableIssues() != null) {
             for (ConsumableIssueDTO issue : history.getConsumableIssues()) {
-                for (ConsumableIssueDTO.LineDTO line : issue.getDetails()) {
-                    rows.add(itemRow(line.getConsumableName(), line.getConsumableCode(),
-                            line.getUnitName(), line.getQuantity()));
-                }
+                appendConsumableRows(rows, issue);
             }
         }
         return rows;
+    }
+
+    private static void appendSparePartsRows(List<Map<String, String>> rows, SparePartsIssueDTO issue) {
+        if (issue == null || issue.getDetails() == null) {
+            return;
+        }
+        for (SparePartsIssueDTO.LineDTO line : issue.getDetails()) {
+            rows.add(itemRow(line.getSparePartName(), line.getSparePartCode(),
+                    line.getUnitName(), line.getQuantity()));
+        }
+    }
+
+    private static void appendConsumableRows(List<Map<String, String>> rows, ConsumableIssueDTO issue) {
+        if (issue == null || issue.getDetails() == null) {
+            return;
+        }
+        for (ConsumableIssueDTO.LineDTO line : issue.getDetails()) {
+            rows.add(itemRow(line.getConsumableName(), line.getConsumableCode(),
+                    line.getUnitName(), line.getQuantity()));
+        }
     }
 
     private static Map<String, String> itemRow(String name, String code, String unit, Object quantity) {
@@ -137,13 +179,13 @@ public class SuppliesIssuePdfService {
         return row;
     }
 
-    private Map<String, Object> buildModel(WorkOrder workOrder, List<Map<String, String>> itemRows) {
+    private Map<String, Object> buildModel(WorkOrder workOrder, List<Map<String, String>> itemRows,
+                                           LocalDate issuedDate) {
         Map<String, Object> model = new HashMap<>();
 
-        LocalDate today = LocalDate.now();
-        model.put("issuedDay", String.format("%02d", today.getDayOfMonth()));
-        model.put("issuedMonth", String.format("%02d", today.getMonthValue()));
-        model.put("issuedYear", String.valueOf(today.getYear()));
+        model.put("issuedDay", String.format("%02d", issuedDate.getDayOfMonth()));
+        model.put("issuedMonth", String.format("%02d", issuedDate.getMonthValue()));
+        model.put("issuedYear", String.valueOf(issuedDate.getYear()));
 
         // Người đề nghị = người cấp phiếu công tác (Tổ trưởng/Quản đốc tạo PCT).
         Account createdBy = workOrder.getCreatedBy();

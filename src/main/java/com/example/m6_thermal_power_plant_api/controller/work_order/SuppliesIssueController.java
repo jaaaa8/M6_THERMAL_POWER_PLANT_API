@@ -57,7 +57,21 @@ public class SuppliesIssueController {
      */
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportPdf(@PathVariable Integer workOrderId) {
-        SuppliesIssuePdfService.SuppliesIssuePdf pdf = suppliesIssuePdfService.render(workOrderId);
+        return pdfResponse(suppliesIssuePdfService.render(workOrderId));
+    }
+
+    /**
+     * Xuất bản in PDF của MỘT LẦN cấp vật tư (dòng supplies_issues): chỉ gồm các
+     * dòng vật tư của đúng lần đó. Lần cấp bất biến sau khi tạo — client có thể
+     * cache kết quả theo id. 404 nếu lần cấp không thuộc phiếu công tác này.
+     */
+    @GetMapping("/{suppliesIssueId}/pdf")
+    public ResponseEntity<byte[]> exportInstancePdf(@PathVariable Integer workOrderId,
+                                                    @PathVariable Integer suppliesIssueId) {
+        return pdfResponse(suppliesIssuePdfService.renderInstance(workOrderId, suppliesIssueId));
+    }
+
+    private static ResponseEntity<byte[]> pdfResponse(SuppliesIssuePdfService.SuppliesIssuePdf pdf) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header("Content-Disposition", ContentDisposition.inline()

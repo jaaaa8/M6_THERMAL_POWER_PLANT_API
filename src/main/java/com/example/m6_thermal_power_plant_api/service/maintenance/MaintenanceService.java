@@ -311,6 +311,24 @@ public class MaintenanceService implements IMaintenanceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId) {
+        java.util.Set<Integer> busy = new java.util.LinkedHashSet<>();
+        List<WorkOrderStatus> liveStatuses = List.of(
+                WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.WAITING_FOR_APPROVAL,
+                WorkOrderStatus.APPROVED, WorkOrderStatus.STOPPED);
+        for (Object[] row : workOrderRepository.findRoleHolderEmployeeIds(liveStatuses, excludeWorkOrderId)) {
+            for (Object id : row) {
+                if (id != null) {
+                    busy.add((Integer) id);
+                }
+            }
+        }
+        busy.addAll(workOrderMemberRepository.findActiveMemberEmployeeIds(liveStatuses, excludeWorkOrderId));
+        return new ArrayList<>(busy);
+    }
+
+    @Override
     @Transactional
     public WorkOrderMemberDTO addMember(Integer workOrderId, CreateWorkOrderRequest.MemberInput input) {
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)

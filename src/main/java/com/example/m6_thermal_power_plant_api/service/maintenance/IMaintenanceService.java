@@ -70,6 +70,18 @@ public interface IMaintenanceService {
     WorkOrderDetailDTO getWorkOrderDetail(Integer workOrderId);
 
     /**
+     * Id các nhân viên ĐANG BẬN — giữ vai trò leader / chỉ huy trực tiếp / giám
+     * sát an toàn của một phiếu công tác đang sống, hoặc đang là thành viên CHƯA
+     * RỜI (leftAt = null) của phiếu sống. Dùng cho UI lọc gợi ý khi thêm nhân sự
+     * (CHỈ là bộ lọc hiển thị — backend không chặn thêm, giữ triết lý permissive).
+     *
+     * @param excludeWorkOrderId bỏ qua phiếu này khi xét (để thao tác nhân sự trên
+     *                           chính phiếu đang mở không tự loại người của nó);
+     *                           null = xét mọi phiếu sống.
+     */
+    java.util.List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId);
+
+    /**
      * Thêm nhân viên vào phiếu công tác đang chạy (joinedAt = now, leftAt = null).
      * Từ chối (409) nếu phiếu đã COMPLETED/CANCELLED hoặc nhân viên đang là thành
      * viên CHƯA RỜI của chính phiếu này. Nhân viên đã rời trước đó vào lại được —

@@ -29,4 +29,22 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
            OR LOWER(rr.incidentDescription) LIKE LOWER(CONCAT('%', :search, '%'))
     """)
     Page<WorkOrder> searchWorkOrders(@Param("search") String search, Pageable pageable);
+
+    /**
+     * Bộ ba nhân sự phụ trách (leader / chỉ huy trực tiếp / giám sát an toàn) của
+     * mọi phiếu công tác có status thuộc {@code statuses} (trừ phiếu
+     * {@code excludeId} nếu truyền). Mỗi phần tử là Object[3] id nhân viên, phần
+     * tử có thể null — dùng cho bộ lọc "nhân viên đang bận" khi thêm nhân sự.
+     */
+    @Query("""
+        SELECT l.id, d.id, s.id FROM WorkOrder wo
+        LEFT JOIN wo.leader l
+        LEFT JOIN wo.directSupervisor d
+        LEFT JOIN wo.safetySupervisor s
+        WHERE wo.status IN :statuses
+          AND (:excludeId IS NULL OR wo.id <> :excludeId)
+    """)
+    List<Object[]> findRoleHolderEmployeeIds(
+            @Param("statuses") java.util.Collection<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses,
+            @Param("excludeId") Integer excludeId);
 }
