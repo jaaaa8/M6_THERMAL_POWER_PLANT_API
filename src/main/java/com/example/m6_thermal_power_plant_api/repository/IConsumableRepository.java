@@ -40,11 +40,12 @@ public interface IConsumableRepository extends JpaRepository<Consumable, Integer
     @Query("""
         select new com.example.m6_thermal_power_plant_api.dto.consumables.ConsumableStockDTO(
             c.id, c.consumableCode, c.name, c.price, c.manufacturer, c.imgPath,
-            c.unit.id, c.unit.name, c.status,
+            u.id, u.name, c.status,
             coalesce((select sum(ci.quantity) from ConsumableInventory ci where ci.consumable.id = c.id and ci.transactionType = com.example.m6_thermal_power_plant_api.entity.enums.TransactionType.IMPORT and ci.isDeleted = false), 0) -
             coalesce((select sum(ci.quantity) from ConsumableInventory ci where ci.consumable.id = c.id and ci.transactionType = com.example.m6_thermal_power_plant_api.entity.enums.TransactionType.EXPORT and ci.isDeleted = false), 0)
         )
         from Consumable c
+        left join c.unit u
         where (:code is null or :code = '' or lower(c.consumableCode) like lower(concat('%', :code, '%')))
           and (:name is null or :name = '' or lower(c.name) like lower(concat('%', :name, '%')))
           and (:manufacturer is null or :manufacturer = '' or lower(c.manufacturer) like lower(concat('%', :manufacturer, '%')))

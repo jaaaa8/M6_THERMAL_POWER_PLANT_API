@@ -11,6 +11,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Dữ liệu hiển thị một phiếu cấp vật tư thay thế (kèm các dòng chi tiết).
@@ -25,11 +26,12 @@ import java.util.List;
 public class SparePartsIssueDTO {
 
     private Integer id;
-    /** Mã của chính phiếu cấp (cột spare_part_code trên spare_parts_issues). */
+    /** Mã của chính phiếu cấp (cột issue_code trên spare_parts_issues). */
     private String issueCode;
+    /** LẦN cấp vật tư (supplies_issues) mà phiếu này thuộc về — null với dữ liệu mồ côi. */
+    private Integer suppliesIssueId;
     private Integer workOrderId;
     private String orderCode;
-    private String transactionType;
     /** Tổng số lượng của mọi dòng chi tiết. */
     private BigDecimal quantity;
     private Integer issuedById;
@@ -58,18 +60,29 @@ public class SparePartsIssueDTO {
                     .sparePartName(d.getSparePart() != null ? d.getSparePart().getName() : null)
                     .unitName(d.getSparePart() != null && d.getSparePart().getUnit() != null
                             ? d.getSparePart().getUnit().getName() : null)
+                    .quantity(d.getQuantity())
                     .build();
         }
     }
 
     public static SparePartsIssueDTO from(SparePartsIssue issue, List<SparePartsIssueDetail> details) {
+        List<LineDTO> lines = details != null ? details.stream().map(LineDTO::from).toList() : List.of();
         return SparePartsIssueDTO.builder()
                 .id(issue.getId())
                 .issueCode(issue.getIssueCode())
+                .suppliesIssueId(issue.getSuppliesIssue() != null ? issue.getSuppliesIssue().getId() : null)
                 .workOrderId(issue.getWorkOrder() != null ? issue.getWorkOrder().getId() : null)
                 .orderCode(issue.getWorkOrder() != null ? issue.getWorkOrder().getOrderCode() : null)
+                .quantity(lines.stream()
+                        .map(LineDTO::getQuantity)
+                        .filter(Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add))
                 .issuedById(issue.getIssuedBy() != null ? issue.getIssuedBy().getId() : null)
-                .details(details != null ? details.stream().map(LineDTO::from).toList() : List.of())
+                .issuedByName(issue.getIssuedBy() != null && issue.getIssuedBy().getEmployee() != null
+                        ? issue.getIssuedBy().getEmployee().getFullName()
+                        : (issue.getIssuedBy() != null ? issue.getIssuedBy().getUsername() : null))
+                .issuedAt(issue.getIssuedAt())
+                .details(lines)
                 .build();
     }
 }

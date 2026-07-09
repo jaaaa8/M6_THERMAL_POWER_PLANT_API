@@ -277,6 +277,14 @@ INSERT INTO spare_parts_issues (
       (1, 'SPI-2026-0001', 1, 1,  4, '2026-06-10 14:00:00', false, 1),
       (2, 'SPI-2026-0002', 2, 3,  4, '2026-06-15 09:00:00', false, 0);
 
+-- Dòng chi tiết của phiếu cấp vật tư thay thế (vật tư + số lượng nằm ở đây,
+-- cột spare_part_id trên phiếu chỉ là dữ liệu cũ, code không còn đọc).
+INSERT INTO spare_parts_issue_details (
+    id, issue_id, spare_part_id, quantity, is_deleted
+) VALUES
+      (1, 1, 1, 2.00, false),
+      (2, 2, 3, 1.00, false);
+
 INSERT INTO consumable_issues (
     id, consumable_code, work_order_id, consumable_id, transaction_type, quantity, issued_by, issued_at, is_deleted
 ) VALUES
@@ -347,6 +355,11 @@ INSERT INTO spare_parts_issues (
     id, issue_code, work_order_id, spare_part_id, issued_by, issued_at, is_deleted, status
 ) VALUES
     (3, 'SPI-2026-0003', 3, 2, 4, '2026-06-18 14:00:00', false, 1);
+
+INSERT INTO spare_parts_issue_details (
+    id, issue_id, spare_part_id, quantity, is_deleted
+) VALUES
+    (3, 3, 2, 1.00, false);
 
 INSERT INTO consumable_issues (
     id, consumable_code, work_order_id, consumable_id, transaction_type, quantity, issued_by, issued_at, is_deleted
