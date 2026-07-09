@@ -67,10 +67,8 @@ public class SparePartIssuesService implements ISparePartIssuesService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         SparePartsIssue issue = issueRepository.save(SparePartsIssue.builder()
-                .sparePartCode(TimeStampCodeGenerator.generate(SparePartsIssue.class))
+                .issueCode(TimeStampCodeGenerator.generate(SparePartsIssue.class))
                 .workOrder(workOrder)
-                .transactionType("export")
-                .quantity(total)
                 .issuedBy(issuedBy)
                 .issuedAt(now)
                 .build());
@@ -83,7 +81,6 @@ public class SparePartIssuesService implements ISparePartIssuesService {
             details.add(detailRepository.save(SparePartsIssueDetail.builder()
                     .issue(issue)
                     .sparePart(sparePart)
-                    .quantity(line.getQuantity())
                     .build()));
         }
 

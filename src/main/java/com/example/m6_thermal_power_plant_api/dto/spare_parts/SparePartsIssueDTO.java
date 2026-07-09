@@ -58,7 +58,6 @@ public class SparePartsIssueDTO {
                     .sparePartName(d.getSparePart() != null ? d.getSparePart().getName() : null)
                     .unitName(d.getSparePart() != null && d.getSparePart().getUnit() != null
                             ? d.getSparePart().getUnit().getName() : null)
-                    .quantity(d.getQuantity())
                     .build();
         }
     }
@@ -66,16 +65,10 @@ public class SparePartsIssueDTO {
     public static SparePartsIssueDTO from(SparePartsIssue issue, List<SparePartsIssueDetail> details) {
         return SparePartsIssueDTO.builder()
                 .id(issue.getId())
-                .issueCode(issue.getSparePartCode())
+                .issueCode(issue.getIssueCode())
                 .workOrderId(issue.getWorkOrder() != null ? issue.getWorkOrder().getId() : null)
                 .orderCode(issue.getWorkOrder() != null ? issue.getWorkOrder().getOrderCode() : null)
-                .transactionType(issue.getTransactionType())
-                .quantity(issue.getQuantity())
                 .issuedById(issue.getIssuedBy() != null ? issue.getIssuedBy().getId() : null)
-                .issuedByName(issue.getIssuedBy() != null && issue.getIssuedBy().getEmployee() != null
-                        ? issue.getIssuedBy().getEmployee().getFullName()
-                        : (issue.getIssuedBy() != null ? issue.getIssuedBy().getUsername() : null))
-                .issuedAt(issue.getIssuedAt())
                 .details(details != null ? details.stream().map(LineDTO::from).toList() : List.of())
                 .build();
     }

@@ -50,8 +50,8 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
 
     /** Mã của chính phiếu cấp vật tư này (khác mã vật tư trong danh mục) */
     // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
-    @Column(name = "spare_part_code", nullable = false, length = 50)
-    private String sparePartCode;
+    @Column(name = "issue_code", nullable = false, length = 50)
+    private String issueCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_order_id")
@@ -65,6 +65,9 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
 
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
+
+    @Column(name = "attachment_path", length = 500)
+    private String attachmentPath;
 
     @OneToMany(mappedBy = "issue")
     private List<SparePartsIssueDetail> details;

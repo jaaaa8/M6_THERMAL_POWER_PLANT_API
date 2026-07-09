@@ -3,14 +3,23 @@ package com.example.m6_thermal_power_plant_api.service.leader.spare_parts_issue;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.SparePartsIssueDetailRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.SparePartsIssueRequestDto;
 import com.example.m6_thermal_power_plant_api.entity.*;
+import com.example.m6_thermal_power_plant_api.entity.enums.SparePartsIssueStatus;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartRepository;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartsIssueDetailRepository;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartsIssueRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
 import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
+import com.example.m6_thermal_power_plant_api.repository.employee.IEmployeeRepository;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -37,10 +46,12 @@ public class SparePartsIssueService implements ISparePartsIssueService {
         List<SparePartsIssue> sparePartsIssues = sparePartsIssueRepository.findAll();
         return sparePartsIssues.stream().map(sparePartsIssue -> new SparePartsIssueRequestDto(
                 sparePartsIssue.getId(),
-                sparePartsIssue.getSparePartCode(),
+                sparePartsIssue.getIssueCode(),
                 sparePartsIssue.getWorkOrder().getId(),
-                sparePartsIssue.getIssuedBy().getId(),
+                sparePartsIssue.getIssuedBy().getUsername(),
                 sparePartsIssue.getIssuedAt(),
+                sparePartsIssue.getAttachmentPath(),
+                sparePartsIssue.getStatus().name(),
                 sparePartsIssue.getDetails().stream().map(detail -> new SparePartsIssueDetailRequestDto(
                         detail.getSparePart().getId(),
                         detail.getQuantity()
@@ -54,7 +65,7 @@ public class SparePartsIssueService implements ISparePartsIssueService {
 
         SparePartsIssue issue = new SparePartsIssue();
 
-        issue.setSparePartCode(
+        issue.setIssueCode(
                 TimeStampCodeGenerator.generate(SparePartsIssue.class));
 
         issue.setWorkOrder(
@@ -63,9 +74,9 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                                 new RuntimeException("Work order not found")));
 
         issue.setIssuedBy(
-                accountRepository.findById(dto.getIssuedById())
-                        .orElseThrow(() ->
-                                new RuntimeException("Account not found")));
+                        accountRepository.findByUsername(dto.getIssueUsername())
+                                .orElseThrow(() ->
+                                        new RuntimeException("Account not found")));
 
         issue.setIssuedAt(dto.getIssuedAt());
 
@@ -109,7 +120,7 @@ public class SparePartsIssueService implements ISparePartsIssueService {
 //            }
         }
 
-        dto.setIssueCode(issue.getSparePartCode());
+        dto.setIssueCode(issue.getIssueCode());
 
         return dto;
     }
@@ -122,7 +133,7 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 .orElseThrow(() -> new RuntimeException("Work order not found"));
         issue.setWorkOrder(workOrder);
         issue.setIssuedAt(sparePartsIssueRequestDto.getIssuedAt());
-        Account account = accountRepository.findById(sparePartsIssueRequestDto.getIssuedById())
+        Account account = accountRepository.findByUsername(sparePartsIssueRequestDto.getIssueUsername())
                 .orElseThrow(() -> new RuntimeException("Account not found"));
         issue.setIssuedBy(account);
         List<SparePartsIssueDetail> details = (List<SparePartsIssueDetail>) sparePartsIssueRequestDto.getDetails().stream()
@@ -147,13 +158,108 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 .orElseThrow(() -> new RuntimeException("Spare parts issue not found"));
         return new SparePartsIssueRequestDto(
                 sparePartsIssue.getId(),
-                sparePartsIssue.getSparePartCode(),
+                sparePartsIssue.getIssueCode(),
                 sparePartsIssue.getWorkOrder().getId(),
-                sparePartsIssue.getIssuedBy().getId(),
+                sparePartsIssue.getIssuedBy().getUsername(),
                 sparePartsIssue.getIssuedAt(),
+                sparePartsIssue.getAttachmentPath(),
+                sparePartsIssue.getStatus().name(),
                 sparePartsIssue.getDetails().stream().map(detail -> new SparePartsIssueDetailRequestDto(
                         detail.getSparePart().getId(),
                         detail.getQuantity()
                 )).toList());
+    }
+
+    @Override
+    public SparePartsIssueRequestDto upload(
+            Integer id,
+            MultipartFile[] pdfFiles
+    ) {
+        SparePartsIssue sparePartsIssue = sparePartsIssueRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy phiếu xuất vật tư"));
+
+        if (pdfFiles == null || pdfFiles.length == 0) {
+            throw new RuntimeException("File PDF không được để trống");
+        }
+
+        try {
+            String uploadDir = System.getProperty("user.dir")
+                    + "/src/main/resources/pdf/spare-parts-issue/";
+
+            File directory = new File(uploadDir);
+
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            List<String> filePaths = new ArrayList<>();
+
+            for (MultipartFile file : pdfFiles) {
+
+                if (file.isEmpty()) {
+                    continue;
+                }
+
+                String originalName = file.getOriginalFilename();
+
+                String extension = originalName.substring(
+                        originalName.lastIndexOf(".")
+                );
+
+                String fileName = sparePartsIssue.getIssueCode();
+
+                Path targetPath = Paths.get(uploadDir, fileName);
+
+                Files.copy(
+                        file.getInputStream(),
+                        targetPath,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+
+                filePaths.add(
+                        "/pdf/spare-parts-issue/" + fileName
+                );
+            }
+
+            if (!filePaths.isEmpty()) {
+                sparePartsIssue.setAttachmentPath(
+                        String.join(",", filePaths)
+                );
+            }
+
+            sparePartsIssue.setStatus(SparePartsIssueStatus.COMPLETED);
+
+            sparePartsIssueRepository.save(sparePartsIssue);
+
+            return convertToDto(sparePartsIssue);
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Lỗi upload PDF: " + e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    private SparePartsIssueRequestDto convertToDto(
+            SparePartsIssue entity
+    ) {
+        SparePartsIssueRequestDto dto =
+                new SparePartsIssueRequestDto();
+
+        dto.setId(entity.getId());
+        dto.setIssueCode(entity.getIssueCode());
+        dto.setAttachmentPath(entity.getAttachmentPath());
+        dto.setIssuedAt(entity.getIssuedAt());
+
+        if(entity.getIssuedBy() != null){
+            dto.setIssueUsername(
+                    entity.getIssuedBy().getUsername()
+            );
+        }
+
+        return dto;
     }
 }

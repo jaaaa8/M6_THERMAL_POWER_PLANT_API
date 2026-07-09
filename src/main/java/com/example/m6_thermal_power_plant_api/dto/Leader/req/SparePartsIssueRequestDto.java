@@ -27,9 +27,15 @@ public class SparePartsIssueRequestDto {
 
     private Integer workOrderId;
 
-    private Integer issuedById;
+    private String issueUsername;
 
     private LocalDateTime issuedAt;
 
+    private String attachmentPath;
+
+    private String status;
+
     private List<SparePartsIssueDetailRequestDto> details;
+
+
 }
