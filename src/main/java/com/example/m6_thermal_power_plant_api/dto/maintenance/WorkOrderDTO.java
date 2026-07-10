@@ -33,6 +33,8 @@ public class WorkOrderDTO {
     private LocalDateTime startTime;
     private LocalDateTime expectedEndTime;
     private String pdfPath;
+    /** URL bản lưu đóng băng của phiếu cấp vật tư (chỉ có sau khi phiếu kết thúc). */
+    private String suppliesPdfPath;
 
     private Integer repairRequestId;
     private String requestCode;
@@ -42,6 +44,7 @@ public class WorkOrderDTO {
     private String equipmentKksCode;
     private String equipmentName;
 
+
     private Integer leaderId;
     private String leaderName;
     private Integer directSupervisorId;
@@ -49,6 +52,8 @@ public class WorkOrderDTO {
     private Integer safetySupervisorId;
     private String safetySupervisorName;
     private String repairDescription;
+
+    private LocalDateTime createdAt;
 
     private List<WorkOrderMemberDTO> members;
 
@@ -60,6 +65,7 @@ public class WorkOrderDTO {
                 .startTime(wo.getStartTime())
                 .expectedEndTime(wo.getExpectedEndTime())
                 .pdfPath(wo.getPdfPath())
+                .suppliesPdfPath(wo.getSuppliesPdfPath())
                 .repairDescription(wo.getRepairDescription());
 
         RepairRequest req = wo.getRepairRequest();
@@ -74,6 +80,11 @@ public class WorkOrderDTO {
                 b.equipmentId(req.getEquipment().getId())
                         .equipmentKksCode(req.getEquipment().getKksCode())
                         .equipmentName(req.getEquipment().getName());
+            }
+            if(req.getCreatedAt() != null) {
+                b.createdAt(req.getCreatedAt());
+            }else{
+                b.createdAt(LocalDateTime.now());
             }
         }
 
