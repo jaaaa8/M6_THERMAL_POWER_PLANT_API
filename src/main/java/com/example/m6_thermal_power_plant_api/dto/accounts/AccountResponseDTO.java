@@ -12,11 +12,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AccountResponseDTO {
+    private Integer id;
     private String username;
     private String email;
     private AccountStatus status;
     private List<RoleDTO> roles;
     private EmployeeInfo employee;
+    private String image;
 
     @Data
     @Builder

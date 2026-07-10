@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DepartmentDTO {
+    private Integer id;
     private String departmentCode;
     private String name;
     private String description;

@@ -23,15 +23,42 @@ public class EmployeeDTO {
     private String imgPath;
 
     public static EmployeeDTO from(Employee employee) {
+        String deptName = null;
+        try {
+            if (employee.getDepartment() != null) {
+                deptName = employee.getDepartment().getName();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // ignore soft-deleted department
+        }
+
+        String posName = null;
+        try {
+            if (employee.getPosition() != null) {
+                posName = employee.getPosition().getName();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // ignore soft-deleted position
+        }
+
+        String expName = null;
+        try {
+            if (employee.getExpertise() != null) {
+                expName = employee.getExpertise().getName();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // ignore soft-deleted expertise
+        }
+
         return EmployeeDTO.builder()
                 .id(employee.getId())
                 .employeeCode(employee.getEmployeeCode())
                 .fullName(employee.getFullName())
                 .gmail(employee.getGmail())
                 .phone(employee.getPhone())
-                .departmentName(employee.getDepartment() != null ? employee.getDepartment().getName() : null)
-                .positionName(employee.getPosition() != null ? employee.getPosition().getName() : null)
-                .expertiseName(employee.getExpertise() != null ? employee.getExpertise().getName() : null)
+                .departmentName(deptName)
+                .positionName(posName)
+                .expertiseName(expName)
                 .isActive(employee.getIsActive())
                 .imgPath(employee.getImgPath())
                 .build();

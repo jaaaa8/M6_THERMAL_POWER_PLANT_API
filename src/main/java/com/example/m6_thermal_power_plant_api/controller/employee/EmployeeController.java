@@ -45,6 +45,11 @@ public class EmployeeController {
         return new ResponseEntity<>(createdEmployee, HttpStatus.CREATED);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<EmployeeResponseDTO> getEmployeeById(@PathVariable Integer id) {
+        return ResponseEntity.ok(employeeService.getEmployeeById(id));
+    }
+
     @GetMapping("/departments")
     public ResponseEntity<List<DepartmentDTO>> getAllDepartments() {
         return ResponseEntity.ok(departmentService.getAllDepartments());
@@ -58,5 +63,25 @@ public class EmployeeController {
     @GetMapping("/expertises")
     public ResponseEntity<List<ExpertiseDTO>> getAllExpertises() {
         return ResponseEntity.ok(expertiseService.getAllExpertises());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<org.springframework.data.domain.Page<EmployeeResponseDTO>> searchEmployees(
+            @ModelAttribute com.example.m6_thermal_power_plant_api.dto.employee.EmployeeSearchRequestDTO searchRequest,
+            org.springframework.data.domain.Pageable pageable
+    ) {
+        return ResponseEntity.ok(employeeService.searchEmployees(searchRequest, pageable));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<EmployeeResponseDTO> updateEmployee(@PathVariable Integer id, @jakarta.validation.Valid @RequestBody EmployeeDTO employeeDTO) {
+        EmployeeResponseDTO updated = employeeService.updateEmployee(id, employeeDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteEmployee(@PathVariable Integer id) {
+        employeeService.deleteEmployee(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -28,4 +28,6 @@ public interface IToolService {
     ToolResponse markDamaged(Integer id, ToolDamageRequest request);
 
     List<ToolTransactionLogResponse> getTransactionLogs(Integer toolId);
+
+    String generateNextCode();
 }

@@ -48,6 +48,8 @@ public class CreateWorkOrderRequest {
 
     private String repairDescription;
 
+    private LocalDateTime createdAt;
+
     @Valid
     private List<MemberInput> members;
 

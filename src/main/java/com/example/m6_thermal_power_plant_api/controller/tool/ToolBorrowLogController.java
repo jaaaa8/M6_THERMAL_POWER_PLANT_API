@@ -68,10 +68,10 @@ public class ToolBorrowLogController {
         return ApiResponse.success(toolBorrowLogService.search(accountId, toolId, status, pageable));
     }
 
-    /** Thủ kho bấm gửi ngay email nhắc quá hạn, không cần chờ job chạy theo giờ */
-    @PostMapping("/notify-overdue")
-    public ApiResponse<Integer> notifyOverdueNow() {
-        int sentCount = toolBorrowOverdueNotifier.sendOverdueNotifications();
-        return ApiResponse.success("Đã gửi " + sentCount + " email nhắc quá hạn", sentCount);
+    /** Gửi email test đến địa chỉ bất kỳ để kiểm tra cấu hình SMTP */
+    @PostMapping("/test-email")
+    public ApiResponse<String> testEmail(@RequestParam String toEmail) {
+        toolBorrowOverdueNotifier.sendTestEmail(toEmail);
+        return ApiResponse.success("Đã gửi email test đến " + toEmail, toEmail);
     }
 }
