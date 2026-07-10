@@ -21,7 +21,6 @@ import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRep
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -47,20 +46,23 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderArchiveService workOrderArchiveService;
     private final IRepairHistoryService repairHistoryService;
 
-    public MaintenanceService(RepairRequestRepository repairRequestRepository,
-                              WorkOrderRepository workOrderRepository,
+    private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
+
+    public MaintenanceService(WorkOrderRepository workOrderRepository,
+                              RepairRequestRepository repairRequestRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
                               WorkOrderExtensionRepository workOrderExtensionRepository,
                               EmployeeRepository employeeRepository,
+                              com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               ISparePartIssuesService sparePartIssuesService,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService,
-                              IRepairHistoryService repairHistoryService) {
-        this.repairRequestRepository = repairRequestRepository;
+                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService) {
         this.workOrderRepository = workOrderRepository;
+        this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.workOrderExtensionRepository = workOrderExtensionRepository;
         this.employeeRepository = employeeRepository;
+        this.equipmentRepository = equipmentRepository;
         this.sparePartIssuesService = sparePartIssuesService;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
@@ -402,7 +404,6 @@ public class MaintenanceService implements IMaintenanceService {
         // Đóng băng bản lưu PDF cuối cùng (PCT + phiếu cấp vật tư) — best-effort,
         // không bao giờ làm hỏng việc hoàn thành phiếu.
         workOrderArchiveService.archiveOnClose(workOrderId);
-        repairHistoryService.createRepairHistory(workOrder);
 
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
@@ -581,7 +582,6 @@ public class MaintenanceService implements IMaintenanceService {
                         new StopWorkOrderRequest(request.getReason().trim(), request.getExtendedUntil()));
             }
             case COMPLETED -> {
-                repairHistoryService.createRepairHistory(workOrder);
                 return completeWorkOrder(workOrderId); // giữ nguyên guard + đóng băng PDF
             }
             case CANCELLED -> {

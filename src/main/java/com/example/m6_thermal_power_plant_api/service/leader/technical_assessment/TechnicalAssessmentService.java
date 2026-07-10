@@ -38,9 +38,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 .map(ta -> new TechnicalAssessmentUpdateRequestDto(
                         ta.getId(),
                         ta.getTechnicalCode(),
-                        new AccountDto(ta.getAssessor().getUsername(),
-                                ta.getAssessor().getEmail(),
-                                ta.getAssessor().getEmployee().getFullName()),
+                        getSafeAccountDto(ta.getAssessor()),
                         ta.getAttachmentPath(),
                         ta.getImgPath(),
                         ta.getResult(),
@@ -49,6 +47,19 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                         ta.getStatus()
                 ))
                 .toList();
+    }
+
+    private AccountDto getSafeAccountDto(Account assessor) {
+        if (assessor == null) return null;
+        String fullName = assessor.getUsername();
+        try {
+            if (assessor.getEmployee() != null) {
+                fullName = assessor.getEmployee().getFullName();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            fullName = assessor.getUsername() + " (Đã xóa)";
+        }
+        return new AccountDto(assessor.getUsername(), assessor.getEmail(), fullName);
     }
 
     @Override
@@ -197,11 +208,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         return new TechnicalAssessmentUpdateRequestDto(
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
-                technicalAssessment.getAssessor() != null ? new AccountDto(
-                        technicalAssessment.getAssessor().getUsername(),
-                        technicalAssessment.getAssessor().getEmail(),
-                        technicalAssessment.getAssessor().getEmployee().getFullName()
-                ) : null,
+                getSafeAccountDto(technicalAssessment.getAssessor()),
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),
@@ -277,11 +284,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         return new TechnicalAssessmentUpdateRequestDto(
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
-                technicalAssessment.getAssessor() != null ? new AccountDto(
-                        technicalAssessment.getAssessor().getUsername(),
-                        technicalAssessment.getAssessor().getEmail(),
-                        technicalAssessment.getAssessor().getEmployee().getFullName()
-                ) : null,
+                getSafeAccountDto(technicalAssessment.getAssessor()),
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),
