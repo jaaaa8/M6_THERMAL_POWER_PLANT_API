@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class AccountDto {
     @NotBlank(message = "Username cannot be blank")
     @Size(min = 8, max = 50, message = "Username must be between 8 and 50 characters")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[0-9])[a-z0-9]+$", message = "Username must contain only lowercase letters and numbers, and include at least one of each")
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[0-9])[a-z0-9!\"#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~]+$", message = "Username must contain lowercase letters, numbers, and can include special characters")
     private String username;
 
     @jakarta.validation.constraints.Email(message = "Email should be valid")

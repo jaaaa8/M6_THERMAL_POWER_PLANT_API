@@ -24,7 +24,7 @@ public class EquipmentController {
             @RequestParam (required = false) String kks,
             @RequestParam (required = false) String name,
             @RequestParam (required = false) Integer typeId,
-            @RequestParam (required = false)EquipmentStatus status,
+            @RequestParam (required = false) String status,
             Pageable pageable
     ){
         return  ResponseEntity.ok(equipmentService.getEquipmentList(

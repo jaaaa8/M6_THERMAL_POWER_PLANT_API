@@ -17,6 +17,7 @@ import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceEx
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
@@ -43,6 +44,7 @@ public class MaintenanceService implements IMaintenanceService {
     private final ISparePartIssuesService sparePartIssuesService;
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
+    private final IRepairHistoryService repairHistoryService;
 
     private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
 
@@ -54,7 +56,7 @@ public class MaintenanceService implements IMaintenanceService {
                               com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               ISparePartIssuesService sparePartIssuesService,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService) {
+                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService) {
         this.workOrderRepository = workOrderRepository;
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
@@ -64,6 +66,7 @@ public class MaintenanceService implements IMaintenanceService {
         this.sparePartIssuesService = sparePartIssuesService;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
+        this.repairHistoryService = repairHistoryService;
     }
 
     @Override

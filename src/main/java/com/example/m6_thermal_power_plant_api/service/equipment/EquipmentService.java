@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -22,8 +23,7 @@ public class EquipmentService implements IEquipmentService {
     private  final IEquipmentRepository equipmentRepository;
 
     @Override
-    public Page<ListEquipmentDTO> getEquipmentList(String kks, String name, Integer typeId, EquipmentStatus status, Pageable pageable) {
-
+    public Page<ListEquipmentDTO> getEquipmentList(String kks, String name, Integer typeId, String status, Pageable pageable) {
 
         Pageable page= PageRequest.of(
                 pageable.getPageNumber(),
@@ -69,4 +69,5 @@ public class EquipmentService implements IEquipmentService {
 
         return imgPath.split("\\|")[0];
     }
+
 }
