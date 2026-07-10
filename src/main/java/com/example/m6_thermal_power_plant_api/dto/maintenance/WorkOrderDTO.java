@@ -99,10 +99,20 @@ public class WorkOrderDTO {
     }
 
     private static Integer idOf(Employee e) {
-        return e == null ? null : e.getId();
+        if (e == null) return null;
+        try {
+            return e.getId();
+        } catch (jakarta.persistence.EntityNotFoundException ex) {
+            return null;
+        }
     }
 
     private static String nameOf(Employee e) {
-        return e == null ? null : e.getFullName();
+        if (e == null) return null;
+        try {
+            return e.getFullName();
+        } catch (jakarta.persistence.EntityNotFoundException ex) {
+            return "Nhân viên đã bị xóa";
+        }
     }
 }

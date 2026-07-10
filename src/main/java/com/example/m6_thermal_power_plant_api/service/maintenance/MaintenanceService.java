@@ -44,22 +44,69 @@ public class MaintenanceService implements IMaintenanceService {
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
 
-    public MaintenanceService(RepairRequestRepository repairRequestRepository,
-                              WorkOrderRepository workOrderRepository,
+    private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
+
+    public MaintenanceService(WorkOrderRepository workOrderRepository,
+                              RepairRequestRepository repairRequestRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
                               WorkOrderExtensionRepository workOrderExtensionRepository,
                               EmployeeRepository employeeRepository,
+                              com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               ISparePartIssuesService sparePartIssuesService,
                               AccountRepository accountRepository,
                               WorkOrderArchiveService workOrderArchiveService) {
-        this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
+        this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.workOrderExtensionRepository = workOrderExtensionRepository;
         this.employeeRepository = employeeRepository;
+        this.equipmentRepository = equipmentRepository;
         this.sparePartIssuesService = sparePartIssuesService;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RepairRequestDTO> getAllRepairRequests(com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus status, Pageable pageable) {
+        if (status != null) {
+            return repairRequestRepository.findByStatus(status, pageable).map(RepairRequestDTO::from);
+        }
+        return repairRequestRepository.findAll(pageable).map(RepairRequestDTO::from);
+    }
+
+    @Override
+    @Transactional
+    public RepairRequestDTO createRepairRequest(com.example.m6_thermal_power_plant_api.dto.maintenance.CreateRepairRequestDTO dto, String requesterUsername) {
+        com.example.m6_thermal_power_plant_api.entity.Equipment equipment = equipmentRepository.findById(dto.getEquipmentId())
+                .orElseThrow(() -> new ObjectNotFoundException("Không tìm thấy thiết bị với ID: " + dto.getEquipmentId()));
+
+        com.example.m6_thermal_power_plant_api.entity.Account requester = accountRepository.findAccountByUsername(requesterUsername)
+                .orElseThrow(() -> new ObjectNotFoundException("Không tìm thấy tài khoản người tạo: " + requesterUsername));
+
+        com.example.m6_thermal_power_plant_api.entity.RepairRequest req = new com.example.m6_thermal_power_plant_api.entity.RepairRequest();
+        req.setRequestCode(com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator.generate("RepairRequest"));
+        req.setEquipment(equipment);
+        req.setRequester(requester);
+        req.setIncidentDescription(dto.getIncidentDescription());
+        req.setPriority(dto.getPriority());
+        req.setStatus(com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus.PENDING);
+
+        return RepairRequestDTO.from(repairRequestRepository.save(req));
+    }
+
+    @Override
+    @Transactional
+    public void deleteRepairRequest(Integer id, String requesterUsername) {
+        com.example.m6_thermal_power_plant_api.entity.RepairRequest req = repairRequestRepository.findById(id)
+                .orElseThrow(() -> new ObjectNotFoundException("Không tìm thấy yêu cầu sửa chữa với ID: " + id));
+
+        if (req.getWorkOrders() != null && !req.getWorkOrders().isEmpty()) {
+            throw new IllegalStateException("Không thể xoá yêu cầu đã có phiếu công tác — hãy huỷ Phiếu công tác (PCT) trước.");
+        }
+
+        req.setIsDeleted(true);
+        repairRequestRepository.save(req);
     }
 
     @Override

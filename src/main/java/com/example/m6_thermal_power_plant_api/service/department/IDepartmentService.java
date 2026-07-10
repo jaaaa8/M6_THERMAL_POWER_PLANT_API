@@ -8,4 +8,6 @@ public interface IDepartmentService {
     DepartmentDTO createDepartment(com.example.m6_thermal_power_plant_api.dto.employee.DepartmentCreateDTO dto);
     void deleteDepartment(Integer id);
     org.springframework.data.domain.Page<DepartmentDTO> searchDepartments(com.example.m6_thermal_power_plant_api.dto.employee.DepartmentSearchRequestDTO searchRequest, org.springframework.data.domain.Pageable pageable);
+    DepartmentDTO updateDepartment(Integer id, com.example.m6_thermal_power_plant_api.dto.employee.DepartmentUpdateDTO dto);
+    DepartmentDTO getDepartmentById(Integer id);
 }

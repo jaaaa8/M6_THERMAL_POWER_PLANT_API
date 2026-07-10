@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +38,14 @@ public class EquipmentService implements IEquipmentService {
                 page
         );
       return  equipment.map(this ::convertEquipment);
+    }
+
+    @Override
+    public Page<ListEquipmentDTO> getBySystem(Integer systemId, Pageable pageable) {
+
+        return equipmentRepository
+                .findBySystemId(systemId, pageable)
+                .map(this::convertEquipment);
     }
 
     private ListEquipmentDTO convertEquipment(Equipment equipment) {

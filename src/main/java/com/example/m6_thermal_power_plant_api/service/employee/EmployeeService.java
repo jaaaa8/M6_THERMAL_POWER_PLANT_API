@@ -11,6 +11,7 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +27,7 @@ public class EmployeeService implements IEmployeeService {
 
     private final IEmployeeRepository employeeRepository;
     private final EntityManager entityManager;
+    private final SoftDeleteCascadeService softDeleteCascadeService;
 
     private EmployeeResponseDTO mapToResponseDTO(Employee e) {
         if (e == null) return null;
@@ -393,5 +395,13 @@ public class EmployeeService implements IEmployeeService {
         Employee saved = employeeRepository.save(existing);
         employeeRepository.flush();
         return mapToResponseDTO(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteEmployee(Integer id) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new com.example.m6_thermal_power_plant_api.exception.ResourceNotFoundException("Employee not found with id: " + id));
+        softDeleteCascadeService.softDelete(employee);
     }
 }

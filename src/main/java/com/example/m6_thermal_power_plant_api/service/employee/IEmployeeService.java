@@ -18,4 +18,5 @@ public interface IEmployeeService {
             com.example.m6_thermal_power_plant_api.dto.employee.EmployeeSearchRequestDTO searchRequest,
             org.springframework.data.domain.Pageable pageable
     );
+    void deleteEmployee(Integer id);
 }
