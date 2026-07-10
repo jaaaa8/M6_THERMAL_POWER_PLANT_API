@@ -1,7 +1,7 @@
 package com.example.m6_thermal_power_plant_api.controller.repair;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
-import com.example.m6_thermal_power_plant_api.service.maintenance.IMaintenanceService;
+import com.example.m6_thermal_power_plant_api.service.maintenance.IRepairService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -22,10 +22,10 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/v1/repair-requests")
 public class RepairRequestController {
-    private final IMaintenanceService maintenanceService;
+    private final IRepairService repairService;
 
-    public RepairRequestController(IMaintenanceService maintenanceService) {
-        this.maintenanceService = maintenanceService;
+    public RepairRequestController(IRepairService repairService) {
+        this.repairService = repairService;
     }
 
 
@@ -42,14 +42,14 @@ public class RepairRequestController {
     @GetMapping("/pending")
     public PagedModel<RepairRequestDTO> getPendingRepairRequests(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return new PagedModel<>(maintenanceService.getPendingRepairRequests(pageable));
+        return new PagedModel<>(repairService.getPendingRepairRequests(pageable));
     }
 
     @GetMapping
     public PagedModel<RepairRequestDTO> getAllRepairRequests(
             @RequestParam(required = false) com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus status,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return new PagedModel<>(maintenanceService.getAllRepairRequests(status, pageable));
+        return new PagedModel<>(repairService.getAllRepairRequests(status, pageable));
     }
 
     @PostMapping
@@ -57,12 +57,12 @@ public class RepairRequestController {
     public RepairRequestDTO createRepairRequest(
             @Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.maintenance.CreateRepairRequestDTO dto,
             Authentication authentication) {
-        return maintenanceService.createRepairRequest(dto, authentication.getName());
+        return repairService.createRepairRequest(dto, authentication.getName());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteRepairRequest(@PathVariable Integer id, Authentication authentication) {
-        maintenanceService.deleteRepairRequest(id, authentication.getName());
+        repairService.deleteRepairRequest(id, authentication.getName());
     }
 }
