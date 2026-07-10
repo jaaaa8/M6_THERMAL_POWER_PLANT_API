@@ -399,6 +399,7 @@ public class MaintenanceService implements IMaintenanceService {
         }
 
         workOrder.setStatus(WorkOrderStatus.COMPLETED);
+        repairHistoryService.createRepairHistory(workOrder);
         workOrderRepository.save(workOrder);
 
         // Đóng băng bản lưu PDF cuối cùng (PCT + phiếu cấp vật tư) — best-effort,
@@ -582,7 +583,7 @@ public class MaintenanceService implements IMaintenanceService {
                         new StopWorkOrderRequest(request.getReason().trim(), request.getExtendedUntil()));
             }
             case COMPLETED -> {
-                return completeWorkOrder(workOrderId); // giữ nguyên guard + đóng băng PDF
+                return completeWorkOrder(workOrderId);// giữ nguyên guard + đóng băng PDF
             }
             case CANCELLED -> {
                 return cancelWorkOrder(workOrderId); // giữ nguyên side effect (trả yêu cầu về hàng chờ, archive)
