@@ -70,6 +70,16 @@ public class MaintenanceService implements IMaintenanceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<RepairRequestDTO> getPendingRepairRequests(Pageable pageable) {
+        // Page.map giữ nguyên metadata phân trang; RepairRequestDTO.from chạy
+        // TRONG transaction readOnly nên các quan hệ LAZY map được an toàn.
+        return repairRequestRepository
+                .findByStatus(RepairRequestStatus.PENDING, pageable)
+                .map(RepairRequestDTO::from);
+    }
+
+    @Override
     @Transactional
     public WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request, String createdByUsername) {
         RepairRequest repairRequest = repairRequestRepository.findById(request.getRepairRequestId())

@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
  */
 public interface IMaintenanceService {
 
+    Page<RepairRequestDTO> getPendingRepairRequests(Pageable pageable);
+
     /**
      * User Story #40 (row 44): tạo một phiếu công tác (PCT) từ 1 yêu cầu sửa chữa.
      * Thông tin thiết bị lấy từ request; gắn người lãnh đạo công việc, chỉ huy
