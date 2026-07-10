@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.controller.employee;
 
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentDTO;
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentCreateDTO;
+import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentUpdateDTO;
 import com.example.m6_thermal_power_plant_api.service.department.IDepartmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +42,18 @@ public class DepartmentController {
             org.springframework.data.domain.Pageable pageable
     ) {
         return ResponseEntity.ok(departmentService.searchDepartments(searchRequest, pageable));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<DepartmentDTO> updateDepartment(
+            @PathVariable Integer id,
+            @Valid @RequestBody DepartmentUpdateDTO dto
+    ) {
+        return ResponseEntity.ok(departmentService.updateDepartment(id, dto));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<DepartmentDTO> getDepartmentById(@PathVariable Integer id) {
+        return ResponseEntity.ok(departmentService.getDepartmentById(id));
     }
 }
