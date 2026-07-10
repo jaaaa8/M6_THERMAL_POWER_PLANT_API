@@ -17,9 +17,11 @@ import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceEx
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class MaintenanceService implements IMaintenanceService {
     private final ISparePartIssuesService sparePartIssuesService;
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
+    private final IRepairHistoryService repairHistoryService;
 
     public MaintenanceService(RepairRequestRepository repairRequestRepository,
                               WorkOrderRepository workOrderRepository,
@@ -51,7 +54,8 @@ public class MaintenanceService implements IMaintenanceService {
                               EmployeeRepository employeeRepository,
                               ISparePartIssuesService sparePartIssuesService,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService) {
+                              WorkOrderArchiveService workOrderArchiveService,
+                              IRepairHistoryService repairHistoryService) {
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderRepository = workOrderRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
@@ -60,6 +64,7 @@ public class MaintenanceService implements IMaintenanceService {
         this.sparePartIssuesService = sparePartIssuesService;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
+        this.repairHistoryService = repairHistoryService;
     }
 
     @Override
@@ -397,6 +402,7 @@ public class MaintenanceService implements IMaintenanceService {
         // Đóng băng bản lưu PDF cuối cùng (PCT + phiếu cấp vật tư) — best-effort,
         // không bao giờ làm hỏng việc hoàn thành phiếu.
         workOrderArchiveService.archiveOnClose(workOrderId);
+        repairHistoryService.createRepairHistory(workOrder);
 
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
@@ -575,6 +581,7 @@ public class MaintenanceService implements IMaintenanceService {
                         new StopWorkOrderRequest(request.getReason().trim(), request.getExtendedUntil()));
             }
             case COMPLETED -> {
+                repairHistoryService.createRepairHistory(workOrder);
                 return completeWorkOrder(workOrderId); // giữ nguyên guard + đóng băng PDF
             }
             case CANCELLED -> {

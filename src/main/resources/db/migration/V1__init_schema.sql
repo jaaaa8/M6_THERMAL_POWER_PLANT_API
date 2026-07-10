@@ -404,7 +404,7 @@ CREATE TABLE `spare_parts_issue_details` (
   `id` int NOT NULL AUTO_INCREMENT,
   `is_deleted` bit(1) NOT NULL,
   `issue_id` int DEFAULT NULL,
-  `quantity` decimal(38,2) DEFAULT NULL,
+  `quantity` int DEFAULT NULL,
   `spare_part_id` int DEFAULT NULL,
   `deleted_at` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
