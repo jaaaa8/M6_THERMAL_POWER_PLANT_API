@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/v1/equipments")
 @RequiredArgsConstructor
@@ -32,6 +34,16 @@ public class EquipmentController {
                 status ,
                 pageable
         ));
+    }
+
+    @GetMapping("/{systemId}")
+    public ResponseEntity<Page<ListEquipmentDTO>> getEquipmentBySystem(
+            @PathVariable Integer systemId,
+            Pageable pageable){
+
+        return ResponseEntity.ok(
+                equipmentService.getBySystem(systemId,pageable)
+        );
 
     }
 }
