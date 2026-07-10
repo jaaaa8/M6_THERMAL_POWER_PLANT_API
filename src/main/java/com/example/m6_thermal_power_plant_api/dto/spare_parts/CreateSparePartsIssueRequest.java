@@ -38,6 +38,6 @@ public class CreateSparePartsIssueRequest {
 
         @NotNull(message = "quantity là bắt buộc")
         @Positive(message = "quantity phải lớn hơn 0")
-        private BigDecimal quantity;
+        private Integer quantity;
     }
 }

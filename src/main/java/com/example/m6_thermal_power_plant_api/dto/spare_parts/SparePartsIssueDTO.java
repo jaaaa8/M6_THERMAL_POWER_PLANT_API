@@ -33,7 +33,7 @@ public class SparePartsIssueDTO {
     private Integer workOrderId;
     private String orderCode;
     /** Tổng số lượng của mọi dòng chi tiết. */
-    private BigDecimal quantity;
+    private Integer quantity;
     private Integer issuedById;
     private String issuedByName;
     private LocalDateTime issuedAt;
@@ -50,7 +50,7 @@ public class SparePartsIssueDTO {
         private String sparePartCode;
         private String sparePartName;
         private String unitName;
-        private BigDecimal quantity;
+        private Integer quantity;
 
         public static LineDTO from(SparePartsIssueDetail d) {
             return LineDTO.builder()
@@ -67,7 +67,7 @@ public class SparePartsIssueDTO {
 
     public static SparePartsIssueDTO from(SparePartsIssue issue, List<SparePartsIssueDetail> details) {
         List<LineDTO> lines = details != null ? details.stream().map(LineDTO::from).toList() : List.of();
-        return SparePartsIssueDTO.builder()
+        SparePartsIssueDTO build = SparePartsIssueDTO.builder()
                 .id(issue.getId())
                 .issueCode(issue.getIssueCode())
                 .suppliesIssueId(issue.getSuppliesIssue() != null ? issue.getSuppliesIssue().getId() : null)
@@ -76,7 +76,8 @@ public class SparePartsIssueDTO {
                 .quantity(lines.stream()
                         .map(LineDTO::getQuantity)
                         .filter(Objects::nonNull)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add))
+                        .reduce(0, Integer::sum)
+                )
                 .issuedById(issue.getIssuedBy() != null ? issue.getIssuedBy().getId() : null)
                 .issuedByName(issue.getIssuedBy() != null && issue.getIssuedBy().getEmployee() != null
                         ? issue.getIssuedBy().getEmployee().getFullName()
@@ -84,5 +85,6 @@ public class SparePartsIssueDTO {
                 .issuedAt(issue.getIssuedAt())
                 .details(lines)
                 .build();
+        return build;
     }
 }
