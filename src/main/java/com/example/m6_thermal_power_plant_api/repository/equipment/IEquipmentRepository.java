@@ -48,10 +48,10 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
         """,
             nativeQuery = true)
     Page<Equipment> getEquipment(
-            String kks,
-            String name,
-            Integer typeId,
-            EquipmentStatus status,
+            @Param("kks") String kks,
+            @Param("name") String name,
+            @Param("typeId") Integer typeId,
+            @Param("status") String status,
             Pageable pageable
     );
 
