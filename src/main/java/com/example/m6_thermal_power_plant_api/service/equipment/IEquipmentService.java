@@ -8,6 +8,6 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface IEquipmentService {
-    Page<ListEquipmentDTO> getEquipmentList(String kks, String name, Integer typeId, EquipmentStatus status, Pageable pageable);
+    Page<ListEquipmentDTO> getEquipmentList(String kks, String name, Integer typeId, String status, Pageable pageable);
     Page<ListEquipmentDTO> getBySystem(Integer systemId, Pageable pageable);
 }
