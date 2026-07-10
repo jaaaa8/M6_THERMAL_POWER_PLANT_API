@@ -10,19 +10,23 @@ import java.util.List;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class RepairHistoryResponseDto {
 
     private Integer id;
 
+    private Integer workOrderId;
+
     private String orderCode;
 
-    private String equipmentCode;
+    private String leaderName;
+
+    private Integer equipmentId;
+
+    private String kksCode;
 
     private String equipmentName;
 
-    private String equipmentImage;
+    private String equipmentImg;
 
     private LocalDate repairDate;
 
@@ -30,7 +34,5 @@ public class RepairHistoryResponseDto {
 
     private String repairResult;
 
-    private String leaderName;
-
-    private List<RepairHistoryDetailDto> details;
+    private List<RepairHistoryDetailResponseDto> details;
 }

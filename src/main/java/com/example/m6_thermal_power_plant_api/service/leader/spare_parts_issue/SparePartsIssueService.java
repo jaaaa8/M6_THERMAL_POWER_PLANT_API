@@ -11,7 +11,9 @@ import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
 import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.employee.IEmployeeRepository;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -23,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Transactional
+@RequiredArgsConstructor
 public class SparePartsIssueService implements ISparePartsIssueService {
     private final ISparePartsIssueRepository sparePartsIssueRepository;
     private final WorkOrderRepository workOrderRepository;
@@ -30,36 +34,34 @@ public class SparePartsIssueService implements ISparePartsIssueService {
     private final ISparePartRepository sparePartRepository;
     private final ISparePartsIssueDetailRepository sparePartsIssueDetailRepository;
 
-    public SparePartsIssueService(ISparePartsIssueRepository sparePartsIssueRepository,
-                                  WorkOrderRepository workOrderRepository,
-                                  IAccountRepository accountRepository,
-                                  ISparePartRepository sparePartRepository,
-                                  ISparePartsIssueDetailRepository sparePartsIssueDetailRepository) {
-        this.sparePartsIssueRepository = sparePartsIssueRepository;
-        this.workOrderRepository = workOrderRepository;
-        this.accountRepository = accountRepository;
-        this.sparePartRepository = sparePartRepository;
-        this.sparePartsIssueDetailRepository = sparePartsIssueDetailRepository;
-    }
+
     @Override
     public List<SparePartsIssueRequestDto> findAll() {
-        List<SparePartsIssue> sparePartsIssues = sparePartsIssueRepository.findAll();
-        return sparePartsIssues.stream().map(sparePartsIssue -> new SparePartsIssueRequestDto(
-                sparePartsIssue.getId(),
-                sparePartsIssue.getIssueCode(),
-                sparePartsIssue.getWorkOrder().getId(),
-                sparePartsIssue.getIssuedBy().getUsername(),
-                sparePartsIssue.getIssuedAt(),
-                sparePartsIssue.getAttachmentPath(),
-                sparePartsIssue.getStatus().name(),
-                sparePartsIssue.getDetails().stream().map(detail -> new SparePartsIssueDetailRequestDto(
-                        detail.getSparePart().getId(),
-                        detail.getQuantity()
-                )).toList()
-        )).toList();
+
+        List<SparePartsIssue> sparePartsIssues =
+                sparePartsIssueRepository.findAllOrderByStatusAndIssuedAt();
+
+        return sparePartsIssues.stream()
+                .map(sparePartsIssue -> new SparePartsIssueRequestDto(
+                        sparePartsIssue.getId(),
+                        sparePartsIssue.getIssueCode(),
+                        sparePartsIssue.getWorkOrder().getId(),
+                        sparePartsIssue.getIssuedBy().getUsername(),
+                        sparePartsIssue.getIssuedAt(),
+                        sparePartsIssue.getAttachmentPath(),
+                        sparePartsIssue.getStatus().name(),
+                        sparePartsIssue.getDetails().stream()
+                                .map(detail -> new SparePartsIssueDetailRequestDto(
+                                        detail.getSparePart().getId(),
+                                        detail.getQuantity()
+                                ))
+                                .toList()
+                ))
+                .toList();
     }
 
     @Override
+    @Transactional
     public SparePartsIssueRequestDto save(
             SparePartsIssueRequestDto dto) {
 
