@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.service.department;
 
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentDTO;
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentCreateDTO;
+import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentUpdateDTO;
 import com.example.m6_thermal_power_plant_api.entity.Department;
 import com.example.m6_thermal_power_plant_api.repository.department.IDepartmentRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
@@ -80,5 +81,81 @@ class DepartmentServiceTest {
                 .hasMessageContaining("Department not found");
 
         verify(softDeleteCascadeService, never()).softDelete(any(Department.class));
+    }
+
+    @Test
+    void updateDepartment_whenExists_updatesAndReturnsDTO() {
+        DepartmentUpdateDTO updateDTO = DepartmentUpdateDTO.builder()
+                .name("Updated Department")
+                .description("Updated description")
+                .build();
+
+        Department existingDepartment = Department.builder()
+                .id(1)
+                .departmentCode("DEPT01")
+                .name("Technical Department")
+                .description("Handles technical issues")
+                .build();
+
+        Department updatedDepartment = Department.builder()
+                .id(1)
+                .departmentCode("DEPT01")
+                .name("Updated Department")
+                .description("Updated description")
+                .build();
+
+        when(departmentRepository.findById(1)).thenReturn(Optional.of(existingDepartment));
+        when(departmentRepository.save(any(Department.class))).thenReturn(updatedDepartment);
+
+        DepartmentDTO result = departmentService.updateDepartment(1, updateDTO);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(1);
+        assertThat(result.getName()).isEqualTo("Updated Department");
+        assertThat(result.getDescription()).isEqualTo("Updated description");
+        verify(departmentRepository).save(existingDepartment);
+    }
+
+    @Test
+    void updateDepartment_whenNotFound_throwsException() {
+        DepartmentUpdateDTO updateDTO = DepartmentUpdateDTO.builder()
+                .name("Updated Department")
+                .build();
+
+        when(departmentRepository.findById(1)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> departmentService.updateDepartment(1, updateDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Department not found");
+
+        verify(departmentRepository, never()).save(any(Department.class));
+    }
+
+    @Test
+    void getDepartmentById_whenExists_returnsDTO() {
+        Department department = Department.builder()
+                .id(1)
+                .departmentCode("DEPT01")
+                .name("Technical Department")
+                .description("Handles technical issues")
+                .build();
+
+        when(departmentRepository.findById(1)).thenReturn(Optional.of(department));
+
+        DepartmentDTO result = departmentService.getDepartmentById(1);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(1);
+        assertThat(result.getName()).isEqualTo("Technical Department");
+        assertThat(result.getDescription()).isEqualTo("Handles technical issues");
+    }
+
+    @Test
+    void getDepartmentById_whenNotFound_throwsException() {
+        when(departmentRepository.findById(1)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> departmentService.getDepartmentById(1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Department not found");
     }
 }
