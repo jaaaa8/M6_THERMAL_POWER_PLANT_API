@@ -68,7 +68,6 @@ public class ConsumableController {
     }
 
     @GetMapping("/stock")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
     public Page<ConsumableStockDTO> searchStock(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String name,
@@ -79,7 +78,6 @@ public class ConsumableController {
     }
 
     @PostMapping("/receipts")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
     public ResponseEntity<?> importConsumable(
             @Valid @RequestBody ConsumableReceiptCreateDTO dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -92,7 +90,6 @@ public class ConsumableController {
     }
 
     @GetMapping("/receipts")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
     public Page<ConsumableReceiptResponseDTO> getReceiptHistory(Pageable pageable) {
         return consumableInventoryService.getReceiptHistory(pageable);
     }

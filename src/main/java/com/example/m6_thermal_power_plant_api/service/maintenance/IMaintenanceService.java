@@ -1,5 +1,6 @@
 package com.example.m6_thermal_power_plant_api.service.maintenance;
 
+import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateRepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
@@ -16,11 +17,6 @@ import org.springframework.data.domain.Pageable;
  */
 public interface IMaintenanceService {
 
-    /**
-     * User Story #39 (row 43): xem danh sách các yêu cầu sửa chữa đang chờ xử lý
-     * (status = PENDING), CÓ PHÂN TRANG. Thứ tự sắp xếp lấy từ {@code pageable}
-     * (controller mặc định createdAt giảm dần — mới nhất lên trước).
-     */
     Page<RepairRequestDTO> getPendingRepairRequests(Pageable pageable);
 
     /**

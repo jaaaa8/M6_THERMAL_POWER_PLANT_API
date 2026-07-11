@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.controller.equipment;
 
 import com.example.m6_thermal_power_plant_api.dto.equipment.request.CreateSystemDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.request.UpdateSystemDTO;
+import com.example.m6_thermal_power_plant_api.dto.equipment.response.ListEquipmentDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.response.SystemListDTO;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.service.equipment.IEquipmentSystemService;

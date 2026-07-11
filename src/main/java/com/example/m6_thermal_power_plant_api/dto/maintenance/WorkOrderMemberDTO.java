@@ -27,11 +27,18 @@ public class WorkOrderMemberDTO {
     public static WorkOrderMemberDTO from(WorkOrderMember m) {
         WorkOrderMemberDTOBuilder b = WorkOrderMemberDTO.builder()
                 .id(m.getId())
-                .employeeId(m.getEmployees() != null ? m.getEmployees().getId() : null)
-                .fullName(m.getEmployees() != null ? m.getEmployees().getFullName() : null)
                 .roleInTask(m.getRoleInTask())
                 .joinedAt(m.getJoinedAt())
                 .leftAt(m.getLeftAt());
+
+        if (m.getEmployees() != null) {
+            try {
+                b.employeeId(m.getEmployees().getId());
+                b.fullName(m.getEmployees().getFullName());
+            } catch (jakarta.persistence.EntityNotFoundException e) {
+                b.fullName("Nhân viên đã bị xóa");
+            }
+        }
         return b.build();
     }
 }

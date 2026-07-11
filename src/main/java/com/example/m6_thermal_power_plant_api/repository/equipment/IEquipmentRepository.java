@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -29,13 +30,13 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
     @Query(value = """
 
             SELECT e.*
-FROM equipment e
-WHERE
-(:kks IS NULL OR e.kks_code LIKE CONCAT('%',:kks,'%'))
-AND (:name IS NULL OR e.name LIKE CONCAT('%',:name,'%'))
-AND (:typeId IS NULL OR e.equipment_type_id=:typeId)
-AND (:status IS NULL OR e.status=:status)
-""",
+            FROM equipment e
+            WHERE
+            (:kks IS NULL OR e.kks_code LIKE CONCAT('%',:kks,'%'))
+            AND (:name IS NULL OR e.name LIKE CONCAT('%',:name,'%'))
+            AND (:typeId IS NULL OR e.equipment_type_id=:typeId)
+            AND (:status IS NULL OR e.status=:status)
+            """,
             countQuery = """
         SELECT COUNT(*)
         FROM equipment e
@@ -47,10 +48,13 @@ AND (:status IS NULL OR e.status=:status)
         """,
             nativeQuery = true)
     Page<Equipment> getEquipment(
-            String kks,
-            String name,
-            Integer typeId,
-            EquipmentStatus status,
+            @Param("kks") String kks,
+            @Param("name") String name,
+            @Param("typeId") Integer typeId,
+            @Param("status") String status,
             Pageable pageable
     );
+
+    Page<Equipment> findBySystemId(Integer systemId,Pageable pageable);
+
 }
