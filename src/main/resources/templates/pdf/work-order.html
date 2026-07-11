@@ -71,7 +71,7 @@
 <div class="section">2. <span class="label">Người chỉ huy trực tiếp:</span>
     <span th:text="${directSupervisorName}">..........</span></div>
 
-<div class="section">3. <span class="label">Người giám sát an toàn điện:</span>
+<div class="section">3. <span class="label">Người giám sát an toàn:</span>
     <span th:text="${safetySupervisorName}">..........</span></div>
 
 <div class="section">4. <span class="label">Nhân viên đơn vị công tác:</span>
@@ -88,7 +88,7 @@
     đến <span th:text="${plannedTo}">..........</span></div>
 
 <div class="section">
-    Phiếu công tác cấp ngày <span th:text="${issuedDay}">...</span>
+    Phiếu công tác được lập ngày <span th:text="${issuedDay}">...</span>
     tháng <span th:text="${issuedMonth}">...</span>
     năm <span th:text="${issuedYear}">......</span>
 </div>
@@ -96,7 +96,7 @@
 <table class="sig-table">
     <tr>
         <td>
-            <div class="sig-role">Người cấp phiếu</div>
+            <div class="sig-role">Người lập phiếu</div>
             <div class="sig-note">(Ký/xác nhận điện tử)</div>
             <div class="sig-space"></div>
             <div>Họ và tên: <span th:text="${issuerName}">..........</span></div>
@@ -127,7 +127,7 @@
 </div>
 
 <div class="section">
-    <span class="label">Người giám sát an toàn điện (ký/xác nhận điện tử - nếu có):</span>
+    <span class="label">Người giám sát an toàn (ký/xác nhận điện tử - nếu có):</span>
     Họ và tên: <span th:text="${safetySupervisorName}">..........</span>
 </div>
 

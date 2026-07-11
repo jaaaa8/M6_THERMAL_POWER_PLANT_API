@@ -28,8 +28,6 @@ public class SparePartsIssueDTO {
     private Integer id;
     /** Mã của chính phiếu cấp (cột issue_code trên spare_parts_issues). */
     private String issueCode;
-    /** LẦN cấp vật tư (supplies_issues) mà phiếu này thuộc về — null với dữ liệu mồ côi. */
-    private Integer suppliesIssueId;
     private Integer workOrderId;
     private String orderCode;
     /** Tổng số lượng của mọi dòng chi tiết. */
@@ -70,7 +68,6 @@ public class SparePartsIssueDTO {
         return SparePartsIssueDTO.builder()
                 .id(issue.getId())
                 .issueCode(issue.getIssueCode())
-                .suppliesIssueId(issue.getSuppliesIssue() != null ? issue.getSuppliesIssue().getId() : null)
                 .workOrderId(issue.getWorkOrder() != null ? issue.getWorkOrder().getId() : null)
                 .orderCode(issue.getWorkOrder() != null ? issue.getWorkOrder().getOrderCode() : null)
                 .quantity(lines.stream()
