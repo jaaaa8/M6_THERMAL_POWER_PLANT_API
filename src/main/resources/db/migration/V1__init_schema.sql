@@ -470,6 +470,15 @@ ALTER TABLE technical_assessments
         FOREIGN KEY(equipment_id)
             REFERENCES equipment(id);
 
+ALTER TABLE technical_assessments
+    ADD COLUMN attachment_public_id VARCHAR(255) NULL AFTER attachment_path,
+
+    ADD COLUMN attachment_resource_type VARCHAR(50) NULL AFTER attachment_public_id,
+
+    ADD COLUMN img_public_ids TEXT NULL AFTER img_path,
+
+    ADD COLUMN img_resource_type VARCHAR(100) NULL AFTER img_public_ids;
+
 CREATE TABLE `tool_borrow_logs` (
   `account_id` int NOT NULL,
   `approved_by` int DEFAULT NULL,

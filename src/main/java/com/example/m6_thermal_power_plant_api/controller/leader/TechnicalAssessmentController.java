@@ -76,7 +76,6 @@ public class TechnicalAssessmentController {
 
             TechnicalAssessmentCreateRequestDto result =
                     technicalAssessmentService.save(dto, imageFiles);
-            FileUploadService
 
             return ResponseEntity.ok(result);
 
@@ -108,12 +107,39 @@ public class TechnicalAssessmentController {
             TechnicalAssessmentUpdateRequestDto dto =
                     technicalAssessmentService.findById(id);
 
+            if (dto.getStatus() == TechnicalAssessmentStatus.COMPLETED) {
+                throw new IllegalStateException(
+                        "Biên bản đã hoàn thành, không thể cập nhật PDF."
+                );
+            }
+
             return ResponseEntity.ok(
                     technicalAssessmentService.update(dto, pdfFile)
             );
 
         } catch (Exception e) {
 
+            e.printStackTrace();
+
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/delete-pdf/{id}")
+    public ResponseEntity<?> deletePdf(@PathVariable("id") Integer id) {
+        try {
+
+            TechnicalAssessmentUpdateRequestDto dto =
+                    technicalAssessmentService.findById(id);
+            if(dto.getStatus() == TechnicalAssessmentStatus.PENDING) {
+                throw new IllegalStateException(
+                        "Biên bản chưa có PDF, không thể xoá."
+                );
+            }
+            return ResponseEntity.ok(technicalAssessmentService.deletePdfAttachment(dto));
+
+        } catch (Exception e) {
             e.printStackTrace();
 
             return ResponseEntity.badRequest()

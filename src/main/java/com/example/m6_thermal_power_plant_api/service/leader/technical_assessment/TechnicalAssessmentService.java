@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.service.leader.technical_assessment;
 
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.*;
+import com.example.m6_thermal_power_plant_api.dto.file.FileUploadResult;
 import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
@@ -8,6 +9,7 @@ import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentSt
 import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.ITechnicalAssessmentRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
+import com.example.m6_thermal_power_plant_api.service.util.FileUploadService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,23 +19,28 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.UUID;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TechnicalAssessmentService implements ITechnicalAssessmentService {
     private final ITechnicalAssessmentRepository technicalAssessmentRepository;
     private final IAccountRepository accountRepository;
     private final IEquipmentRepository equipmentRepository;
+    private final FileUploadService fileUploadService;
+    private final ObjectMapper objectMapper;
     public  TechnicalAssessmentService(ITechnicalAssessmentRepository technicalAssessmentRepository,
                                        IAccountRepository accountRepository,
-                                       IEquipmentRepository equipmentRepository) {
+                                       IEquipmentRepository equipmentRepository,
+                                       FileUploadService fileUploadService,
+                                       ObjectMapper objectMapper) {
         this.accountRepository = accountRepository;
         this.technicalAssessmentRepository = technicalAssessmentRepository;
         this.equipmentRepository = equipmentRepository;
+        this.fileUploadService = fileUploadService;
+        this.objectMapper = objectMapper;
     }
     @Override
     public List<TechnicalAssessmentUpdateRequestDto> findAll() {
@@ -54,7 +61,9 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                                 )
                         ),
                         ta.getAttachmentPath(),
-                        ta.getImgPath(),
+                        ta.getImgPath() != null
+                                ? ta.getImgPath().split(";")
+                                : new String[0],
                         ta.getResult(),
                         ta.getDescription(),
                         ta.getCreatedAt(),
@@ -120,63 +129,14 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         // Upload nhiều ảnh
         if (imageFiles != null && imageFiles.length > 0) {
 
-            String uploadDir =
-                    "src/main/resources/img/technical-assessment";
-
-            Path uploadPath =
-                    Paths.get(uploadDir);
-
             try {
+                List<FileUploadResult> uploadedImages = fileUploadService.uploadImages(imageFiles);
 
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
+                String imgPath = uploadedImages.stream()
+                        .map(FileUploadResult::secureUrl)
+                        .collect(Collectors.joining(";"));
 
-                List<String> imagePaths = new ArrayList<>();
-
-                int index = 1;
-
-                for (MultipartFile file : imageFiles) {
-
-                    if (file.isEmpty()) {
-                        continue;
-                    }
-
-                    String originalFileName = file.getOriginalFilename();
-
-                    String extension = "";
-
-                    if (originalFileName != null
-                            && originalFileName.contains(".")) {
-
-                        extension = originalFileName.substring(
-                                originalFileName.lastIndexOf(".")
-                        );
-                    }
-
-                    String fileName = String.format(
-                            "%s-%03d%s",
-                            technicalCode,
-                            index++,
-                            extension
-                    );
-
-                    Path filePath = uploadPath.resolve(fileName);
-
-                    Files.copy(
-                            file.getInputStream(),
-                            filePath,
-                            StandardCopyOption.REPLACE_EXISTING
-                    );
-
-                    imagePaths.add(
-                            "/img/technical-assessment/" + fileName
-                    );
-                }
-
-                technicalAssessment.setImgPath(
-                        String.join(";", imagePaths)
-                );
+                technicalAssessment.setImgPath(imgPath);
 
             } catch (Exception e) {
                 throw new RuntimeException(
@@ -244,7 +204,9 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                         )
                 ),
                 technicalAssessment.getAttachmentPath(),
-                technicalAssessment.getImgPath(),
+                technicalAssessment.getImgPath() != null
+                        ? technicalAssessment.getImgPath().split(";")
+                        : new String[0],
                 technicalAssessment.getResult(),
                 technicalAssessment.getDescription(),
                 technicalAssessment.getCreatedAt(),
@@ -267,28 +229,14 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
 
             if (pdfFile != null && !pdfFile.isEmpty()) {
 
-                String uploadDir =
-                        "src/main/resources/pdf/technical-assessment";
-
-                Path uploadPath = Paths.get(uploadDir);
-
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
-                String fileName = pdfFile.getOriginalFilename();
-
-                assert fileName != null;
-                Path filePath =
-                        uploadPath.resolve(fileName);
-
-                Files.copy(
-                        pdfFile.getInputStream(),
-                        filePath,
-                        StandardCopyOption.REPLACE_EXISTING
+                FileUploadResult uploadResult = fileUploadService.uploadPdf(
+                        pdfFile.getBytes(),
+                        "technical-assessments",
+                        dto.getTechnicalCode()
                 );
 
                 dto.setAttachmentPath(
-                        "/pdf/technical-assessment/" + fileName
+                        uploadResult.secureUrl()
                 );
             } else {
                 dto.setAttachmentPath(
@@ -299,6 +247,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
 
 
             entity.setAttachmentPath(dto.getAttachmentPath());
+            entity.setStatus(TechnicalAssessmentStatus.COMPLETED);
 
             technicalAssessmentRepository.save(entity);
             return dto;
@@ -330,7 +279,9 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                         )
                 ),
                 technicalAssessment.getAttachmentPath(),
-                technicalAssessment.getImgPath(),
+                technicalAssessment.getImgPath() != null
+                        ? technicalAssessment.getImgPath().split(";")
+                        : new String[0],
                 technicalAssessment.getResult(),
                 technicalAssessment.getDescription(),
                 technicalAssessment.getCreatedAt(),
@@ -361,6 +312,41 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         );
     }
 
+    @Override
+    public TechnicalAssessmentUpdateRequestDto deletePdfAttachment(TechnicalAssessmentUpdateRequestDto dto) {
+        TechnicalAssessment entity = technicalAssessmentRepository.findById(dto.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Technical assessment not found for id: " + dto.getId()));
+
+        try {
+            if (entity.getAttachmentPublicId() != null && entity.getAttachmentResourceType() != null) {
+                fileUploadService.deleteFile(entity.getAttachmentPublicId(), entity.getAttachmentResourceType());
+            }
+            if (entity.getImgPublicIds() != null && entity.getImgResourceType() != null) {
+                String[] imgPublicIds = entity.getImgPublicIds().split(";");
+                for (String imgPublicId : imgPublicIds) {
+                    fileUploadService.deleteFile(imgPublicId, entity.getImgResourceType());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Error deleting PDF attachment",
+                    e
+            );
+        }
+
+        entity.setAttachmentPath(null);
+        entity.setAttachmentPublicId(null);
+        entity.setAttachmentResourceType(null);
+        entity.setImgPublicIds(null);
+        entity.setImgPath(null);
+        entity.setImgResourceType(null);
+        entity.setStatus(TechnicalAssessmentStatus.PENDING);
+
+        technicalAssessmentRepository.save(entity);
+
+        return dto;
+    }
+
     private TechnicalAssessmentUpdateRequestDto convertToUpdateDto(
             TechnicalAssessment entity
     ) {
@@ -370,7 +356,11 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         dto.setId(entity.getId());
         dto.setTechnicalCode(entity.getTechnicalCode());
         dto.setAttachmentPath(entity.getAttachmentPath());
-        dto.setImgPath(entity.getImgPath());
+        if(entity.getImgPath() != null && !entity.getImgPath().isEmpty()) {
+            dto.setImgPath(entity.getImgPath().split(";"));
+        } else {
+            dto.setImgPath(new String[0]);
+        }
         dto.setResult(entity.getResult());
         dto.setDescription(entity.getDescription());
         dto.setCreatedAt(entity.getCreatedAt());

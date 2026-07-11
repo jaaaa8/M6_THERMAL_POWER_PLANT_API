@@ -26,4 +26,6 @@ public interface ITechnicalAssessmentService {
             TechnicalAssessmentStatus status,
             Pageable pageable
     );
+
+    TechnicalAssessmentUpdateRequestDto deletePdfAttachment(TechnicalAssessmentUpdateRequestDto dto);
 }

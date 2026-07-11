@@ -58,6 +58,18 @@ public class TechnicalAssessment extends BaseSoftDeleteEntity {
     private String imgPath;
 
     @Column(columnDefinition = "TEXT")
+    private String imgPublicIds;
+
+    @Column(length = 100)
+    private String imgResourceType;
+
+    @Column(length = 255)
+    private String attachmentPublicId;
+
+    @Column(length = 50)
+    private String attachmentResourceType;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @CreationTimestamp
