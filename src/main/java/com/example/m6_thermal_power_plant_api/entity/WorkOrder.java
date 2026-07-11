@@ -95,14 +95,6 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Column(name = "pdf_path", length = 500)
     private String pdfPath;
 
-    /**
-     * Bản lưu ĐÓNG BĂNG của "Phiếu đề nghị cấp phát vật tư" — chỉ ghi MỘT lần
-     * khi phiếu về trạng thái kết thúc (COMPLETED/CANCELLED). Phiếu còn sống thì
-     * PDF vật tư luôn render mới theo yêu cầu, không cache URL.
-     */
-    @Column(name = "supplies_pdf_path", length = 500)
-    private String suppliesPdfPath;
-
     @JsonIgnore
     @OneToMany(mappedBy = "workOrder", fetch = FetchType.LAZY)
     private List<WorkOrderMember> members;

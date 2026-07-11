@@ -33,8 +33,6 @@ public class WorkOrderDTO {
     private LocalDateTime startTime;
     private LocalDateTime expectedEndTime;
     private String pdfPath;
-    /** URL bản lưu đóng băng của phiếu cấp vật tư (chỉ có sau khi phiếu kết thúc). */
-    private String suppliesPdfPath;
 
     private Integer repairRequestId;
     private String requestCode;
@@ -65,7 +63,6 @@ public class WorkOrderDTO {
                 .startTime(wo.getStartTime())
                 .expectedEndTime(wo.getExpectedEndTime())
                 .pdfPath(wo.getPdfPath())
-                .suppliesPdfPath(wo.getSuppliesPdfPath())
                 .repairDescription(wo.getRepairDescription());
 
         RepairRequest req = wo.getRepairRequest();

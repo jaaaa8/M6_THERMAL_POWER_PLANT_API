@@ -317,6 +317,9 @@ public class MaintenanceService implements IMaintenanceService {
         return events;
     }
 
+
+    // tìm danh sách các WO không ở trạng thái CANCELLED/COMPLETE
+    // => còn lại là những WO có nhân viên bận
     @Override
     @Transactional(readOnly = true)
     public List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId) {
@@ -525,6 +528,13 @@ public class MaintenanceService implements IMaintenanceService {
         workOrderRepository.save(workOrder);
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
+
+    // cập nhập trạng thái của WO
+    // 1. Sau khi có nguời tạo WO mới, sẽ in ra phiếu này ở trạng thái là OPEN (ONLINE)
+    // 2. Đem phiếu CT này đến SHIFT_LEADER, SHIFT_LEADER đồng ý, trạng thái chuyển sang APPROVED, nhân viên kiểm tra phiếu trạng thái APPROVED, sẽ báo xuống nơi thiết bị sửa chữa để cô lập thiết bị.
+    // 3. Sau khi cô lập thiết bị hoàn tất, cập nhập lại thời gian cho phép trên phiếu (ONLINE và phiếu giấy),-> status thành IN_PROGRESS
+    // 4. Nếu làm đến cuối ngày không xong, TEAM_LEADER cập nhập status thành STOPPED, đem đơn vật lý gửi lại phòng của SHIFT_LEADER
+    // 5. Qua ngày, status tự động đổi thành WAITING_FOR_APPROVAL, SHIFT_LEADER duyệt gia hạn dựa trên thời gian mới trong phiếu, status -> IN_PROGRESS
 
     @Override
     @Transactional
