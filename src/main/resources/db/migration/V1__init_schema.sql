@@ -456,11 +456,19 @@ CREATE TABLE `technical_assessments` (
   `description` text,
   `img_path` text,
   `result` text,
-  `status` enum('COMPLETED','IN_PROGRESS','PENDING','REJECTED') DEFAULT NULL,
+  `status` enum('COMPLETED','PENDING') DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `FKswuy8clmdfxp64b7lxrkq54vd` (`assessor_id`),
   CONSTRAINT `FKswuy8clmdfxp64b7lxrkq54vd` FOREIGN KEY (`assessor_id`) REFERENCES `accounts` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ALTER TABLE technical_assessments
+    ADD COLUMN equipment_id INT;
+
+ALTER TABLE technical_assessments
+    ADD CONSTRAINT FK_equipment_assessment
+        FOREIGN KEY(equipment_id)
+            REFERENCES equipment(id);
 
 CREATE TABLE `tool_borrow_logs` (
   `account_id` int NOT NULL,

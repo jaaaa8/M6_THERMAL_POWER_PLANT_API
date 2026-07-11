@@ -1,15 +1,16 @@
 package com.example.m6_thermal_power_plant_api.service.leader.technical_assessment;
 
-import com.example.m6_thermal_power_plant_api.dto.Leader.req.AccountDto;
-import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentCreateRequestDto;
-import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentUpdateRequestDto;
-import com.example.m6_thermal_power_plant_api.dto.Leader.res.TechnicalAssessmentResponseDto;
-import com.example.m6_thermal_power_plant_api.dto.accounts.AccountDTO;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.*;
 import com.example.m6_thermal_power_plant_api.entity.Account;
+import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
+import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentStatus;
 import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.ITechnicalAssessmentRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Files;
@@ -26,10 +27,13 @@ import java.util.List;
 public class TechnicalAssessmentService implements ITechnicalAssessmentService {
     private final ITechnicalAssessmentRepository technicalAssessmentRepository;
     private final IAccountRepository accountRepository;
+    private final IEquipmentRepository equipmentRepository;
     public  TechnicalAssessmentService(ITechnicalAssessmentRepository technicalAssessmentRepository,
-                                       IAccountRepository accountRepository) {
+                                       IAccountRepository accountRepository,
+                                       IEquipmentRepository equipmentRepository) {
         this.accountRepository = accountRepository;
         this.technicalAssessmentRepository = technicalAssessmentRepository;
+        this.equipmentRepository = equipmentRepository;
     }
     @Override
     public List<TechnicalAssessmentUpdateRequestDto> findAll() {
@@ -39,6 +43,16 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                         ta.getId(),
                         ta.getTechnicalCode(),
                         getSafeAccountDto(ta.getAssessor()),
+                        new EquipmentDto(
+                                ta.getEquipment().getId(),
+                                ta.getEquipment().getKksCode(),
+                                ta.getEquipment().getName(),
+                                new SystemDto(
+                                        ta.getEquipment().getSystem().getId(),
+                                        ta.getEquipment().getSystem().getCode(),
+                                        ta.getEquipment().getSystem().getName()
+                                )
+                        ),
                         ta.getAttachmentPath(),
                         ta.getImgPath(),
                         ta.getResult(),
@@ -59,7 +73,12 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         } catch (jakarta.persistence.EntityNotFoundException e) {
             fullName = assessor.getUsername() + " (Đã xóa)";
         }
-        return new AccountDto(assessor.getUsername(), assessor.getEmail(), fullName);
+        return new AccountDto(assessor.getUsername(), assessor.getEmail(), fullName,
+                assessor.getEmployee() != null ? new EmployeeDto(
+                        assessor.getEmployee().getId(),
+                        assessor.getEmployee().getEmployeeCode(),
+                        fullName
+                ) : null);
     }
 
     @Override
@@ -183,6 +202,11 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 dto.getStatus()
         );
 
+        Equipment equipment = equipmentRepository.findById(dto.getEquipmentId())
+                .orElseThrow(() -> new IllegalArgumentException("Equipment not found with id: " + dto.getEquipmentId()));
+
+        technicalAssessment.setEquipment(equipment);
+
         TechnicalAssessment saved =
                 technicalAssessmentRepository.save(technicalAssessment);
 
@@ -209,6 +233,16 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
                 getSafeAccountDto(technicalAssessment.getAssessor()),
+                new EquipmentDto(
+                        technicalAssessment.getEquipment().getId(),
+                        technicalAssessment.getEquipment().getKksCode(),
+                        technicalAssessment.getEquipment().getName(),
+                        new SystemDto(
+                                technicalAssessment.getEquipment().getSystem().getId(),
+                                technicalAssessment.getEquipment().getSystem().getCode(),
+                                technicalAssessment.getEquipment().getSystem().getName()
+                        )
+                ),
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),
@@ -285,6 +319,16 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 technicalAssessment.getId(),
                 technicalAssessment.getTechnicalCode(),
                 getSafeAccountDto(technicalAssessment.getAssessor()),
+                new EquipmentDto(
+                        technicalAssessment.getEquipment().getId(),
+                        technicalAssessment.getEquipment().getKksCode(),
+                        technicalAssessment.getEquipment().getName(),
+                        new SystemDto(
+                                technicalAssessment.getEquipment().getSystem().getId(),
+                                technicalAssessment.getEquipment().getSystem().getCode(),
+                                technicalAssessment.getEquipment().getSystem().getName()
+                        )
+                ),
                 technicalAssessment.getAttachmentPath(),
                 technicalAssessment.getImgPath(),
                 technicalAssessment.getResult(),
@@ -292,5 +336,74 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
                 technicalAssessment.getCreatedAt(),
                 technicalAssessment.getStatus()
         );
+    }
+
+    @Override
+    public Page<TechnicalAssessmentUpdateRequestDto> search(
+            String technicalCode,
+            Integer equipmentId,
+            TechnicalAssessmentStatus status,
+            Pageable pageable
+    ) {
+
+
+        Page<TechnicalAssessment> assessments =
+                technicalAssessmentRepository.search(
+                        technicalCode,
+                        equipmentId,
+                        status,
+                        pageable
+                );
+
+
+        return assessments.map(
+                this::convertToUpdateDto
+        );
+    }
+
+    private TechnicalAssessmentUpdateRequestDto convertToUpdateDto(
+            TechnicalAssessment entity
+    ) {
+        TechnicalAssessmentUpdateRequestDto dto =
+                new TechnicalAssessmentUpdateRequestDto();
+
+        dto.setId(entity.getId());
+        dto.setTechnicalCode(entity.getTechnicalCode());
+        dto.setAttachmentPath(entity.getAttachmentPath());
+        dto.setImgPath(entity.getImgPath());
+        dto.setResult(entity.getResult());
+        dto.setDescription(entity.getDescription());
+        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setStatus(entity.getStatus());
+        dto.setEquipment(
+                new EquipmentDto(
+                        entity.getEquipment().getId(),
+                        entity.getEquipment().getKksCode(),
+                        entity.getEquipment().getName(),
+                        new SystemDto(
+                                entity.getEquipment().getSystem().getId(),
+                                entity.getEquipment().getSystem().getCode(),
+                                entity.getEquipment().getSystem().getName()
+                        )
+                )
+        );
+
+        if (entity.getAssessor() != null) {
+            AccountDto accountDto = new AccountDto();
+
+            accountDto.setUsername(entity.getAssessor().getUsername());
+            accountDto.setEmail(entity.getAssessor().getEmail());
+            accountDto.setEmployee(
+                    new  EmployeeDto(
+                            entity.getAssessor().getEmployee().getId(),
+                            entity.getAssessor().getEmployee().getEmployeeCode(),
+                            entity.getAssessor().getEmployee().getFullName()
+                    )
+            );
+
+            dto.setAssessor(accountDto);
+        }
+
+        return dto;
     }
 }

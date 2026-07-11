@@ -2,10 +2,12 @@ package com.example.m6_thermal_power_plant_api.controller.leader;
 
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentCreateRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.TechnicalAssessmentUpdateRequestDto;
-import com.example.m6_thermal_power_plant_api.dto.Leader.res.TechnicalAssessmentResponseDto;
-import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
+import com.example.m6_thermal_power_plant_api.entity.enums.TechnicalAssessmentStatus;
 import com.example.m6_thermal_power_plant_api.service.leader.technical_assessment.ITechnicalAssessmentService;
-import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
+import com.example.m6_thermal_power_plant_api.service.util.FileUploadService;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
@@ -22,10 +24,32 @@ public class TechnicalAssessmentController {
     public  TechnicalAssessmentController(ITechnicalAssessmentService technicalAssessmentService) {
         this.technicalAssessmentService = technicalAssessmentService;
     }
-    @GetMapping("")
-    public ResponseEntity<List<TechnicalAssessmentUpdateRequestDto>> getTechnicalAssessments() {
-        List<TechnicalAssessmentUpdateRequestDto> technicalAssessments = technicalAssessmentService.findAll();
-        return ResponseEntity.ok(technicalAssessments);
+    @GetMapping("/search")
+    public ResponseEntity<Page<TechnicalAssessmentUpdateRequestDto>> searchTechnicalAssessments(
+
+            @RequestParam(required = false)
+            String technicalCode,
+
+            @RequestParam(required = false)
+            Integer equipmentId,
+
+            @RequestParam(required = false)
+            TechnicalAssessmentStatus status,
+
+            Pageable pageable
+    ) {
+
+
+        Page<TechnicalAssessmentUpdateRequestDto> result =
+                technicalAssessmentService.search(
+                        technicalCode,
+                        equipmentId,
+                        status,
+                        pageable
+                );
+
+
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/add")
@@ -39,6 +63,7 @@ public class TechnicalAssessmentController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     public ResponseEntity<?> submitTechnicalAssessmentForm(
+            @Valid
             @RequestPart("data")
             TechnicalAssessmentCreateRequestDto dto,
 
@@ -51,6 +76,7 @@ public class TechnicalAssessmentController {
 
             TechnicalAssessmentCreateRequestDto result =
                     technicalAssessmentService.save(dto, imageFiles);
+            FileUploadService
 
             return ResponseEntity.ok(result);
 
@@ -61,7 +87,7 @@ public class TechnicalAssessmentController {
         }
     }
 
-    @GetMapping("/edit/{technicalCode}")
+    @GetMapping("/{technicalCode}")
     public ResponseEntity<TechnicalAssessmentUpdateRequestDto> getEditTechnicalAssessmentForm(@PathVariable("technicalCode") String technicalCode) {
         TechnicalAssessmentUpdateRequestDto existingAssessment = technicalAssessmentService.findByTechnicalCode(technicalCode);
         if (existingAssessment == null) {

@@ -64,6 +64,10 @@ public class TechnicalAssessment extends BaseSoftDeleteEntity {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "equipment_id")
+    private Equipment equipment;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(length = 50)

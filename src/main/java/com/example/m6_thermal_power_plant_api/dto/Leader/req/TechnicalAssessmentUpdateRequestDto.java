@@ -16,6 +16,7 @@ public class TechnicalAssessmentUpdateRequestDto {
     private int id;
     private String technicalCode;
     private AccountDto assessor;
+    private EquipmentDto equipment;
     private String attachmentPath;
     private String imgPath;
     private String result;
@@ -23,9 +24,10 @@ public class TechnicalAssessmentUpdateRequestDto {
     private LocalDateTime createdAt;
     private TechnicalAssessmentStatus status = TechnicalAssessmentStatus.PENDING;
 
-    public TechnicalAssessmentUpdateRequestDto(String technicalCode, AccountDto assessor, String imgPath, String result, String description) {
+    public TechnicalAssessmentUpdateRequestDto(String technicalCode, AccountDto assessor, EquipmentDto equipment, String imgPath, String result, String description) {
         this.technicalCode = technicalCode;
         this.assessor = assessor;
+        this.equipment = equipment;
         this.imgPath = imgPath;
         this.result = result;
         this.description = description;
