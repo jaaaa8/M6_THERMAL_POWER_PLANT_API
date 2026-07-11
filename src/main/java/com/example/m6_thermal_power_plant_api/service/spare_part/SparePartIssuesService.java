@@ -39,7 +39,7 @@ public class SparePartIssuesService implements ISparePartIssuesService {
     @Override
     @Transactional
     public SparePartsIssueDTO createForWorkOrder(Integer workOrderId, CreateSparePartsIssueRequest request,
-                                                 String issuedByUsername, SuppliesIssue suppliesIssue) {
+                                                 String issuedByUsername) {
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay phieu cong tac voi id: " + workOrderId));
@@ -61,7 +61,6 @@ public class SparePartIssuesService implements ISparePartIssuesService {
         SparePartsIssue issue = issueRepository.save(SparePartsIssue.builder()
                 .issueCode(TimeStampCodeGenerator.generate(SparePartsIssue.class))
                 .workOrder(workOrder)
-                .suppliesIssue(suppliesIssue)
                 .issuedBy(issuedBy)
                 .issuedAt(now)
                 .build());

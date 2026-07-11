@@ -74,7 +74,7 @@
 </head>
 <body>
 <div class="header">
-    <h1>PHIẾU ĐỀ NGHỊ CẤP PHÁT VẬT TƯ, TRANG THIẾT BỊ</h1>
+    <h1 th:text="${documentTitle} ?: 'PHIẾU ĐỀ NGHỊ CẤP PHÁT VẬT TƯ, TRANG THIẾT BỊ'">PHIẾU ĐỀ NGHỊ CẤP PHÁT VẬT TƯ, TRANG THIẾT BỊ</h1>
 </div>
 <div class="date-row">
     Ngày <span th:text="${issuedDay}">...</span>
