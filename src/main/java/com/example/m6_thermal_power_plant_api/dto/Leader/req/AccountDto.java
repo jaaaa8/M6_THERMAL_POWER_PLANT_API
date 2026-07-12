@@ -20,11 +20,6 @@ public class AccountDto {
     @Email(message = "Email không đúng định dạng")
     private String email;
 
-
-    @NotBlank(message = "Họ tên không được để trống")
-    private String name;
-
-
     @Valid
     private EmployeeDto employee;
 

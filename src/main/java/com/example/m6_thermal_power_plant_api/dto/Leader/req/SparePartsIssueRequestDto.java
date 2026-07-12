@@ -27,7 +27,7 @@ public class SparePartsIssueRequestDto {
 
     private Integer workOrderId;
 
-    private String issueUsername;
+    private AccountDto issuedBy;
 
     private LocalDateTime issuedAt;
 
