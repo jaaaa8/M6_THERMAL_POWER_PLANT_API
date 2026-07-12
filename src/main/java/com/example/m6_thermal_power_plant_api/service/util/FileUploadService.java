@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,6 +54,23 @@ public class FileUploadService {
 
         Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
         return toResult(result);
+    }
+
+    public List<FileUploadResult> uploadImages(
+            MultipartFile[] files
+    ) throws IOException {
+
+        if (files == null || files.length == 0) {
+            return Collections.emptyList();
+        }
+
+        List<FileUploadResult> results = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            results.add(uploadImage(file));
+        }
+
+        return results;
     }
 
     /**

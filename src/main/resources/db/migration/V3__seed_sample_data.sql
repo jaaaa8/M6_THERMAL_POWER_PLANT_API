@@ -265,11 +265,6 @@ INSERT INTO work_order_extensions (
 ) VALUES
     (1, 2, 'Need additional insulation resistance testing before energizing.', '2026-06-15 20:00:00', 1, false);
 
-INSERT INTO technical_assessments (
-    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
-) VALUES
-      (1, 'TA-2026-0001', 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
-      (2, 'TA-2026-0002', 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS', false);
 
 INSERT INTO spare_parts_issues (
     id, issue_code, work_order_id, spare_part_id, issued_by, issued_at, is_deleted, status
@@ -347,9 +342,15 @@ INSERT INTO work_order_extensions (
     (2, 3, 'Awaiting replacement mechanical seal delivery before reassembly.', '2026-06-18 22:00:00', 1, false);
 
 INSERT INTO technical_assessments (
-    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+    id, technical_code, assessor_id, equipment_id, result, attachment_path, img_path, description, created_at, status, is_deleted
 ) VALUES
-    (3, 'TA-2026-0003', 2, 'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
+      (1, 'TA-2026-0001', 2,1, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
+      (2, 'TA-2026-0002', 3, 1,'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'PENDING', false);
+
+INSERT INTO technical_assessments (
+    id, technical_code, assessor_id, equipment_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+) VALUES
+    (3, 'TA-2026-0003', 2, 2,'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
 
 INSERT INTO spare_parts_issues (
     id, issue_code, work_order_id, spare_part_id, issued_by, issued_at, is_deleted, status
