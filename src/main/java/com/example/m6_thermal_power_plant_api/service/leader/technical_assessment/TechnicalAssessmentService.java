@@ -82,7 +82,7 @@ public class TechnicalAssessmentService implements ITechnicalAssessmentService {
         } catch (jakarta.persistence.EntityNotFoundException e) {
             fullName = assessor.getUsername() + " (Đã xóa)";
         }
-        return new AccountDto(assessor.getUsername(), assessor.getEmail(), fullName,
+        return new AccountDto(assessor.getUsername(), assessor.getEmail(),
                 assessor.getEmployee() != null ? new EmployeeDto(
                         assessor.getEmployee().getId(),
                         assessor.getEmployee().getEmployeeCode(),
