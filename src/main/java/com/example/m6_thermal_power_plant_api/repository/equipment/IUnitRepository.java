@@ -10,7 +10,5 @@ import java.util.Optional;
 
 @Repository
 public interface IUnitRepository extends JpaRepository<Unit, Integer> {
-
-
     boolean existsByNameIgnoreCase(String name);
 }
