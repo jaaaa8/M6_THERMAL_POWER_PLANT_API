@@ -404,7 +404,7 @@ CREATE TABLE `spare_parts_issue_details` (
   `id` int NOT NULL AUTO_INCREMENT,
   `is_deleted` bit(1) NOT NULL,
   `issue_id` int DEFAULT NULL,
-  `quantity` decimal(38,2) DEFAULT NULL,
+  `quantity` int DEFAULT NULL,
   `spare_part_id` int DEFAULT NULL,
   `deleted_at` datetime(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -456,11 +456,28 @@ CREATE TABLE `technical_assessments` (
   `description` text,
   `img_path` text,
   `result` text,
-  `status` enum('COMPLETED','IN_PROGRESS','PENDING','REJECTED') DEFAULT NULL,
+  `status` enum('COMPLETED','PENDING') DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `FKswuy8clmdfxp64b7lxrkq54vd` (`assessor_id`),
   CONSTRAINT `FKswuy8clmdfxp64b7lxrkq54vd` FOREIGN KEY (`assessor_id`) REFERENCES `accounts` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ALTER TABLE technical_assessments
+    ADD COLUMN equipment_id INT;
+
+ALTER TABLE technical_assessments
+    ADD CONSTRAINT FK_equipment_assessment
+        FOREIGN KEY(equipment_id)
+            REFERENCES equipment(id);
+
+ALTER TABLE technical_assessments
+    ADD COLUMN attachment_public_id VARCHAR(255) NULL AFTER attachment_path,
+
+    ADD COLUMN attachment_resource_type VARCHAR(50) NULL AFTER attachment_public_id,
+
+    ADD COLUMN img_public_ids TEXT NULL AFTER img_path,
+
+    ADD COLUMN img_resource_type VARCHAR(100) NULL AFTER img_public_ids;
 
 CREATE TABLE `tool_borrow_logs` (
   `account_id` int NOT NULL,

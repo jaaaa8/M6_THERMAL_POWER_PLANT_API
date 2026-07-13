@@ -71,7 +71,6 @@ public class SparePartController {
     }
 
     @GetMapping("/stock")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
     public Page<SparePartStockDTO> searchStock(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String name,
@@ -82,7 +81,6 @@ public class SparePartController {
     }
 
     @PostMapping("/receipts")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
     public ResponseEntity<?> importConsumable(
             @Valid @RequestBody SparePartReceiptCreateDTO dto,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -95,7 +93,6 @@ public class SparePartController {
     }
 
     @GetMapping("/receipts")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MATERIALS_STOREKEEPER')")
     public Page<SparePartReceiptResponseDTO> getReceiptHistory(Pageable pageable) {
         return sparePartInventoryService.getReceiptHistory(pageable);
     }

@@ -1,5 +1,7 @@
 package com.example.m6_thermal_power_plant_api.service.leader.spare_parts_issue;
 
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.AccountDto;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.EmployeeDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.SparePartsIssueDetailRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.SparePartsIssueRequestDto;
 import com.example.m6_thermal_power_plant_api.entity.*;
@@ -11,7 +13,11 @@ import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
 import com.example.m6_thermal_power_plant_api.repository.account.IAccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.employee.IEmployeeRepository;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -23,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Transactional
+@RequiredArgsConstructor
 public class SparePartsIssueService implements ISparePartsIssueService {
     private final ISparePartsIssueRepository sparePartsIssueRepository;
     private final WorkOrderRepository workOrderRepository;
@@ -30,36 +38,9 @@ public class SparePartsIssueService implements ISparePartsIssueService {
     private final ISparePartRepository sparePartRepository;
     private final ISparePartsIssueDetailRepository sparePartsIssueDetailRepository;
 
-    public SparePartsIssueService(ISparePartsIssueRepository sparePartsIssueRepository,
-                                  WorkOrderRepository workOrderRepository,
-                                  IAccountRepository accountRepository,
-                                  ISparePartRepository sparePartRepository,
-                                  ISparePartsIssueDetailRepository sparePartsIssueDetailRepository) {
-        this.sparePartsIssueRepository = sparePartsIssueRepository;
-        this.workOrderRepository = workOrderRepository;
-        this.accountRepository = accountRepository;
-        this.sparePartRepository = sparePartRepository;
-        this.sparePartsIssueDetailRepository = sparePartsIssueDetailRepository;
-    }
-    @Override
-    public List<SparePartsIssueRequestDto> findAll() {
-        List<SparePartsIssue> sparePartsIssues = sparePartsIssueRepository.findAll();
-        return sparePartsIssues.stream().map(sparePartsIssue -> new SparePartsIssueRequestDto(
-                sparePartsIssue.getId(),
-                sparePartsIssue.getIssueCode(),
-                sparePartsIssue.getWorkOrder().getId(),
-                sparePartsIssue.getIssuedBy().getUsername(),
-                sparePartsIssue.getIssuedAt(),
-                sparePartsIssue.getAttachmentPath(),
-                sparePartsIssue.getStatus().name(),
-                sparePartsIssue.getDetails().stream().map(detail -> new SparePartsIssueDetailRequestDto(
-                        detail.getSparePart().getId(),
-                        detail.getQuantity()
-                )).toList()
-        )).toList();
-    }
 
     @Override
+    @Transactional
     public SparePartsIssueRequestDto save(
             SparePartsIssueRequestDto dto) {
 
@@ -74,11 +55,12 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                                 new RuntimeException("Work order not found")));
 
         issue.setIssuedBy(
-                        accountRepository.findByUsername(dto.getIssueUsername())
+                        accountRepository.findByUsername(dto.getIssuedBy().getUsername())
                                 .orElseThrow(() ->
                                         new RuntimeException("Account not found")));
 
         issue.setIssuedAt(dto.getIssuedAt());
+        issue.setStatus(SparePartsIssueStatus.PENDING);
 
         List<SparePartsIssueDetail> details =
 
@@ -121,6 +103,18 @@ public class SparePartsIssueService implements ISparePartsIssueService {
         }
 
         dto.setIssueCode(issue.getIssueCode());
+        dto.setStatus(issue.getStatus().name());
+        dto.setIssuedBy(
+                new AccountDto(
+                        issue.getIssuedBy().getUsername(),
+                        issue.getIssuedBy().getEmail(),
+                        new EmployeeDto(
+                                issue.getIssuedBy().getEmployee().getId(),
+                                issue.getIssuedBy().getEmployee().getEmployeeCode(),
+                                issue.getIssuedBy().getEmployee().getFullName()
+                        )
+                )
+        );
 
         return dto;
     }
@@ -133,7 +127,8 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 .orElseThrow(() -> new RuntimeException("Work order not found"));
         issue.setWorkOrder(workOrder);
         issue.setIssuedAt(sparePartsIssueRequestDto.getIssuedAt());
-        Account account = accountRepository.findByUsername(sparePartsIssueRequestDto.getIssueUsername())
+        issue.setStatus(SparePartsIssueStatus.valueOf(sparePartsIssueRequestDto.getStatus()));
+        Account account = accountRepository.findByUsername(sparePartsIssueRequestDto.getIssuedBy().getUsername())
                 .orElseThrow(() -> new RuntimeException("Account not found"));
         issue.setIssuedBy(account);
         List<SparePartsIssueDetail> details = (List<SparePartsIssueDetail>) sparePartsIssueRequestDto.getDetails().stream()
@@ -160,87 +155,43 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 sparePartsIssue.getId(),
                 sparePartsIssue.getIssueCode(),
                 sparePartsIssue.getWorkOrder().getId(),
-                sparePartsIssue.getIssuedBy().getUsername(),
+                new AccountDto(
+                        sparePartsIssue.getIssuedBy().getUsername(),
+                        sparePartsIssue.getIssuedBy().getEmail(),
+                        new EmployeeDto(
+                                sparePartsIssue.getIssuedBy().getEmployee().getId(),
+                                sparePartsIssue.getIssuedBy().getEmployee().getEmployeeCode(),
+                                sparePartsIssue.getIssuedBy().getEmployee().getFullName()
+                        )
+                ),
                 sparePartsIssue.getIssuedAt(),
                 sparePartsIssue.getAttachmentPath(),
                 sparePartsIssue.getStatus().name(),
                 sparePartsIssue.getDetails().stream().map(detail -> new SparePartsIssueDetailRequestDto(
                         detail.getSparePart().getId(),
-                        detail.getQuantity()
+                        detail.getSparePart().getSparePartCode(),
+                        detail.getSparePart().getName(),
+                        detail.getQuantity(),
+                        detail.getSparePart().getUnit().getName(),
+                        detail.getSparePart().getImgPath()
                 )).toList());
     }
 
     @Override
-    public SparePartsIssueRequestDto upload(
-            Integer id,
-            MultipartFile[] pdfFiles
+    public Page<SparePartsIssueRequestDto> search(
+            String keyword,
+            SparePartsIssueStatus status,
+            Pageable pageable
     ) {
-        SparePartsIssue sparePartsIssue = sparePartsIssueRepository
-                .findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("Không tìm thấy phiếu xuất vật tư"));
 
-        if (pdfFiles == null || pdfFiles.length == 0) {
-            throw new RuntimeException("File PDF không được để trống");
-        }
-
-        try {
-            String uploadDir = System.getProperty("user.dir")
-                    + "/src/main/resources/pdf/spare-parts-issue/";
-
-            File directory = new File(uploadDir);
-
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
-
-            List<String> filePaths = new ArrayList<>();
-
-            for (MultipartFile file : pdfFiles) {
-
-                if (file.isEmpty()) {
-                    continue;
-                }
-
-                String originalName = file.getOriginalFilename();
-
-                String extension = originalName.substring(
-                        originalName.lastIndexOf(".")
+        Page<SparePartsIssue> page =
+                sparePartsIssueRepository.search(
+                        keyword,
+                        status,
+                        pageable
                 );
 
-                String fileName = sparePartsIssue.getIssueCode();
-
-                Path targetPath = Paths.get(uploadDir, fileName);
-
-                Files.copy(
-                        file.getInputStream(),
-                        targetPath,
-                        StandardCopyOption.REPLACE_EXISTING
-                );
-
-                filePaths.add(
-                        "/pdf/spare-parts-issue/" + fileName
-                );
-            }
-
-            if (!filePaths.isEmpty()) {
-                sparePartsIssue.setAttachmentPath(
-                        String.join(",", filePaths)
-                );
-            }
-
-            sparePartsIssue.setStatus(SparePartsIssueStatus.COMPLETED);
-
-            sparePartsIssueRepository.save(sparePartsIssue);
-
-            return convertToDto(sparePartsIssue);
-
-        } catch (Exception e) {
-            throw new RuntimeException(
-                    "Lỗi upload PDF: " + e.getMessage(),
-                    e
-            );
-        }
+        return page.map(this::convertToDto);
     }
 
     private SparePartsIssueRequestDto convertToDto(
@@ -253,13 +204,37 @@ public class SparePartsIssueService implements ISparePartsIssueService {
         dto.setIssueCode(entity.getIssueCode());
         dto.setAttachmentPath(entity.getAttachmentPath());
         dto.setIssuedAt(entity.getIssuedAt());
+        dto.setWorkOrderId(entity.getWorkOrder().getId());
+        dto.setStatus(entity.getStatus().name());
 
-        if(entity.getIssuedBy() != null){
-            dto.setIssueUsername(
-                    entity.getIssuedBy().getUsername()
+        if (entity.getIssuedBy() != null) {
+            dto.setIssuedBy(
+                    new AccountDto(
+                            entity.getIssuedBy().getUsername(),
+                            entity.getIssuedBy().getEmail(),
+                            new EmployeeDto(
+                                    entity.getIssuedBy().getEmployee().getId(),
+                                    entity.getIssuedBy().getEmployee().getEmployeeCode(),
+                                    entity.getIssuedBy().getEmployee().getFullName()
+                            )
+                    )
             );
         }
 
+        List<SparePartsIssueDetailRequestDto> details = new ArrayList<>();
+        if (entity.getDetails() != null) {
+            for (SparePartsIssueDetail detail : entity.getDetails()) {
+                SparePartsIssueDetailRequestDto detailDto = new SparePartsIssueDetailRequestDto();
+                detailDto.setSparePartId(detail.getSparePart().getId());
+                detailDto.setSparePartCode(detail.getSparePart().getSparePartCode());
+                detailDto.setSparePartName(detail.getSparePart().getName());
+                detailDto.setQuantity(detail.getQuantity());
+                detailDto.setUnit(detail.getSparePart().getUnit().getName());
+                detailDto.setImgPath(detail.getSparePart().getImgPath());
+                details.add(detailDto);
+            }
+        }
+        dto.setDetails(details);
         return dto;
     }
 }

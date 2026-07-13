@@ -1,7 +1,10 @@
 package com.example.m6_thermal_power_plant_api.controller.leader;
 
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.SparePartsIssueRequestDto;
+import com.example.m6_thermal_power_plant_api.entity.enums.SparePartsIssueStatus;
 import com.example.m6_thermal_power_plant_api.service.leader.spare_parts_issue.ISparePartsIssueService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,10 +19,20 @@ public class SparePartsIssueController {
         this.sparePartsIssueService = sparePartsIssueService;
     }
 
-    @GetMapping("")
-    public ResponseEntity<List<SparePartsIssueRequestDto>> getAllSparePartsIssues() {
-        List<SparePartsIssueRequestDto> sparePartsIssues = sparePartsIssueService.findAll();
-        return ResponseEntity.ok(sparePartsIssues);
+    @GetMapping("/search")
+    public ResponseEntity<Page<SparePartsIssueRequestDto>> search(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) SparePartsIssueStatus status,
+            Pageable pageable
+    ) {
+
+        return ResponseEntity.ok(
+                sparePartsIssueService.search(
+                        keyword,
+                        status,
+                        pageable
+                )
+        );
     }
 
     @GetMapping("/add")
@@ -44,18 +57,6 @@ public class SparePartsIssueController {
     public ResponseEntity<SparePartsIssueRequestDto> updateSparePartsIssue(@RequestBody SparePartsIssueRequestDto sparePartsIssueRequestDto) {
         SparePartsIssueRequestDto updatedSparePartsIssue = sparePartsIssueService.update(sparePartsIssueRequestDto);
         return ResponseEntity.ok(updatedSparePartsIssue);
-    }
-
-    @PostMapping("/upload-spare-parts-issue")
-    public ResponseEntity<SparePartsIssueRequestDto> uploadSparePartsIssue(@RequestParam("id") Integer id,
-                                                                           @RequestPart(value = "pdf", required = false) MultipartFile[] pdf) {
-        try {
-            SparePartsIssueRequestDto updatedSparePartsIssue = sparePartsIssueService.upload(id, pdf);
-            return ResponseEntity.ok(updatedSparePartsIssue);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body(null);
-        }
     }
 
     @GetMapping("/detail/{id}")

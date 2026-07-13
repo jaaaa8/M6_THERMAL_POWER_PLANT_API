@@ -17,6 +17,7 @@ import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceEx
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
@@ -43,23 +44,29 @@ public class MaintenanceService implements IMaintenanceService {
     private final ISparePartIssuesService sparePartIssuesService;
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
+    private final IRepairHistoryService repairHistoryService;
 
-    public MaintenanceService(RepairRequestRepository repairRequestRepository,
-                              WorkOrderRepository workOrderRepository,
+    private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
+
+    public MaintenanceService(WorkOrderRepository workOrderRepository,
+                              RepairRequestRepository repairRequestRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
                               WorkOrderExtensionRepository workOrderExtensionRepository,
                               EmployeeRepository employeeRepository,
+                              com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               ISparePartIssuesService sparePartIssuesService,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService) {
-        this.repairRequestRepository = repairRequestRepository;
+                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService) {
         this.workOrderRepository = workOrderRepository;
+        this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.workOrderExtensionRepository = workOrderExtensionRepository;
         this.employeeRepository = employeeRepository;
+        this.equipmentRepository = equipmentRepository;
         this.sparePartIssuesService = sparePartIssuesService;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
+        this.repairHistoryService = repairHistoryService;
     }
 
     @Override
@@ -310,6 +317,9 @@ public class MaintenanceService implements IMaintenanceService {
         return events;
     }
 
+
+    // tìm danh sách các WO không ở trạng thái CANCELLED/COMPLETE
+    // => còn lại là những WO có nhân viên bận
     @Override
     @Transactional(readOnly = true)
     public List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId) {
@@ -392,6 +402,7 @@ public class MaintenanceService implements IMaintenanceService {
         }
 
         workOrder.setStatus(WorkOrderStatus.COMPLETED);
+        repairHistoryService.createRepairHistory(workOrder);
         workOrderRepository.save(workOrder);
 
         // Đóng băng bản lưu PDF cuối cùng (PCT + phiếu cấp vật tư) — best-effort,
@@ -518,6 +529,13 @@ public class MaintenanceService implements IMaintenanceService {
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
 
+    // cập nhập trạng thái của WO
+    // 1. Sau khi có nguời tạo WO mới, sẽ in ra phiếu này ở trạng thái là OPEN (ONLINE)
+    // 2. Đem phiếu CT này đến SHIFT_LEADER, SHIFT_LEADER đồng ý, trạng thái chuyển sang APPROVED, nhân viên kiểm tra phiếu trạng thái APPROVED, sẽ báo xuống nơi thiết bị sửa chữa để cô lập thiết bị.
+    // 3. Sau khi cô lập thiết bị hoàn tất, cập nhập lại thời gian cho phép trên phiếu (ONLINE và phiếu giấy),-> status thành IN_PROGRESS
+    // 4. Nếu làm đến cuối ngày không xong, TEAM_LEADER cập nhập status thành STOPPED, đem đơn vật lý gửi lại phòng của SHIFT_LEADER
+    // 5. Qua ngày, status tự động đổi thành WAITING_FOR_APPROVAL, SHIFT_LEADER duyệt gia hạn dựa trên thời gian mới trong phiếu, status -> IN_PROGRESS
+
     @Override
     @Transactional
     public WorkOrderDTO updateWorkOrderStatus(Integer workOrderId, UpdateWorkOrderStatusRequest request,
@@ -575,7 +593,7 @@ public class MaintenanceService implements IMaintenanceService {
                         new StopWorkOrderRequest(request.getReason().trim(), request.getExtendedUntil()));
             }
             case COMPLETED -> {
-                return completeWorkOrder(workOrderId); // giữ nguyên guard + đóng băng PDF
+                return completeWorkOrder(workOrderId);// giữ nguyên guard + đóng băng PDF
             }
             case CANCELLED -> {
                 return cancelWorkOrder(workOrderId); // giữ nguyên side effect (trả yêu cầu về hàng chờ, archive)
