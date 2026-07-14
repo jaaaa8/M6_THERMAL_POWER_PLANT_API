@@ -265,17 +265,20 @@ INSERT INTO work_order_extensions (
 ) VALUES
     (1, 2, 'Need additional insulation resistance testing before energizing.', '2026-06-15 20:00:00', 1, false);
 
-INSERT INTO technical_assessments (
-    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
-) VALUES
-      (1, 'TA-2026-0001', 2, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
-      (2, 'TA-2026-0002', 3, 'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'IN_PROGRESS', false);
 
 INSERT INTO spare_parts_issues (
-    id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted
+    id, issue_code, work_order_id, spare_part_id, issued_by, issued_at, is_deleted, status
 ) VALUES
-      (1, 'SPI-2026-0001', 1, 1, 'export', 2.00, 4, '2026-06-10 14:00:00', false),
-      (2, 'SPI-2026-0002', 2, 3, 'export', 1.00, 4, '2026-06-15 09:00:00', false);
+      (1, 'SPI-2026-0001', 1, 1,  4, '2026-06-10 14:00:00', false, 1),
+      (2, 'SPI-2026-0002', 2, 3,  4, '2026-06-15 09:00:00', false, 0);
+
+-- Dòng chi tiết của phiếu cấp vật tư thay thế (vật tư + số lượng nằm ở đây,
+-- cột spare_part_id trên phiếu chỉ là dữ liệu cũ, code không còn đọc).
+INSERT INTO spare_parts_issue_details (
+    id, issue_id, spare_part_id, quantity, is_deleted
+) VALUES
+      (1, 1, 1, 2.00, false),
+      (2, 2, 3, 1.00, false);
 
 INSERT INTO consumable_issues (
     id, consumable_code, work_order_id, consumable_id, transaction_type, quantity, issued_by, issued_at, is_deleted
@@ -339,14 +342,25 @@ INSERT INTO work_order_extensions (
     (2, 3, 'Awaiting replacement mechanical seal delivery before reassembly.', '2026-06-18 22:00:00', 1, false);
 
 INSERT INTO technical_assessments (
-    id, technical_code, assessor_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+    id, technical_code, assessor_id, equipment_id, result, attachment_path, img_path, description, created_at, status, is_deleted
 ) VALUES
-    (3, 'TA-2026-0003', 2, 'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
+      (1, 'TA-2026-0001', 2,1, 'Drive end bearing wear confirmed. Bearing replacement required.', '/exports/technical/TA-2026-0001.pdf', null, 'Pump vibration inspection report', '2026-06-10 15:00:00', 'COMPLETED', false),
+      (2, 'TA-2026-0002', 3, 1,'Panel temperature trend is still under review.', null, null, 'MCC temperature troubleshooting', '2026-06-15 10:00:00', 'PENDING', false);
+
+INSERT INTO technical_assessments (
+    id, technical_code, assessor_id, equipment_id, result, attachment_path, img_path, description, created_at, status, is_deleted
+) VALUES
+    (3, 'TA-2026-0003', 2, 2,'Mechanical seal worn out and replaced with new seal.', '/exports/technical/TA-2026-0003.pdf', null, 'Condensate pump seal inspection report', '2026-06-18 15:00:00', 'COMPLETED', false);
 
 INSERT INTO spare_parts_issues (
-    id, spare_part_code, work_order_id, spare_part_id, transaction_type, quantity, issued_by, issued_at, is_deleted
+    id, issue_code, work_order_id, spare_part_id, issued_by, issued_at, is_deleted, status
 ) VALUES
-    (3, 'SPI-2026-0003', 3, 2, 'export', 1.00, 4, '2026-06-18 14:00:00', false);
+    (3, 'SPI-2026-0003', 3, 2, 4, '2026-06-18 14:00:00', false, 1);
+
+INSERT INTO spare_parts_issue_details (
+    id, issue_id, spare_part_id, quantity, is_deleted
+) VALUES
+    (3, 3, 2, 1.00, false);
 
 INSERT INTO consumable_issues (
     id, consumable_code, work_order_id, consumable_id, transaction_type, quantity, issued_by, issued_at, is_deleted

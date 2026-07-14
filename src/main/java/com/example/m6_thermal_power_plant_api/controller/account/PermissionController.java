@@ -26,7 +26,6 @@ public class PermissionController {
 
     // Danh mục permission chỉ ADMIN được tạo mới — tránh tuỳ tiện sinh permission
     // không ai gán, và giữ tên code nhất quán trong toàn hệ thống.
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<PermissionDTO> createPermission(@Valid @RequestBody CreatePermissionRequestDTO request) {
         return new ResponseEntity<>(permissionService.createPermission(request), HttpStatus.CREATED);

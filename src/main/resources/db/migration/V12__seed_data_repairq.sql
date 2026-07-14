@@ -1,0 +1,17 @@
+-- V12: Seed 10 pending repair requests for testing
+-- All repair requests are in PENDING status
+
+-- INSERT INTO repair_requests (
+--     id, request_code, equipment_id, requester_id, incident_description, priority, status, created_at, is_deleted
+-- ) VALUES
+-- -- Request 5-14: 10 new pending repair requests
+-- (5, 'RR-2026-0005', 1, 1, 'Unusual noise from motor bearing during operation, requires inspection.', 'NORMAL', 'PENDING', '2026-06-20 08:15:00', false),
+-- (6, 'RR-2026-0006', 2, 1, 'Standby pump fails to start on demand, control circuit suspected.', 'HIGH', 'PENDING', '2026-06-20 09:30:00', false),
+-- (7, 'RR-2026-0007', 3, 1, 'Cooling water pump discharge pressure fluctuation observed.', 'NORMAL', 'PENDING', '2026-06-20 10:45:00', false),
+-- (8, 'RR-2026-0008', 4, 1, 'MCC panel indicator lights flickering, loose connection possible.', 'LOW', 'PENDING', '2026-06-20 11:20:00', false),
+-- (9, 'RR-2026-0009', 5, 1, 'Coal conveyor fan motor overheating during continuous operation.', 'HIGH', 'PENDING', '2026-06-20 13:00:00', false),
+-- (10, 'RR-2026-0010', 6, 1, 'Condensate pump suction strainer clogged, flow rate reduced.', 'NORMAL', 'PENDING', '2026-06-20 14:15:00', false),
+-- (11, 'RR-2026-0011', 1, 1, 'Boiler feed pump coupling misalignment detected during routine check.', 'HIGH', 'PENDING', '2026-06-20 15:30:00', false),
+-- (12, 'RR-2026-0012', 3, 1, 'Cooling water pump motor cable insulation degradation found.', 'NORMAL', 'PENDING', '2026-06-20 16:00:00', false),
+-- (13, 'RR-2026-0013', 4, 1, 'MCC panel circuit breaker tripping intermittently under load.', 'EMERGENCY', 'PENDING', '2026-06-21 07:00:00', false),
+-- (14, 'RR-2026-0014', 5, 1, 'Coal conveyor fan blade erosion visible, efficiency reduced.', 'LOW', 'PENDING', '2026-06-21 08:45:00', false);

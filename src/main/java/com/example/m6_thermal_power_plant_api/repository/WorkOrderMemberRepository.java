@@ -18,4 +18,21 @@ public interface WorkOrderMemberRepository extends JpaRepository<WorkOrderMember
 
     /** Nhân viên đang là thành viên CHƯA RỜI (left_at IS NULL) của phiếu? Dùng chặn join trùng. */
     boolean existsByWorkOrder_IdAndEmployees_IdAndLeftAtIsNull(Integer workOrderId, Integer employeeId);
+
+    /**
+     * Id nhân viên đang là thành viên CHƯA RỜI của bất kỳ phiếu công tác nào có
+     * status thuộc {@code statuses} (trừ phiếu {@code excludeId} nếu truyền) —
+     * dùng cho bộ lọc "nhân viên đang bận" khi thêm nhân sự.
+     */
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT DISTINCT m.employees.id FROM WorkOrderMember m
+        WHERE m.leftAt IS NULL
+          AND m.workOrder.status IN :statuses
+          AND (:excludeId IS NULL OR m.workOrder.id <> :excludeId)
+          AND m.employees IS NOT NULL
+    """)
+    List<Integer> findActiveMemberEmployeeIds(
+            @org.springframework.data.repository.query.Param("statuses")
+            java.util.Collection<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses,
+            @org.springframework.data.repository.query.Param("excludeId") Integer excludeId);
 }

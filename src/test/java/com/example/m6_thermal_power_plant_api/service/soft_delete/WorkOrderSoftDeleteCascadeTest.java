@@ -3,6 +3,7 @@ package com.example.m6_thermal_power_plant_api.service.soft_delete;
 import com.example.m6_thermal_power_plant_api.entity.ConsumableExport;
 import com.example.m6_thermal_power_plant_api.entity.ConsumableIssue;
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
+import com.example.m6_thermal_power_plant_api.entity.SparePart;
 import com.example.m6_thermal_power_plant_api.entity.SparePartExport;
 import com.example.m6_thermal_power_plant_api.entity.SparePartsIssue;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
@@ -72,7 +73,12 @@ public class WorkOrderSoftDeleteCascadeTest {
 
         Equipment equipment = wo.getRepairRequest().getEquipment();
         Integer repairRequestId = wo.getRepairRequest().getId();
-        Integer sparePartId = spi.getSparePart().getId();
+        // Vật tư danh mục giờ nằm trên dòng chi tiết (spare_parts_issue_details),
+        // không còn FK trực tiếp spare_part trên phiếu cấp.
+        SparePart sparePart = firstOrThrow(spi.getDetails(),
+                "spare_parts_issue #" + spi.getId() + " không có dòng chi tiết trong sample-data.")
+                .getSparePart();
+        Integer sparePartId = sparePart.getId();
         Integer consumableId = ci.getConsumable().getId();
         Integer equipmentId = equipment.getId();
 
@@ -80,7 +86,7 @@ public class WorkOrderSoftDeleteCascadeTest {
         SparePartExport spe = SparePartExport.builder()
                 .exportCode("TEST-SPE-CASCADE")
                 .sparePartsIssue(spi)
-                .sparePart(spi.getSparePart())
+                .sparePart(sparePart)
                 .requestedQuantity(new BigDecimal("1.00"))
                 .actualQuantity(new BigDecimal("1.00"))
                 .equipment(equipment)

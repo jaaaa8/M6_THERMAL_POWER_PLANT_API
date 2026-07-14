@@ -1,0 +1,7 @@
+package com.example.m6_thermal_power_plant_api.entity.enums;
+
+public enum SparePartsIssueStatus {
+    PENDING,
+    COMPLETED,
+    REJECTED,
+}

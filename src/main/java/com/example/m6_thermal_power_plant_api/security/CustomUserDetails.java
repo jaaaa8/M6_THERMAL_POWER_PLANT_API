@@ -43,8 +43,7 @@ public class CustomUserDetails implements UserDetails {
     }
 
     // Build từ JWT claims (filter dùng — không cần password, không cần query DB).
-    // authorities gồm 2 loại: "ROLE_xxx" (để chỗ nào còn dùng hasRole vẫn chạy được)
-    // VÀ permission code thô (để @PreAuthorize("hasAuthority('...')") kiểm tra).
+    // authorities gồm 2 loại: "ROLE_xxx" và permission code thô.
     public static CustomUserDetails fromClaims(Integer accountId, String username,
                                                 List<String> roles, List<String> permissions) {
         List<GrantedAuthority> authorities = new java.util.ArrayList<>();

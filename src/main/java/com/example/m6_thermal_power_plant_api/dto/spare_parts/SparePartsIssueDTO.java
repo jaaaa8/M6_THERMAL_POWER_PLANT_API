@@ -11,6 +11,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Dữ liệu hiển thị một phiếu cấp vật tư thay thế (kèm các dòng chi tiết).
@@ -25,13 +26,12 @@ import java.util.List;
 public class SparePartsIssueDTO {
 
     private Integer id;
-    /** Mã của chính phiếu cấp (cột spare_part_code trên spare_parts_issues). */
+    /** Mã của chính phiếu cấp (cột issue_code trên spare_parts_issues). */
     private String issueCode;
     private Integer workOrderId;
     private String orderCode;
-    private String transactionType;
     /** Tổng số lượng của mọi dòng chi tiết. */
-    private BigDecimal quantity;
+    private Integer quantity;
     private Integer issuedById;
     private String issuedByName;
     private LocalDateTime issuedAt;
@@ -48,7 +48,7 @@ public class SparePartsIssueDTO {
         private String sparePartCode;
         private String sparePartName;
         private String unitName;
-        private BigDecimal quantity;
+        private Integer quantity;
 
         public static LineDTO from(SparePartsIssueDetail d) {
             return LineDTO.builder()
@@ -64,19 +64,24 @@ public class SparePartsIssueDTO {
     }
 
     public static SparePartsIssueDTO from(SparePartsIssue issue, List<SparePartsIssueDetail> details) {
-        return SparePartsIssueDTO.builder()
+        List<LineDTO> lines = details != null ? details.stream().map(LineDTO::from).toList() : List.of();
+        SparePartsIssueDTO build = SparePartsIssueDTO.builder()
                 .id(issue.getId())
-                .issueCode(issue.getSparePartCode())
+                .issueCode(issue.getIssueCode())
                 .workOrderId(issue.getWorkOrder() != null ? issue.getWorkOrder().getId() : null)
                 .orderCode(issue.getWorkOrder() != null ? issue.getWorkOrder().getOrderCode() : null)
-                .transactionType(issue.getTransactionType())
-                .quantity(issue.getQuantity())
+                .quantity(lines.stream()
+                        .map(LineDTO::getQuantity)
+                        .filter(Objects::nonNull)
+                        .reduce(0, Integer::sum)
+                )
                 .issuedById(issue.getIssuedBy() != null ? issue.getIssuedBy().getId() : null)
                 .issuedByName(issue.getIssuedBy() != null && issue.getIssuedBy().getEmployee() != null
                         ? issue.getIssuedBy().getEmployee().getFullName()
                         : (issue.getIssuedBy() != null ? issue.getIssuedBy().getUsername() : null))
                 .issuedAt(issue.getIssuedAt())
-                .details(details != null ? details.stream().map(LineDTO::from).toList() : List.of())
+                .details(lines)
                 .build();
+        return build;
     }
 }

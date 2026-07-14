@@ -42,6 +42,7 @@ public class WorkOrderDTO {
     private String equipmentKksCode;
     private String equipmentName;
 
+
     private Integer leaderId;
     private String leaderName;
     private Integer directSupervisorId;
@@ -49,6 +50,8 @@ public class WorkOrderDTO {
     private Integer safetySupervisorId;
     private String safetySupervisorName;
     private String repairDescription;
+
+    private LocalDateTime createdAt;
 
     private List<WorkOrderMemberDTO> members;
 
@@ -75,6 +78,11 @@ public class WorkOrderDTO {
                         .equipmentKksCode(req.getEquipment().getKksCode())
                         .equipmentName(req.getEquipment().getName());
             }
+            if(req.getCreatedAt() != null) {
+                b.createdAt(req.getCreatedAt());
+            }else{
+                b.createdAt(LocalDateTime.now());
+            }
         }
 
         b.leaderId(idOf(wo.getLeader())).leaderName(nameOf(wo.getLeader()));
@@ -88,10 +96,20 @@ public class WorkOrderDTO {
     }
 
     private static Integer idOf(Employee e) {
-        return e == null ? null : e.getId();
+        if (e == null) return null;
+        try {
+            return e.getId();
+        } catch (jakarta.persistence.EntityNotFoundException ex) {
+            return null;
+        }
     }
 
     private static String nameOf(Employee e) {
-        return e == null ? null : e.getFullName();
+        if (e == null) return null;
+        try {
+            return e.getFullName();
+        } catch (jakarta.persistence.EntityNotFoundException ex) {
+            return "Nhân viên đã bị xóa";
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
+import com.example.m6_thermal_power_plant_api.entity.enums.SparePartsIssueStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -49,26 +50,13 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
 
     /** Mã của chính phiếu cấp vật tư này (khác mã vật tư trong danh mục) */
     // composite voi cot active_flag de tao unique sau khi run sql script o thu muc db
-    @Column(name = "spare_part_code", nullable = false, length = 50)
-    private String sparePartCode;
+    @Column(name = "issue_code", nullable = false, length = 50)
+    private String issueCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_order_id")
     @CascadeSoftDelete
     private WorkOrder workOrder;
-
-    /** Vật tư thay thế được cấp (tham chiếu danh mục) */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "spare_part_id")
-    @CascadeSoftDelete
-    private SparePart sparePart;
-
-    /** Giá trị hợp lệ theo DB: 'export' | 'import' */
-    @Column(name = "transaction_type", length = 50)
-    private String transactionType;
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal quantity;
 
     /** Người thực hiện cấp phát (đăng nhập bằng tài khoản) */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -78,8 +66,14 @@ public class SparePartsIssue extends BaseSoftDeleteEntity {
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
 
+    @Column(name = "attachment_path", length = 500)
+    private String attachmentPath;
+
     @OneToMany(mappedBy = "issue")
     private List<SparePartsIssueDetail> details;
+
+    @Builder.Default
+    private SparePartsIssueStatus status = SparePartsIssueStatus.PENDING;
 
     @JsonIgnore
     @OneToMany(mappedBy = "sparePartsIssue", fetch = FetchType.LAZY)

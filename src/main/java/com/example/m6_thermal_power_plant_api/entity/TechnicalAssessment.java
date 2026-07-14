@@ -58,11 +58,27 @@ public class TechnicalAssessment extends BaseSoftDeleteEntity {
     private String imgPath;
 
     @Column(columnDefinition = "TEXT")
+    private String imgPublicIds;
+
+    @Column(length = 100)
+    private String imgResourceType;
+
+    @Column(length = 255)
+    private String attachmentPublicId;
+
+    @Column(length = 50)
+    private String attachmentResourceType;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "equipment_id")
+    private Equipment equipment;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

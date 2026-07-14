@@ -22,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -98,7 +99,7 @@ public class AccountSearchServiceDbTest {
                 .email("an@gmail.com")
                 .status(AccountStatus.ACTIVE)
                 .employee(emp1)
-                .roles(List.of(roleUser))
+                .roles(Set.of(roleUser))
                 .build();
         acc1.setIsDeleted(false);
         acc1 = accountRepository.save(acc1);
@@ -109,7 +110,7 @@ public class AccountSearchServiceDbTest {
                 .email("binh@yahoo.com")
                 .status(AccountStatus.ACTIVE)
                 .employee(emp2)
-                .roles(List.of(roleAdmin))
+                .roles(Set.of(roleAdmin))
                 .build();
         acc2.setIsDeleted(false);
         acc2 = accountRepository.save(acc2);
@@ -119,7 +120,7 @@ public class AccountSearchServiceDbTest {
                 .passwordHash("hash3")
                 .email("locked@gmail.com")
                 .status(AccountStatus.LOCKED)
-                .roles(List.of(roleUser))
+                .roles(Set.of(roleUser))
                 .build();
         acc3.setIsDeleted(false);
         acc3 = accountRepository.save(acc3);
@@ -129,7 +130,7 @@ public class AccountSearchServiceDbTest {
                 .passwordHash("hash4")
                 .email("deleted@gmail.com")
                 .status(AccountStatus.ACTIVE)
-                .roles(List.of(roleUser))
+                .roles(Set.of(roleUser))
                 .build();
         acc4.softDelete();
         acc4 = accountRepository.save(acc4);
