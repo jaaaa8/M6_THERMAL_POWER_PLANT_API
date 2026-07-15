@@ -31,13 +31,13 @@ public class ToolBorrowOverdueNotifier {
     private final IToolBorrowLogRepository toolBorrowLogRepository;
     private final JavaMailSender mailSender;
 
-    @Scheduled(cron = "0 */5 * * * *")
+    @Scheduled(cron = "0 */2 * * * *")
     @Transactional
     public void notifyOverdueBorrows() {
         sendOverdueNotifications();
     }
 
-    @Scheduled(cron = "0 */5 * * * *")
+    @Scheduled(cron = "0 */2 * * * *")
     @Transactional
     public void notifyDueSoonBorrows() {
         sendDueSoonNotifications();
