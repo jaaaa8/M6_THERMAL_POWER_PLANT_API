@@ -17,18 +17,35 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
     List<WorkOrder> findByRepairRequest_Id(Integer repairRequestId);
 
     /**
-     * Tìm kiếm phiếu công tác theo từ khoá: orderCode, requestCode hoặc
-     * incidentDescription (thông qua repairRequest). KHÔNG phân biệt hoa/thường.
+     * Tìm kiếm phiếu công tác theo từ khoá — CHỈ trên cột của chính phiếu
+     * (user-specified): id phiếu ({@code searchId} — chỉ khi từ khoá là số),
+     * orderCode, repairDescription. KHÔNG tìm theo requestCode /
+     * incidentDescription của yêu cầu. KHÔNG phân biệt hoa/thường.
+     * Từ khoá null/rỗng = lấy tất cả.
+     *
+     * Sắp xếp mặc định theo TIẾN ĐỘ: OPEN → đang làm (APPROVED / IN_PROGRESS /
+     * STOPPED) → WAITING_FOR_APPROVAL → COMPLETED → CANCELLED; trong cùng nhóm
+     * phiếu mới tạo đứng trước.
      */
     @Query("""
         SELECT wo FROM WorkOrder wo
-        LEFT JOIN wo.repairRequest rr
         WHERE (:search IS NULL OR :search = '')
+           OR wo.id = :searchId
            OR LOWER(wo.orderCode) LIKE LOWER(CONCAT('%', :search, '%'))
-           OR LOWER(rr.requestCode) LIKE LOWER(CONCAT('%', :search, '%'))
-           OR LOWER(rr.incidentDescription) LIKE LOWER(CONCAT('%', :search, '%'))
+           OR LOWER(wo.repairDescription) LIKE LOWER(CONCAT('%', :search, '%'))
+        ORDER BY CASE
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.OPEN THEN 0
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.APPROVED THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.IN_PROGRESS THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.WAITING_FOR_APPROVAL THEN 2
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 3
+            ELSE 4
+        END, wo.createdAt DESC
     """)
-    Page<WorkOrder> searchWorkOrders(@Param("search") String search, Pageable pageable);
+    Page<WorkOrder> searchWorkOrders(@Param("search") String search,
+                                     @Param("searchId") Integer searchId,
+                                     Pageable pageable);
 
     /**
      * Bộ ba nhân sự phụ trách (leader / chỉ huy trực tiếp / giám sát an toàn) của

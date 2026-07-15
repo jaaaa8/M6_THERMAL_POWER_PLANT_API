@@ -163,10 +163,14 @@ public class WorkOrderController {
 
     /**
      * Danh sach phieu cong tac, CO PHAN TRANG + TIM KIEM.
-     * Tham so query: {@code ?page=0&size=20&sort=createdAt,desc&search=...}
-     * Mac dinh trang 20 dong, sap xep createdAt giam dan.
+     * Tham so query: {@code ?page=0&size=20&search=...}
+     * Mac dinh trang 20 dong, sap xep theo TIEN DO: OPEN → dang lam
+     * (APPROVED/IN_PROGRESS/STOPPED) → WAITING_FOR_APPROVAL → COMPLETED →
+     * CANCELLED; cung nhom thi phieu moi tao dung truoc.
      *
-     * @param search tu khoa tim trong orderCode / requestCode / noi dung.
+     * @param search tu khoa tim CHI tren cot cua chinh phieu: id phieu (khi la
+     *               so) / orderCode / repairDescription — KHONG tim theo
+     *               requestCode / noi dung su co cua yeu cau.
      */
     @GetMapping
     public PagedModel<WorkOrderDTO> listWorkOrders(
@@ -181,11 +185,15 @@ public class WorkOrderController {
      * nhân sự. Chỉ là bộ lọc hiển thị, backend KHÔNG chặn thêm (permissive).
      *
      * @param excludeWorkOrderId bỏ qua phiếu này khi xét (thao tác trên chính nó).
+     * @param statuses chỉ xét phiếu có status thuộc danh sách (VD
+     *                 {@code ?statuses=IN_PROGRESS} cho ô Người giám sát an toàn);
+     *                 không truyền = mọi trạng thái sống.
      */
     @GetMapping("/busy-employees")
     public java.util.List<Integer> getBusyEmployees(
-            @RequestParam(required = false) Integer excludeWorkOrderId) {
-        return maintenanceService.getBusyEmployeeIds(excludeWorkOrderId);
+            @RequestParam(required = false) Integer excludeWorkOrderId,
+            @RequestParam(required = false) java.util.List<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses) {
+        return maintenanceService.getBusyEmployeeIds(excludeWorkOrderId, statuses);
     }
 
     /**

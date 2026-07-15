@@ -52,9 +52,12 @@ public interface IMaintenanceService {
      * User Story #42 (row 46): xem danh sách các phiếu công tác, tìm kiếm theo
      * nội dung hoặc số phiếu. Trả về danh sách CÓ PHÂN TRANG.
      *
-     * @param search   từ khoá tìm trong orderCode, requestCode
-     *                 (null hoặc rỗng = không lọc).
-     * @param pageable phân trang + sắp xếp (mặc định createdAt giảm dần).
+     * @param search   từ khoá tìm CHỈ trên cột của chính phiếu: id phiếu (khi là
+     *                 số), orderCode, repairDescription — KHÔNG tìm theo
+     *                 requestCode/incidentDescription (null hoặc rỗng = không lọc).
+     * @param pageable phân trang; sắp xếp mặc định theo tiến độ (OPEN → đang làm
+     *                 → chờ duyệt gia hạn → hoàn thành → huỷ), cùng nhóm thì mới
+     *                 tạo đứng trước.
      */
     Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable);
 
@@ -74,8 +77,13 @@ public interface IMaintenanceService {
      * @param excludeWorkOrderId bỏ qua phiếu này khi xét (để thao tác nhân sự trên
      *                           chính phiếu đang mở không tự loại người của nó);
      *                           null = xét mọi phiếu sống.
+     * @param statuses           chỉ xét phiếu có status thuộc danh sách này
+     *                           (VD chỉ IN_PROGRESS cho ô Người giám sát an toàn);
+     *                           null/rỗng = mọi trạng thái sống như trước.
      */
-    java.util.List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId);
+    java.util.List<Integer> getBusyEmployeeIds(
+            Integer excludeWorkOrderId,
+            java.util.List<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses);
 
     /**
      * Thêm nhân viên vào phiếu công tác đang chạy (joinedAt = now, leftAt = null).

@@ -256,10 +256,18 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional(readOnly = true)
     public Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable) {
-        boolean hasSearch = search != null && !search.isBlank();
-        Page<WorkOrder> page = hasSearch
-                ? workOrderRepository.searchWorkOrders(search, pageable)
-                : workOrderRepository.findAll(pageable);
+        // Luôn đi qua searchWorkOrders (từ khoá rỗng = lấy tất cả) để danh sách
+        // mặc định cũng được sắp theo tiến độ như khi tìm kiếm.
+        String keyword = (search == null || search.isBlank()) ? null : search.trim();
+        Integer searchId = null;
+        if (keyword != null) {
+            try {
+                searchId = Integer.valueOf(keyword);
+            } catch (NumberFormatException ignored) {
+                // từ khoá không phải số → chỉ tìm theo text
+            }
+        }
+        Page<WorkOrder> page = workOrderRepository.searchWorkOrders(keyword, searchId, pageable);
         return page.map(wo -> {
             List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
             return WorkOrderDTO.from(wo, members);
@@ -322,11 +330,15 @@ public class MaintenanceService implements IMaintenanceService {
     // => còn lại là những WO có nhân viên bận
     @Override
     @Transactional(readOnly = true)
-    public List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId) {
+    public List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId, List<WorkOrderStatus> statuses) {
         java.util.Set<Integer> busy = new java.util.LinkedHashSet<>();
-        List<WorkOrderStatus> liveStatuses = List.of(
-                WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.WAITING_FOR_APPROVAL,
-                WorkOrderStatus.APPROVED, WorkOrderStatus.STOPPED);
+        // Không truyền statuses → xét mọi phiếu sống (hành vi cũ); truyền vào thì
+        // chỉ xét các trạng thái đó (VD IN_PROGRESS cho ô Người giám sát an toàn).
+        List<WorkOrderStatus> liveStatuses = (statuses == null || statuses.isEmpty())
+                ? List.of(WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS,
+                        WorkOrderStatus.WAITING_FOR_APPROVAL, WorkOrderStatus.APPROVED,
+                        WorkOrderStatus.STOPPED)
+                : statuses;
         for (Object[] row : workOrderRepository.findRoleHolderEmployeeIds(liveStatuses, excludeWorkOrderId)) {
             for (Object id : row) {
                 if (id != null) {
