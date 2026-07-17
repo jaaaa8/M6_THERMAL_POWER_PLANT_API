@@ -132,6 +132,10 @@ public class SparePartsIssueService implements ISparePartsIssueService {
         SparePartsIssueStatus newStatus = SparePartsIssueStatus.valueOf(sparePartsIssueRequestDto.getStatus());
         SparePartsIssueStatus oldStatus = issue.getStatus();
 
+        if (newStatus == SparePartsIssueStatus.REJECTED) {
+            throw new IllegalArgumentException("Thủ kho vật tư không có quyền từ chối cấp phát vật tư.");
+        }
+
         Account account = accountRepository.findByUsername(sparePartsIssueRequestDto.getIssuedBy().getUsername())
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
