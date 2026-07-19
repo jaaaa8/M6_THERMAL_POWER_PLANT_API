@@ -17,11 +17,16 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
     List<WorkOrder> findByRepairRequest_Id(Integer repairRequestId);
 
     /**
-     * Tìm kiếm phiếu công tác theo từ khoá — CHỈ trên cột của chính phiếu
-     * (user-specified): id phiếu ({@code searchId} — chỉ khi từ khoá là số),
-     * orderCode, repairDescription. KHÔNG tìm theo requestCode /
-     * incidentDescription của yêu cầu. KHÔNG phân biệt hoa/thường.
-     * Từ khoá null/rỗng = lấy tất cả.
+     * Tìm kiếm phiếu công tác theo BỐN bộ lọc độc lập, kết hợp AND (null = bỏ
+     * qua bộ lọc đó, tất cả null = lấy tất cả):
+     *  - {@code code}: id phiếu ({@code searchId} — chỉ khi từ khoá là số),
+     *    orderCode hoặc MÃ NHÂN VIÊN của người lãnh đạo (leader.employeeCode) —
+     *    LEFT JOIN để phiếu chưa gán leader vẫn tìm được theo orderCode.
+     *  - {@code description}: mô tả sửa chữa (repairDescription).
+     *  - {@code startFrom} / {@code startTo}: khoảng startTime, {@code startTo}
+     *    là cận trên KHÔNG bao gồm (service truyền đầu ngày hôm sau).
+     * KHÔNG tìm theo requestCode / incidentDescription của yêu cầu. KHÔNG phân
+     * biệt hoa/thường.
      *
      * Sắp xếp mặc định theo TIẾN ĐỘ: OPEN → đang làm (APPROVED / IN_PROGRESS /
      * STOPPED) → WAITING_FOR_APPROVAL → COMPLETED → CANCELLED; trong cùng nhóm
@@ -29,10 +34,15 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
      */
     @Query("""
         SELECT wo FROM WorkOrder wo
-        WHERE (:search IS NULL OR :search = '')
-           OR wo.id = :searchId
-           OR LOWER(wo.orderCode) LIKE LOWER(CONCAT('%', :search, '%'))
-           OR LOWER(wo.repairDescription) LIKE LOWER(CONCAT('%', :search, '%'))
+        LEFT JOIN wo.leader ld
+        WHERE (:code IS NULL
+               OR wo.id = :searchId
+               OR LOWER(wo.orderCode) LIKE LOWER(CONCAT('%', :code, '%'))
+               OR LOWER(ld.employeeCode) LIKE LOWER(CONCAT('%', :code, '%')))
+          AND (:description IS NULL
+               OR LOWER(wo.repairDescription) LIKE LOWER(CONCAT('%', :description, '%')))
+          AND (:startFrom IS NULL OR wo.startTime >= :startFrom)
+          AND (:startTo IS NULL OR wo.startTime < :startTo)
         ORDER BY CASE
             WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.OPEN THEN 0
             WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.APPROVED THEN 1
@@ -43,8 +53,11 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
             ELSE 4
         END, wo.createdAt DESC
     """)
-    Page<WorkOrder> searchWorkOrders(@Param("search") String search,
+    Page<WorkOrder> searchWorkOrders(@Param("code") String code,
                                      @Param("searchId") Integer searchId,
+                                     @Param("description") String description,
+                                     @Param("startFrom") java.time.LocalDateTime startFrom,
+                                     @Param("startTo") java.time.LocalDateTime startTo,
                                      Pageable pageable);
 
     /**

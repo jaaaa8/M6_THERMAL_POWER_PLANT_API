@@ -50,21 +50,27 @@ public interface IMaintenanceService {
 
     /**
      * User Story #42 (row 46): xem danh sách các phiếu công tác, tìm kiếm theo
-     * nội dung hoặc số phiếu. Trả về danh sách CÓ PHÂN TRANG.
+     * BỐN bộ lọc độc lập kết hợp AND (null/rỗng = bỏ qua bộ lọc đó). Trả về
+     * danh sách CÓ PHÂN TRANG.
      *
-     * @param search   từ khoá tìm CHỈ trên cột của chính phiếu: id phiếu (khi là
-     *                 số), orderCode, repairDescription — KHÔNG tìm theo
-     *                 requestCode/incidentDescription (null hoặc rỗng = không lọc).
-     * @param pageable phân trang; sắp xếp mặc định theo tiến độ (OPEN → đang làm
-     *                 → chờ duyệt gia hạn → hoàn thành → huỷ), cùng nhóm thì mới
-     *                 tạo đứng trước.
+     * @param code        từ khoá tìm theo id phiếu (khi là số) / orderCode / mã
+     *                    nhân viên của người lãnh đạo — KHÔNG tìm theo
+     *                    requestCode/incidentDescription.
+     * @param description từ khoá tìm theo mô tả sửa chữa (repairDescription).
+     * @param fromDate    chỉ lấy phiếu có startTime từ NGÀY này trở đi.
+     * @param toDate      chỉ lấy phiếu có startTime đến HẾT ngày này.
+     * @param pageable    phân trang; sắp xếp mặc định theo tiến độ (OPEN → đang
+     *                    làm → chờ duyệt gia hạn → hoàn thành → huỷ), cùng nhóm
+     *                    thì mới tạo đứng trước.
      */
-    Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable);
+    Page<WorkOrderDTO> listWorkOrders(String code, String description,
+                                      java.time.LocalDate fromDate, java.time.LocalDate toDate,
+                                      Pageable pageable);
 
     /**
      * Chi tiết đầy đủ một phiếu công tác: thông tin chung + danh sách thành viên
      * + DÒNG THỜI GIAN ra/vào khu vực làm việc (JOINED/LEFT, tăng dần theo thời
-     * gian) + các phiếu cấp vật tư thay thế đã tạo cho phiếu.
+     * gian) + các lần tạm dừng / gia hạn của phiếu.
      */
     WorkOrderDetailDTO getWorkOrderDetail(Integer workOrderId);
 

@@ -53,8 +53,6 @@ class MaintenanceServiceTest {
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
     @Mock
-    private com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService sparePartIssuesService;
-    @Mock
     private com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService workOrderArchiveService;
     @InjectMocks
     private MaintenanceService maintenanceService;

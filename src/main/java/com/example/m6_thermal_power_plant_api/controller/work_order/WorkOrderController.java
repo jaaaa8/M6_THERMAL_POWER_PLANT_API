@@ -12,6 +12,7 @@ import com.example.m6_thermal_power_plant_api.service.maintenance.IMaintenanceSe
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderPdfService;
 import com.example.m6_thermal_power_plant_api.util.UniqueCodeRetryExecutor;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 
 /**
  * API cho Quản đốc sửa chữa / Tổ trưởng — Sprint 1 :
@@ -162,21 +165,28 @@ public class WorkOrderController {
     }
 
     /**
-     * Danh sach phieu cong tac, CO PHAN TRANG + TIM KIEM.
-     * Tham so query: {@code ?page=0&size=20&search=...}
+     * Danh sach phieu cong tac, CO PHAN TRANG + TIM KIEM theo 4 bo loc doc lap
+     * ket hop AND (bo trong = khong loc).
+     * Tham so query: {@code ?page=0&size=20&code=...&description=...&fromDate=2026-07-01&toDate=2026-07-31}
      * Mac dinh trang 20 dong, sap xep theo TIEN DO: OPEN → dang lam
      * (APPROVED/IN_PROGRESS/STOPPED) → WAITING_FOR_APPROVAL → COMPLETED →
      * CANCELLED; cung nhom thi phieu moi tao dung truoc.
      *
-     * @param search tu khoa tim CHI tren cot cua chinh phieu: id phieu (khi la
-     *               so) / orderCode / repairDescription — KHONG tim theo
-     *               requestCode / noi dung su co cua yeu cau.
+     * @param code        tu khoa tim theo id phieu (khi la so) / orderCode / ma
+     *                    nhan vien cua nguoi lanh dao — KHONG tim theo
+     *                    requestCode / noi dung su co cua yeu cau.
+     * @param description tu khoa tim theo mo ta sua chua (repairDescription).
+     * @param fromDate    chi lay phieu co startTime tu ngay nay (yyyy-MM-dd).
+     * @param toDate      chi lay phieu co startTime den HET ngay nay (yyyy-MM-dd).
      */
     @GetMapping
     public PagedModel<WorkOrderDTO> listWorkOrders(
-            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @PageableDefault(size = 20) Pageable pageable) {
-        return new PagedModel<>(maintenanceService.listWorkOrders(search, pageable));
+        return new PagedModel<>(maintenanceService.listWorkOrders(code, description, fromDate, toDate, pageable));
     }
 
     /**

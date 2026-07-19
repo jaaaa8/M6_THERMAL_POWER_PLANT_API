@@ -19,7 +19,6 @@ import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
 import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
-import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,7 +40,6 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderMemberRepository workOrderMemberRepository;
     private final WorkOrderExtensionRepository workOrderExtensionRepository;
     private final EmployeeRepository employeeRepository;
-    private final ISparePartIssuesService sparePartIssuesService;
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
     private final IRepairHistoryService repairHistoryService;
@@ -54,7 +52,6 @@ public class MaintenanceService implements IMaintenanceService {
                               WorkOrderExtensionRepository workOrderExtensionRepository,
                               EmployeeRepository employeeRepository,
                               com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
-                              ISparePartIssuesService sparePartIssuesService,
                               AccountRepository accountRepository,
                               WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService) {
         this.workOrderRepository = workOrderRepository;
@@ -63,7 +60,6 @@ public class MaintenanceService implements IMaintenanceService {
         this.workOrderExtensionRepository = workOrderExtensionRepository;
         this.employeeRepository = employeeRepository;
         this.equipmentRepository = equipmentRepository;
-        this.sparePartIssuesService = sparePartIssuesService;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
         this.repairHistoryService = repairHistoryService;
@@ -255,19 +251,26 @@ public class MaintenanceService implements IMaintenanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable) {
-        // Luôn đi qua searchWorkOrders (từ khoá rỗng = lấy tất cả) để danh sách
-        // mặc định cũng được sắp theo tiến độ như khi tìm kiếm.
-        String keyword = (search == null || search.isBlank()) ? null : search.trim();
+    public Page<WorkOrderDTO> listWorkOrders(String code, String description,
+                                             java.time.LocalDate fromDate, java.time.LocalDate toDate,
+                                             Pageable pageable) {
+        // Luôn đi qua searchWorkOrders (mọi bộ lọc rỗng = lấy tất cả) để danh
+        // sách mặc định cũng được sắp theo tiến độ như khi tìm kiếm.
+        String codeKeyword = (code == null || code.isBlank()) ? null : code.trim();
+        String descKeyword = (description == null || description.isBlank()) ? null : description.trim();
         Integer searchId = null;
-        if (keyword != null) {
+        if (codeKeyword != null) {
             try {
-                searchId = Integer.valueOf(keyword);
+                searchId = Integer.valueOf(codeKeyword);
             } catch (NumberFormatException ignored) {
                 // từ khoá không phải số → chỉ tìm theo text
             }
         }
-        Page<WorkOrder> page = workOrderRepository.searchWorkOrders(keyword, searchId, pageable);
+        // toDate là NGÀY bao gồm → cận trên loại trừ = đầu ngày hôm sau.
+        LocalDateTime startFrom = fromDate == null ? null : fromDate.atStartOfDay();
+        LocalDateTime startTo = toDate == null ? null : toDate.plusDays(1).atStartOfDay();
+        Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
+                codeKeyword, searchId, descKeyword, startFrom, startTo, pageable);
         return page.map(wo -> {
             List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
             return WorkOrderDTO.from(wo, members);
@@ -286,7 +289,6 @@ public class MaintenanceService implements IMaintenanceService {
         return WorkOrderDetailDTO.builder()
                 .workOrder(WorkOrderDTO.from(workOrder, members))
                 .memberHistory(buildMemberHistory(members))
-                .sparePartsIssues(sparePartIssuesService.getByWorkOrder(workOrderId))
                 .extensions(workOrderExtensionRepository
                         .findByWorkOrder_IdOrderByExtendedUntilAsc(workOrderId)
                         .stream().map(WorkOrderExtensionDTO::from).toList())
