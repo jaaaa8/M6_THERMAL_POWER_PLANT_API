@@ -115,7 +115,7 @@ public interface IMaintenanceService {
 
     /**
      * Tổ trưởng GỬI DUYỆT / TẠM DỪNG phiếu: tạo một dòng work_order_extensions
-     * (reason + extendedUntil, CHƯA có người duyệt) và chuyển status →
+     * (chỉ reason, CHƯA có người duyệt và CHƯA có ngày) và chuyển status →
      * WAITING_FOR_APPROVAL. Dùng cho cả 2 luồng: phiếu MỚI TẠO (OPEN) xin
      * Trưởng ca duyệt trước khi làm, và phiếu đang chạy tạm dừng cuối ngày.
      *
@@ -138,8 +138,8 @@ public interface IMaintenanceService {
     /**
      * Cập nhật trạng thái phiếu theo máy trạng thái (modal "Cập nhật trạng thái"):
      * OPEN ─duyệt phiếu─► APPROVED ─bắt đầu─► IN_PROGRESS ─không kịp─► STOPPED
-     * ─gửi duyệt lại (reason+extendedUntil, tạo dòng gia hạn)─► WAITING_FOR_APPROVAL
-     * ─duyệt gia hạn (approvedBy = username)─► APPROVED ─► ... ─► COMPLETED;
+     * ─gửi duyệt lại (reason, tạo dòng gia hạn)─► WAITING_FOR_APPROVAL
+     * ─duyệt gia hạn (approvedBy = username, allowedDate)─► APPROVED ─► ... ─► COMPLETED;
      * mọi trạng thái sống ─► CANCELLED (side effect huỷ giữ nguyên).
      * Idempotent khi target = trạng thái hiện tại; 409 cho bước chuyển không hợp lệ.
      */
@@ -150,8 +150,13 @@ public interface IMaintenanceService {
      * đăng nhập vào approvedBy của dòng gia hạn đang chờ (người bấm chịu trách
      * nhiệm nhập đúng theo bản giấy) và chuyển status → APPROVED.
      * Chỉ cho phép khi phiếu đang WAITING_FOR_APPROVAL.
+     *
+     * @param allowedDate NGÀY Trưởng ca cho phép làm tiếp (in vào cột "Ngày cho
+     *                    phép tiếp tục làm việc" của bản PDF); null = hôm sau
+     *                    ngày Tổ trưởng gửi duyệt.
      */
-    WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername);
+    WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername,
+                                  java.time.LocalDate allowedDate);
 
     /**
      * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc

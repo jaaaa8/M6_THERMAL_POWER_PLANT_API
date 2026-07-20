@@ -8,13 +8,13 @@ import com.example.m6_thermal_power_plant_api.entity.Employee;
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
+import com.example.m6_thermal_power_plant_api.entity.WorkOrderExtension;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
-import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
@@ -54,6 +54,12 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
     @Mock
     private com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService workOrderArchiveService;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.repository.WorkOrderExtensionRepository workOrderExtensionRepository;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.repository.AccountRepository accountRepository;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService repairHistoryService;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -143,7 +149,7 @@ class MaintenanceServiceTest {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         WorkOrder live = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
-                LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
+                LocalDateTime.of(2026, 7, 1, 8, 0));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
 
         // Cùng direct supervisor (id=1) dù giờ KHÔNG đè (ngày khác) -> vẫn bị từ chối.
@@ -152,7 +158,6 @@ class MaintenanceServiceTest {
         req.setLeaderId(2);
         req.setDirectSupervisorId(1);
         req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
-        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 2, 12, 0));
 
         assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
                 .isInstanceOf(DuplicateHumanResourceException.class);
@@ -170,7 +175,6 @@ class MaintenanceServiceTest {
                 .leader(leader)
                 .directSupervisor(createEmployee(1, "shift.leader", "Nguyen Van An"))
                 .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
-                .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
                 .build();
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
 
@@ -181,7 +185,6 @@ class MaintenanceServiceTest {
         req.setDirectSupervisorId(3);
         req.setSafetySupervisorId(4);
         req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
-        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 2, 12, 0));
 
         assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
                 .isInstanceOf(DuplicateHumanResourceException.class);
@@ -199,7 +202,6 @@ class MaintenanceServiceTest {
                 .directSupervisor(createEmployee(1, "shift.leader", "Nguyen Van An"))
                 .safetySupervisor(safetySupervisor)
                 .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
-                .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
                 .build();
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
 
@@ -210,7 +212,6 @@ class MaintenanceServiceTest {
         req.setDirectSupervisorId(3);
         req.setSafetySupervisorId(4);
         req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
-        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 2, 12, 0));
 
         assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
                 .isInstanceOf(DuplicateHumanResourceException.class);
@@ -218,31 +219,10 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    void createWorkOrder_whenActiveWorkOrderTimeOverlaps_throwsConflict() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
-        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
-        WorkOrder live = liveWorkOrder(1, createEmployee(3, "electric.tech", "Le Minh Cuong"),
-                LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
-        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(live));
-
-        // Khác direct supervisor (1 vs 3) nhưng giờ đè lên 08:00-12:00 -> bị từ chối.
-        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
-        req.setRepairRequestId(2);
-        req.setLeaderId(2);
-        req.setDirectSupervisorId(1);
-        req.setStartTime(LocalDateTime.of(2026, 7, 1, 10, 0));
-        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 1, 14, 0));
-
-        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
-                .isInstanceOf(TimeOverlapException.class);
-        verify(workOrderRepository, never()).save(any(WorkOrder.class));
-    }
-
-    @Test
-    void createWorkOrder_secondTeamDifferentSupervisorAndNoOverlap_isAllowed() {
+    void createWorkOrder_secondTeamDifferentSupervisorSameHours_isAllowed() {
         RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
         WorkOrder live = liveWorkOrder(1, createEmployee(3, "electric.tech", "Le Minh Cuong"),
-                LocalDateTime.of(2026, 7, 1, 8, 0), LocalDateTime.of(2026, 7, 1, 12, 0));
+                LocalDateTime.of(2026, 7, 1, 8, 0));
         Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
         Employee newDirect = createEmployee(1, "shift.leader", "Nguyen Van An");
 
@@ -256,13 +236,13 @@ class MaintenanceServiceTest {
             return wo;
         });
 
-        // Khác direct supervisor (1 vs 3) VÀ giờ bắt đầu (13:00) sau khi phiếu cũ kết thúc (12:00).
+        // Khác direct supervisor (1 vs 3) -> cho phép, KỂ CẢ khi trùng khung giờ:
+        // từ V13 phiếu không còn mốc kết thúc dự kiến nên không kiểm tra chồng lấn.
         CreateWorkOrderRequest req = new CreateWorkOrderRequest();
         req.setRepairRequestId(2);
         req.setLeaderId(2);
         req.setDirectSupervisorId(1);
-        req.setStartTime(LocalDateTime.of(2026, 7, 1, 13, 0));
-        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 1, 17, 0));
+        req.setStartTime(LocalDateTime.of(2026, 7, 1, 8, 0));
 
         WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
 
@@ -280,7 +260,6 @@ class MaintenanceServiceTest {
                 .id(1).orderCode("WO-old").status(WorkOrderStatus.CANCELLED)
                 .directSupervisor(director)
                 .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
-                .expectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0))
                 .build();
         Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
 
@@ -299,7 +278,6 @@ class MaintenanceServiceTest {
         req.setLeaderId(2);
         req.setDirectSupervisorId(1);
         req.setStartTime(LocalDateTime.of(2026, 7, 1, 8, 0));
-        req.setExpectedEndTime(LocalDateTime.of(2026, 7, 1, 12, 0));
 
         WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
 
@@ -330,7 +308,7 @@ class MaintenanceServiceTest {
         WorkOrder target = WorkOrder.builder()
                 .id(10).orderCode("WO-x").status(WorkOrderStatus.OPEN).repairRequest(request).build();
         WorkOrder otherLive = liveWorkOrder(20, createEmployee(3, "electric.tech", "Le Minh Cuong"),
-                LocalDateTime.of(2026, 7, 5, 8, 0), LocalDateTime.of(2026, 7, 5, 12, 0));
+                LocalDateTime.of(2026, 7, 5, 8, 0));
         when(workOrderRepository.findById(10)).thenReturn(Optional.of(target));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(target, otherLive));
 
@@ -360,15 +338,89 @@ class MaintenanceServiceTest {
                 .isInstanceOf(ObjectNotFoundException.class);
     }
 
-    /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + khung giờ cho trước. */
-    private static WorkOrder liveWorkOrder(int id, Employee directSupervisor, LocalDateTime start, LocalDateTime end) {
+    @Test
+    void completeWorkOrder_stampsActualEndTime() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.IN_PROGRESS)
+                .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+
+        LocalDateTime before = LocalDateTime.now();
+        maintenanceService.completeWorkOrder(10);
+
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+        assertThat(wo.getEndTime()).isNotNull().isAfterOrEqualTo(before);
+    }
+
+    @Test
+    void completeWorkOrder_whenAlreadyCompleted_keepsOriginalEndTime() {
+        LocalDateTime stamped = LocalDateTime.of(2026, 7, 3, 16, 30);
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.COMPLETED)
+                .endTime(stamped)
+                .build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+
+        maintenanceService.completeWorkOrder(10);
+
+        assertThat(wo.getEndTime()).isEqualTo(stamped);
+    }
+
+    @Test
+    void approveExtension_setsAllowedDateChosenByShiftLeader() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.WAITING_FOR_APPROVAL).build();
+        WorkOrderExtension pending = WorkOrderExtension.builder()
+                .id(1).workOrder(wo).reason("Chua xong, xin lam tiep")
+                .requestedAt(LocalDateTime.of(2026, 7, 20, 17, 30))
+                .build();
+        Account shiftLeader = new Account();
+        shiftLeader.setId(7);
+        shiftLeader.setUsername("shift.leader");
+
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        when(accountRepository.findAccountByUsername("shift.leader")).thenReturn(Optional.of(shiftLeader));
+        when(workOrderExtensionRepository.findByWorkOrder_IdOrderByRequestedAtAsc(10))
+                .thenReturn(List.of(pending));
+
+        // Trưởng ca lùi sang 22/07 (chưa cô lập xong thiết bị) thay vì mặc định 21/07.
+        maintenanceService.approveExtension(10, "shift.leader", java.time.LocalDate.of(2026, 7, 22));
+
+        assertThat(pending.getAllowedDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 22));
+        assertThat(pending.getApprovedBy()).isSameAs(shiftLeader);
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.APPROVED);
+    }
+
+    @Test
+    void approveExtension_withoutDate_defaultsToDayAfterRequest() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.WAITING_FOR_APPROVAL).build();
+        WorkOrderExtension pending = WorkOrderExtension.builder()
+                .id(1).workOrder(wo)
+                .requestedAt(LocalDateTime.of(2026, 7, 20, 17, 30))
+                .build();
+        Account shiftLeader = new Account();
+        shiftLeader.setUsername("shift.leader");
+
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        when(accountRepository.findAccountByUsername("shift.leader")).thenReturn(Optional.of(shiftLeader));
+        when(workOrderExtensionRepository.findByWorkOrder_IdOrderByRequestedAtAsc(10))
+                .thenReturn(List.of(pending));
+
+        maintenanceService.approveExtension(10, "shift.leader", null);
+
+        assertThat(pending.getAllowedDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 21));
+    }
+
+    /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + giờ bắt đầu cho trước. */
+    private static WorkOrder liveWorkOrder(int id, Employee directSupervisor, LocalDateTime start) {
         return WorkOrder.builder()
                 .id(id)
                 .orderCode("WO-live-" + id)
                 .status(WorkOrderStatus.IN_PROGRESS)
                 .directSupervisor(directSupervisor)
                 .startTime(start)
-                .expectedEndTime(end)
                 .build();
     }
 

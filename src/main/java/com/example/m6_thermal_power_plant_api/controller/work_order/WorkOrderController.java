@@ -112,8 +112,9 @@ public class WorkOrderController {
 
     /**
      * Tổ trưởng gửi duyệt / tạm dừng phiếu (từ mọi trạng thái đang sống): tạo
-     * dòng gia hạn chờ duyệt + status → WAITING_FOR_APPROVAL. Bước duyệt diễn ra
-     * NGOÀI hệ thống: bản giấy PCT được đưa tận tay Trưởng ca ký.
+     * dòng gia hạn chờ duyệt (chỉ lý do — ngày cho làm tiếp do Trưởng ca chốt
+     * lúc duyệt) + status → WAITING_FOR_APPROVAL. Bước duyệt diễn ra NGOÀI hệ
+     * thống: bản giấy PCT được đưa tận tay Trưởng ca ký.
      */
     @PatchMapping("/{id}/stop")
     public WorkOrderDTO stopWorkOrder(@PathVariable Integer id,
@@ -149,10 +150,16 @@ public class WorkOrderController {
      * Ghi nhận online việc Trưởng ca ĐÃ ký duyệt bản giấy: tài khoản đang đăng
      * nhập được lưu vào approvedBy (người bấm chịu trách nhiệm nhập đúng theo
      * bản giấy) + status → APPROVED.
+     *
+     * @param allowedDate ngày Trưởng ca cho phép làm tiếp (yyyy-MM-dd) — bỏ
+     *                    trống thì lấy hôm sau ngày Tổ trưởng gửi duyệt.
      */
     @PatchMapping("/{id}/approve-extension")
-    public WorkOrderDTO approveExtension(@PathVariable Integer id, java.security.Principal principal) {
-        return maintenanceService.approveExtension(id, principal.getName());
+    public WorkOrderDTO approveExtension(
+            @PathVariable Integer id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate allowedDate,
+            java.security.Principal principal) {
+        return maintenanceService.approveExtension(id, principal.getName(), allowedDate);
     }
 
     /**
