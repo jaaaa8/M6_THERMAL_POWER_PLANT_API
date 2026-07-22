@@ -34,13 +34,14 @@ class DepartmentServiceTest {
     @Test
     void createDepartment_savesAndReturnsDepartmentDTO() {
         DepartmentCreateDTO createDTO = DepartmentCreateDTO.builder()
+                .departmentCode("DEPT")
                 .name("Technical Department")
                 .description("Handles technical issues")
                 .build();
 
         Department department = Department.builder()
                 .id(1)
-                .departmentCode("DEPT123456789")
+                .departmentCode("DEPT")
                 .name("Technical Department")
                 .description("Handles technical issues")
                 .build();
@@ -52,7 +53,7 @@ class DepartmentServiceTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1);
-        assertThat(result.getDepartmentCode()).isEqualTo("DEPT123456789");
+        assertThat(result.getDepartmentCode()).isEqualTo("DEPT");
         assertThat(result.getName()).isEqualTo("Technical Department");
         verify(departmentRepository).save(any(Department.class));
     }
