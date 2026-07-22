@@ -45,4 +45,14 @@ public class RepairHistoryController {
                 repairHistoryService.create(dto)
         );
     }
+    @GetMapping("/equipment/{equipmentId}")
+    public ResponseEntity<?> getByEquipment(
+            @PathVariable Integer equipmentId
+    ){
+
+        return ResponseEntity.ok(
+                repairHistoryService.findByEquipment(equipmentId)
+        );
+
+    }
 }
