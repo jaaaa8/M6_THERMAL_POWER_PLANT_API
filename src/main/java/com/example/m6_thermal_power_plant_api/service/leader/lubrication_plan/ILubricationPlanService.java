@@ -11,4 +11,5 @@ public interface ILubricationPlanService {
     LubricationPlanDto create(
             LubricationPlanDto dto
     );
+    void deleteById(Integer id);
 }
