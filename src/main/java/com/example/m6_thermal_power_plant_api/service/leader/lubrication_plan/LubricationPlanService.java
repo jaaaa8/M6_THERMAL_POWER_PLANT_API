@@ -159,4 +159,17 @@ public class LubricationPlanService implements ILubricationPlanService {
 
         return convertToDto(saved);
     }
+
+    @Override
+    public void deleteById(Integer id) {
+
+        LubricationPlan plan = lubricationPlanRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy kế hoạch"));
+
+        plan.setIsDeleted(true);
+
+        lubricationPlanRepository.save(plan);
+    }
 }

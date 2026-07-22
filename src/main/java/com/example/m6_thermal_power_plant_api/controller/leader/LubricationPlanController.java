@@ -46,4 +46,12 @@ public class LubricationPlanController {
                     .body(e.getMessage());
         }
     }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> delete(
+            @PathVariable Integer id
+    ) {
+        lubricationPlanService.deleteById(id);
+        return ResponseEntity.ok("Xóa kế hoạch thành công");
+    }
 }
