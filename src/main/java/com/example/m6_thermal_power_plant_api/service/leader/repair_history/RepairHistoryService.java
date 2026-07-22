@@ -208,6 +208,8 @@ public class RepairHistoryService implements IRepairHistoryService {
 
         if (repairHistoryRepository
                 .existsByWorkOrderId(workOrder.getId())) {
+            // Đã có lịch sử sửa chữa cho phiếu công tác này rồi → không tạo trùng
+            return;
         }
 
         RepairHistory history =

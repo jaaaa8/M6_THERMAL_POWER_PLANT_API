@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.service.leader.spare_parts_issue.I
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -41,6 +42,7 @@ public class SparePartsIssueController {
         return ResponseEntity.ok(sparePartsIssueRequestDto);
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
     @PostMapping("/add")
     public ResponseEntity<SparePartsIssueRequestDto> saveSparePartsIssue(@RequestBody SparePartsIssueRequestDto sparePartsIssueRequestDto) {
         SparePartsIssueRequestDto savedSparePartsIssue = sparePartsIssueService.save(sparePartsIssueRequestDto);
@@ -53,6 +55,7 @@ public class SparePartsIssueController {
         return ResponseEntity.ok(sparePartsIssueRequestDto);
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER','MATERIALS_STOREKEEPER')")
     @PostMapping("/update")
     public ResponseEntity<?> updateSparePartsIssue(@RequestBody SparePartsIssueRequestDto dto) {
         try {
@@ -72,6 +75,7 @@ public class SparePartsIssueController {
         return ResponseEntity.ok(sparePartsIssueRequestDto);
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER','MATERIALS_STOREKEEPER')")
     @PostMapping("/upload-spare-parts-issue")
     public ResponseEntity<?> uploadSparePartsIssuePdf(
             @RequestParam("id") Integer id,

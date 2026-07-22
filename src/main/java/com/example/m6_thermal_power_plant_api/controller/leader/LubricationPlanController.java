@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.service.leader.lubrication_plan.IL
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +18,7 @@ public class LubricationPlanController {
         this.lubricationPlanService = lubricationPlanService;
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
     @GetMapping("")
     public ResponseEntity<Page<LubricationPlanDto>> getAllLubricationPlans(
             @RequestParam(required = false) String keyword,
@@ -26,6 +28,7 @@ public class LubricationPlanController {
         return ResponseEntity.ok(lubricationPlanService.search(keyword,status,pageable));
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
     @PostMapping("/add")
     public ResponseEntity<?> create(
             @RequestBody LubricationPlanDto dto
@@ -47,6 +50,7 @@ public class LubricationPlanController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> delete(
             @PathVariable Integer id
