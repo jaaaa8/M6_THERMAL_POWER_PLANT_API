@@ -2,26 +2,19 @@ package com.example.m6_thermal_power_plant_api.controller.account;
 
 import com.example.m6_thermal_power_plant_api.dto.accounts.AccountDTO;
 import com.example.m6_thermal_power_plant_api.dto.accounts.AccountResponseDTO;
-import com.example.m6_thermal_power_plant_api.dto.accounts.WorkerAccountRequest;
-import com.example.m6_thermal_power_plant_api.dto.accounts.WorkerAccountResponse;
-import com.example.m6_thermal_power_plant_api.entity.Account;
+
 import com.example.m6_thermal_power_plant_api.service.account.IAccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Quản trị tài khoản (xem/tạo/sửa/khoá/reset) — mặc định HR_STAFF; ADMIN luôn
-// pass nhờ RoleHierarchy (xem SecurityConfig). Riêng tạo tài khoản công nhân
-// (worker) còn mở cho Thủ kho CCDC — override method-level bên dưới.
 @RestController
 @RequestMapping("/api/v1/accounts")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('HR_STAFF')")
 public class AccountController {
 
     private final IAccountService accountService;
@@ -41,12 +34,6 @@ public class AccountController {
     public ResponseEntity<AccountResponseDTO> grantAccount(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
         AccountResponseDTO createdAccount = accountService.grantAccount(request);
         return new ResponseEntity<>(createdAccount, HttpStatus.CREATED);
-    }
-
-    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER', 'HR_STAFF')")
-    @PostMapping("/worker")
-    public ResponseEntity<WorkerAccountResponse> createWorkerAccount(@Valid @RequestBody WorkerAccountRequest req) {
-        return new ResponseEntity<>(accountService.createWorkerAccount(req), HttpStatus.CREATED);
     }
 
     @PatchMapping("/status")

@@ -10,6 +10,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.example.m6_thermal_power_plant_api.entity.enums.ConsumableIssueStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
@@ -57,15 +58,6 @@ public class ConsumableIssue extends BaseSoftDeleteEntity {
     @CascadeSoftDelete
     private WorkOrder workOrder;
 
-    /**
-     * LẦN cấp vật tư (bảng cha supplies_issues, V9) mà phiếu này thuộc về — gom
-     * cặp phiếu thay thế + tiêu hao tạo trong cùng một hành động. NULL không xảy
-     * ra sau backfill V9, nhưng code đọc vẫn nên phòng thủ.
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplies_issue_id")
-    private SuppliesIssue suppliesIssue;
-
     /** Vật tư tiêu hao được cấp (tham chiếu danh mục) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "consumable_id")
@@ -86,6 +78,16 @@ public class ConsumableIssue extends BaseSoftDeleteEntity {
 
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
+
+    /** URL bản lưu PDF phiếu đề nghị cấp phát trên Cloudinary (V14). */
+    @Column(name = "pdf_path", length = 500)
+    private String pdfPath;
+
+    @Column(name = "attachment_path", length = 500)
+    private String attachmentPath;
+
+    @Builder.Default
+    private ConsumableIssueStatus status = ConsumableIssueStatus.PENDING;
 
     @OneToMany(mappedBy = "issue")
     private List<ConsumableIssueDetail> details;

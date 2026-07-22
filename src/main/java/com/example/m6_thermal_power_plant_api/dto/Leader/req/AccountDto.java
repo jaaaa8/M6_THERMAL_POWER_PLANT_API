@@ -1,28 +1,26 @@
 package com.example.m6_thermal_power_plant_api.dto.Leader.req;
 
-import jakarta.validation.constraints.Digits;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+@Getter
+@Setter
 @NoArgsConstructor
-@Builder
 @AllArgsConstructor
-@Data
 public class AccountDto {
-    @NotBlank(message = "Username cannot be blank")
-    @Size(min = 8, max = 50, message = "Username must be between 8 and 50 characters")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[0-9])[a-z0-9!\"#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~]+$", message = "Username must contain lowercase letters, numbers, and can include special characters")
+
+
+    @NotBlank(message = "Tên đăng nhập không được để trống")
     private String username;
 
-    @jakarta.validation.constraints.Email(message = "Email should be valid")
+
+     @NotBlank(message = "Email không được để trống")
+     @Email(message = "Email không đúng định dạng")
     private String email;
 
+    @Valid
+    private EmployeeDto employee;
 
-    @Digits(integer = 10, fraction = 0, message = "Employee ID must be a number")
-    private String name;
 }

@@ -26,8 +26,6 @@ public class ConsumableIssueDTO {
     private Integer id;
     /** Mã của chính phiếu cấp (cột consumable_code trên consumable_issues). */
     private String issueCode;
-    /** LẦN cấp vật tư (supplies_issues) mà phiếu này thuộc về — null với dữ liệu mồ côi. */
-    private Integer suppliesIssueId;
     private Integer workOrderId;
     private String orderCode;
     private String transactionType;
@@ -36,6 +34,8 @@ public class ConsumableIssueDTO {
     private Integer issuedById;
     private String issuedByName;
     private LocalDateTime issuedAt;
+    private String status;
+    private String attachmentPath;
     private List<LineDTO> details;
 
     @Getter
@@ -50,6 +50,7 @@ public class ConsumableIssueDTO {
         private String consumableName;
         private String unitName;
         private BigDecimal quantity;
+        private BigDecimal currentStock;
 
         public static LineDTO from(ConsumableIssueDetail d) {
             return LineDTO.builder()
@@ -68,7 +69,6 @@ public class ConsumableIssueDTO {
         return ConsumableIssueDTO.builder()
                 .id(issue.getId())
                 .issueCode(issue.getConsumableCode())
-                .suppliesIssueId(issue.getSuppliesIssue() != null ? issue.getSuppliesIssue().getId() : null)
                 .workOrderId(issue.getWorkOrder() != null ? issue.getWorkOrder().getId() : null)
                 .orderCode(issue.getWorkOrder() != null ? issue.getWorkOrder().getOrderCode() : null)
                 .transactionType(issue.getTransactionType())
@@ -78,6 +78,8 @@ public class ConsumableIssueDTO {
                         ? issue.getIssuedBy().getEmployee().getFullName()
                         : (issue.getIssuedBy() != null ? issue.getIssuedBy().getUsername() : null))
                 .issuedAt(issue.getIssuedAt())
+                .status(issue.getStatus() != null ? issue.getStatus().name() : null)
+                .attachmentPath(issue.getAttachmentPath())
                 .details(details != null ? details.stream().map(LineDTO::from).toList() : List.of())
                 .build();
     }

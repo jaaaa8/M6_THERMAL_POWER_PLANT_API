@@ -14,5 +14,15 @@ import java.math.BigDecimal;
 public class SparePartsIssueDetailRequestDto {
     private Integer sparePartId;
 
+    private String sparePartCode;
+
+    private String sparePartName;
+
     private Integer quantity;
+
+    private String unit;
+
+    private String imgPath;
+
+    private BigDecimal currentStock;
 }

@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,6 +54,23 @@ public class FileUploadService {
 
         Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
         return toResult(result);
+    }
+
+    public List<FileUploadResult> uploadImages(
+            MultipartFile[] files
+    ) throws IOException {
+
+        if (files == null || files.length == 0) {
+            return Collections.emptyList();
+        }
+
+        List<FileUploadResult> results = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            results.add(uploadImage(file));
+        }
+
+        return results;
     }
 
     /**
@@ -111,6 +131,44 @@ public class FileUploadService {
                             + ", resourceType=" + resourceType + "): " + outcome);
         }
         log.info("Da xoa file Cloudinary: {}", publicId);
+    }
+
+    /**
+     * Trich xuat public ID tu URL Cloudinary.
+     * Ho tro URL dang:
+     * https://res.cloudinary.com/cloud_name/image/upload/v12345678/folder/subfolder/filename.jpg
+     */
+    public static String extractPublicIdFromUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        int uploadIdx = url.indexOf("/upload/");
+        if (uploadIdx == -1) {
+            uploadIdx = url.indexOf("/private/");
+            if (uploadIdx == -1) {
+                uploadIdx = url.indexOf("/authenticated/");
+                if (uploadIdx == -1) {
+                    return null;
+                }
+            }
+        }
+        
+        // Cat chuoi tu sau "/upload/" hoac "/private/" hoac "/authenticated/"
+        // Vi du: v1720846513/consumables/mo-bo-tron.jpg
+        String path = url.substring(url.indexOf("/", uploadIdx + 1) + 1);
+        
+        // Loai bo version prefix neu co (vi du: v1720846513/)
+        if (path.matches("^v\\d+/.*")) {
+            path = path.substring(path.indexOf("/") + 1);
+        }
+        
+        // Loai bo duoi mo rong file (.jpg, .png, ...)
+        int dotIdx = path.lastIndexOf(".");
+        if (dotIdx != -1) {
+            path = path.substring(0, dotIdx);
+        }
+        
+        return path;
     }
 
     private static FileUploadResult toResult(Map<?, ?> uploadResult) {

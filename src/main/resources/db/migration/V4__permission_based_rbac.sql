@@ -48,12 +48,6 @@ ALTER TABLE `work_orders`
   ADD KEY `idx_work_orders_created_by` (`created_by`),
   ADD CONSTRAINT `fk_work_orders_created_by` FOREIGN KEY (`created_by`) REFERENCES `accounts` (`id`);
 
--- Bản lưu CUỐI CÙNG (đóng băng) của "Phiếu đề nghị cấp phát vật tư" trên Cloudinary.
--- Chỉ được ghi MỘT lần khi phiếu công tác về trạng thái kết thúc (COMPLETED/CANCELLED)
--- — trong lúc phiếu còn sống, PDF vật tư luôn render mới theo yêu cầu, không lưu URL
--- (dữ liệu cấp phát còn thay đổi nên URL cache sẽ bị cũ).
-ALTER TABLE work_orders
-    ADD COLUMN supplies_pdf_path VARCHAR(500) NULL;
 --
 -- V1 (baseline dump từ schema cũ) chỉ có 4 giá trị ENUM('CANCELLED','COMPLETED',
 -- 'IN_PROGRESS','OPEN') — hai trạng thái WAITING_FOR_APPROVAL/APPROVED của luồng

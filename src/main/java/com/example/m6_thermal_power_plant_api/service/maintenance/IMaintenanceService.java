@@ -50,18 +50,27 @@ public interface IMaintenanceService {
 
     /**
      * User Story #42 (row 46): xem danh sách các phiếu công tác, tìm kiếm theo
-     * nội dung hoặc số phiếu. Trả về danh sách CÓ PHÂN TRANG.
+     * BỐN bộ lọc độc lập kết hợp AND (null/rỗng = bỏ qua bộ lọc đó). Trả về
+     * danh sách CÓ PHÂN TRANG.
      *
-     * @param search   từ khoá tìm trong orderCode, requestCode
-     *                 (null hoặc rỗng = không lọc).
-     * @param pageable phân trang + sắp xếp (mặc định createdAt giảm dần).
+     * @param code        từ khoá tìm theo id phiếu (khi là số) / orderCode / mã
+     *                    nhân viên của người lãnh đạo — KHÔNG tìm theo
+     *                    requestCode/incidentDescription.
+     * @param description từ khoá tìm theo mô tả sửa chữa (repairDescription).
+     * @param fromDate    chỉ lấy phiếu có startTime từ NGÀY này trở đi.
+     * @param toDate      chỉ lấy phiếu có startTime đến HẾT ngày này.
+     * @param pageable    phân trang; sắp xếp mặc định theo tiến độ (OPEN → đang
+     *                    làm → chờ duyệt gia hạn → hoàn thành → huỷ), cùng nhóm
+     *                    thì mới tạo đứng trước.
      */
-    Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable);
+    Page<WorkOrderDTO> listWorkOrders(String code, String description,
+                                      java.time.LocalDate fromDate, java.time.LocalDate toDate,
+                                      Pageable pageable);
 
     /**
      * Chi tiết đầy đủ một phiếu công tác: thông tin chung + danh sách thành viên
      * + DÒNG THỜI GIAN ra/vào khu vực làm việc (JOINED/LEFT, tăng dần theo thời
-     * gian) + các phiếu cấp vật tư thay thế đã tạo cho phiếu.
+     * gian) + các lần tạm dừng / gia hạn của phiếu.
      */
     WorkOrderDetailDTO getWorkOrderDetail(Integer workOrderId);
 
@@ -74,8 +83,13 @@ public interface IMaintenanceService {
      * @param excludeWorkOrderId bỏ qua phiếu này khi xét (để thao tác nhân sự trên
      *                           chính phiếu đang mở không tự loại người của nó);
      *                           null = xét mọi phiếu sống.
+     * @param statuses           chỉ xét phiếu có status thuộc danh sách này
+     *                           (VD chỉ IN_PROGRESS cho ô Người giám sát an toàn);
+     *                           null/rỗng = mọi trạng thái sống như trước.
      */
-    java.util.List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId);
+    java.util.List<Integer> getBusyEmployeeIds(
+            Integer excludeWorkOrderId,
+            java.util.List<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses);
 
     /**
      * Thêm nhân viên vào phiếu công tác đang chạy (joinedAt = now, leftAt = null).
@@ -101,7 +115,7 @@ public interface IMaintenanceService {
 
     /**
      * Tổ trưởng GỬI DUYỆT / TẠM DỪNG phiếu: tạo một dòng work_order_extensions
-     * (reason + extendedUntil, CHƯA có người duyệt) và chuyển status →
+     * (chỉ reason, CHƯA có người duyệt và CHƯA có ngày) và chuyển status →
      * WAITING_FOR_APPROVAL. Dùng cho cả 2 luồng: phiếu MỚI TẠO (OPEN) xin
      * Trưởng ca duyệt trước khi làm, và phiếu đang chạy tạm dừng cuối ngày.
      *
@@ -124,8 +138,8 @@ public interface IMaintenanceService {
     /**
      * Cập nhật trạng thái phiếu theo máy trạng thái (modal "Cập nhật trạng thái"):
      * OPEN ─duyệt phiếu─► APPROVED ─bắt đầu─► IN_PROGRESS ─không kịp─► STOPPED
-     * ─gửi duyệt lại (reason+extendedUntil, tạo dòng gia hạn)─► WAITING_FOR_APPROVAL
-     * ─duyệt gia hạn (approvedBy = username)─► APPROVED ─► ... ─► COMPLETED;
+     * ─gửi duyệt lại (reason, tạo dòng gia hạn)─► WAITING_FOR_APPROVAL
+     * ─duyệt gia hạn (approvedBy = username, allowedDate)─► APPROVED ─► ... ─► COMPLETED;
      * mọi trạng thái sống ─► CANCELLED (side effect huỷ giữ nguyên).
      * Idempotent khi target = trạng thái hiện tại; 409 cho bước chuyển không hợp lệ.
      */
@@ -136,8 +150,13 @@ public interface IMaintenanceService {
      * đăng nhập vào approvedBy của dòng gia hạn đang chờ (người bấm chịu trách
      * nhiệm nhập đúng theo bản giấy) và chuyển status → APPROVED.
      * Chỉ cho phép khi phiếu đang WAITING_FOR_APPROVAL.
+     *
+     * @param allowedDate NGÀY Trưởng ca cho phép làm tiếp (in vào cột "Ngày cho
+     *                    phép tiếp tục làm việc" của bản PDF); null = hôm sau
+     *                    ngày Tổ trưởng gửi duyệt.
      */
-    WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername);
+    WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername,
+                                  java.time.LocalDate allowedDate);
 
     /**
      * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc

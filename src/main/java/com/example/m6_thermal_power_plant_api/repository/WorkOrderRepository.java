@@ -17,18 +17,48 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
     List<WorkOrder> findByRepairRequest_Id(Integer repairRequestId);
 
     /**
-     * Tìm kiếm phiếu công tác theo từ khoá: orderCode, requestCode hoặc
-     * incidentDescription (thông qua repairRequest). KHÔNG phân biệt hoa/thường.
+     * Tìm kiếm phiếu công tác theo BỐN bộ lọc độc lập, kết hợp AND (null = bỏ
+     * qua bộ lọc đó, tất cả null = lấy tất cả):
+     *  - {@code code}: id phiếu ({@code searchId} — chỉ khi từ khoá là số),
+     *    orderCode hoặc MÃ NHÂN VIÊN của người lãnh đạo (leader.employeeCode) —
+     *    LEFT JOIN để phiếu chưa gán leader vẫn tìm được theo orderCode.
+     *  - {@code description}: mô tả sửa chữa (repairDescription).
+     *  - {@code startFrom} / {@code startTo}: khoảng startTime, {@code startTo}
+     *    là cận trên KHÔNG bao gồm (service truyền đầu ngày hôm sau).
+     * KHÔNG tìm theo requestCode / incidentDescription của yêu cầu. KHÔNG phân
+     * biệt hoa/thường.
+     *
+     * Sắp xếp mặc định theo TIẾN ĐỘ: OPEN → đang làm (APPROVED / IN_PROGRESS /
+     * STOPPED) → WAITING_FOR_APPROVAL → COMPLETED → CANCELLED; trong cùng nhóm
+     * phiếu mới tạo đứng trước.
      */
     @Query("""
         SELECT wo FROM WorkOrder wo
-        LEFT JOIN wo.repairRequest rr
-        WHERE (:search IS NULL OR :search = '')
-           OR LOWER(wo.orderCode) LIKE LOWER(CONCAT('%', :search, '%'))
-           OR LOWER(rr.requestCode) LIKE LOWER(CONCAT('%', :search, '%'))
-           OR LOWER(rr.incidentDescription) LIKE LOWER(CONCAT('%', :search, '%'))
+        LEFT JOIN wo.leader ld
+        WHERE (:code IS NULL
+               OR wo.id = :searchId
+               OR LOWER(wo.orderCode) LIKE LOWER(CONCAT('%', :code, '%'))
+               OR LOWER(ld.employeeCode) LIKE LOWER(CONCAT('%', :code, '%')))
+          AND (:description IS NULL
+               OR LOWER(wo.repairDescription) LIKE LOWER(CONCAT('%', :description, '%')))
+          AND (:startFrom IS NULL OR wo.startTime >= :startFrom)
+          AND (:startTo IS NULL OR wo.startTime < :startTo)
+        ORDER BY CASE
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.OPEN THEN 0
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.APPROVED THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.IN_PROGRESS THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.WAITING_FOR_APPROVAL THEN 2
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 3
+            ELSE 4
+        END, wo.createdAt DESC
     """)
-    Page<WorkOrder> searchWorkOrders(@Param("search") String search, Pageable pageable);
+    Page<WorkOrder> searchWorkOrders(@Param("code") String code,
+                                     @Param("searchId") Integer searchId,
+                                     @Param("description") String description,
+                                     @Param("startFrom") java.time.LocalDateTime startFrom,
+                                     @Param("startTo") java.time.LocalDateTime startTo,
+                                     Pageable pageable);
 
     /**
      * Bộ ba nhân sự phụ trách (leader / chỉ huy trực tiếp / giám sát an toàn) của
