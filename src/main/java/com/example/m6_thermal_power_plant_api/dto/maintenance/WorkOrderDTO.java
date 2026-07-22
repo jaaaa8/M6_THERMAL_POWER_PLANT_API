@@ -31,7 +31,8 @@ public class WorkOrderDTO {
     private String orderCode;
     private WorkOrderStatus status;
     private LocalDateTime startTime;
-    private LocalDateTime expectedEndTime;
+    /** Kết thúc THỰC TẾ — null khi phiếu chưa COMPLETED. */
+    private LocalDateTime endTime;
     private String pdfPath;
 
     private Integer repairRequestId;
@@ -61,7 +62,7 @@ public class WorkOrderDTO {
                 .orderCode(wo.getOrderCode())
                 .status(wo.getStatus())
                 .startTime(wo.getStartTime())
-                .expectedEndTime(wo.getExpectedEndTime())
+                .endTime(wo.getEndTime())
                 .pdfPath(wo.getPdfPath())
                 .repairDescription(wo.getRepairDescription());
 

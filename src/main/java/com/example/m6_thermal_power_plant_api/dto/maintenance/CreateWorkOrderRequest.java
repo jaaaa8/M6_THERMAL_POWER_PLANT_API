@@ -33,18 +33,12 @@ public class CreateWorkOrderRequest {
     @NotNull(message = "safetySupervisorId (người giám sát an toàn) là bắt buộc")
     private Integer safetySupervisorId;
 
-    /** Thời điểm bắt đầu công việc; để trống nếu chưa xác định. */
+    /** Thời điểm bắt đầu công việc. */
     @NotNull(message = "startTime là bắt buộc.")
     private LocalDateTime startTime;
 
-    /**
-     * Thời điểm dự kiến kết thúc công việc; để trống nếu chưa xác định.
-     *
-     * BẮT BUỘC (cùng startTime) khi yêu cầu này ĐÃ có một phiếu công tác đang
-     * hoạt động (OPEN/IN_PROGRESS) — để hệ thống kiểm tra khung giờ KHÔNG chồng
-     * lấn giữa các phiếu song song (xem ràng buộc ở MaintenanceService).
-     */
-    private LocalDateTime expectedEndTime;
+    // KHÔNG có mốc kết thúc: work_orders.end_time là giờ kết thúc THỰC TẾ, chỉ
+    // được ghi khi phiếu COMPLETED (V13) — không nhập lúc tạo nữa.
 
     private String repairDescription;
 
