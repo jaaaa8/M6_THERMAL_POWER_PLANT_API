@@ -15,6 +15,7 @@ import com.example.m6_thermal_power_plant_api.repository.IToolCategoryRepository
 import com.example.m6_thermal_power_plant_api.repository.IToolRepository;
 import com.example.m6_thermal_power_plant_api.repository.IToolTransactionLogRepository;
 import com.example.m6_thermal_power_plant_api.service.impl.IToolService;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,16 +36,9 @@ public class ToolService implements IToolService {
 
     @Override
     public String generateNextCode() {
-        return toolRepository.findMaxToolCode()
-                .map(max -> {
-                    try {
-                        int num = Integer.parseInt(max.substring(6)); // "MCCDC-0001" → 1
-                        return String.format("MCCDC-%04d", num + 1);
-                    } catch (NumberFormatException e) {
-                        return "MCCDC-0001";
-                    }
-                })
-                .orElse("MCCDC-0001");
+        // Mã CCDC sinh theo timestamp + hậu tố tự tăng (VD: TO-260714081606-000),
+        // luôn duy nhất, không phụ thuộc MAX(tool_code) như cách cũ (dễ trùng).
+        return TimeStampCodeGenerator.generate(Tool.class);
     }
 
     @Override

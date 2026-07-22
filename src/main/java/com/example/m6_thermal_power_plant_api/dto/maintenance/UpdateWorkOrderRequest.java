@@ -32,7 +32,8 @@ public class UpdateWorkOrderRequest {
 
     private LocalDateTime startTime;
 
-    private LocalDateTime expectedEndTime;
+    // Không sửa được giờ kết thúc: end_time là mốc THỰC TẾ do hệ thống đóng dấu
+    // lúc hoàn thành phiếu (V13).
 
     /** Mô tả nội dung sửa chữa in trên PCT. */
     private String repairDescription;
