@@ -36,4 +36,8 @@ public interface IToolBorrowLogRepository extends JpaRepository<ToolBorrowLog, I
     /** Dùng cho job nhắc sắp đến hạn: đã APPROVED, chưa trả, dueDate trong khoảng [from, to], chưa gửi email nhắc */
     List<ToolBorrowLog> findByStatusAndDueDateBetweenAndActualReturnDateIsNullAndDueSoonNotifiedFalse(
             BorrowStatus status, LocalDateTime from, LocalDateTime to);
+
+    /** Dashboard: CCDC quá hạn — đã duyệt, chưa trả, quá ngày hẹn trả */
+    @Query("SELECT COUNT(b) FROM ToolBorrowLog b WHERE b.status = com.example.m6_thermal_power_plant_api.entity.enums.BorrowStatus.APPROVED AND b.dueDate < CURRENT_TIMESTAMP AND b.actualReturnDate IS NULL")
+    long countOverdue();
 }

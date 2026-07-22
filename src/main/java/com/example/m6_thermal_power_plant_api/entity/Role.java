@@ -8,10 +8,10 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.util.List;
-import java.util.Set;
 
 /**
- * Vai trò / Quyền hệ thống (VD: Thủ kho vật tư, Trưởng Ca, Admin...).
+ * Vai trò hệ thống (VD: Thủ kho vật tư, Trưởng Ca, Admin...). Phân quyền theo
+ * ROLE (không còn permission rời — xem SecurityConfig#roleHierarchy).
  * Table: roles
  *
  * Soft delete: xem {@link BaseSoftDeleteEntity}.
@@ -22,7 +22,7 @@ import java.util.Set;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"accounts", "permissions"})
+@ToString(callSuper = true, exclude = "accounts")
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class Role extends BaseSoftDeleteEntity {
 
@@ -36,16 +36,4 @@ public class Role extends BaseSoftDeleteEntity {
     @JsonIgnore
     @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
     private List<Account> accounts;
-
-    /**
-     * Dùng Set (KHÔNG dùng List): để @EntityGraph fetch roles + roles.permissions
-     * cùng lúc mà không dính MultipleBagFetchException. Xem {@link Account#roles}.
-     */
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "role_permissions",
-            joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id")
-    )
-    private Set<Permission> permissions;
 }
