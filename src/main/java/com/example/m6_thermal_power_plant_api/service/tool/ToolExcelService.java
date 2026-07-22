@@ -7,6 +7,7 @@ import com.example.m6_thermal_power_plant_api.entity.tool.ToolCategory;
 import com.example.m6_thermal_power_plant_api.exception.BadRequestException;
 import com.example.m6_thermal_power_plant_api.repository.IToolCategoryRepository;
 import com.example.m6_thermal_power_plant_api.repository.IToolRepository;
+import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -102,15 +103,15 @@ public class ToolExcelService {
                     + " dòng lỗi. Vui lòng sửa hết rồi import lại (không dòng nào được nhập).");
         }
 
-        // Sinh mã lần lượt để tránh trùng trong cùng một lần import
-        int nextNum = currentMaxNumber() + 1;
+        // Sinh mã theo timestamp + hậu tố tự tăng (TimeStampCodeGenerator) —
+        // luôn duy nhất, tránh trùng như cách cộng dồn MAX(tool_code) cũ.
         for (ToolImportRowResult row : rows) {
             ToolCategory category = toolCategoryRepository
                     .findFirstByCategoryNameIgnoreCase(row.getCategoryName().trim())
                     .orElseThrow(() -> new BadRequestException("Chủng loại không tồn tại: " + row.getCategoryName()));
 
             Tool tool = Tool.builder()
-                    .toolCode(String.format("MCCDC-%04d", nextNum++))
+                    .toolCode(TimeStampCodeGenerator.generate(Tool.class))
                     .name(row.getName().trim())
                     .toolCategory(category)
                     .unit(row.getUnit().trim())
@@ -215,17 +216,5 @@ public class ToolExcelService {
             if (!formatter.formatCellValue(row.getCell(c)).trim().isEmpty()) return false;
         }
         return true;
-    }
-
-    private int currentMaxNumber() {
-        return toolRepository.findMaxToolCode()
-                .map(max -> {
-                    try {
-                        return Integer.parseInt(max.substring(6)); // "MCCDC-0001" → 1
-                    } catch (NumberFormatException e) {
-                        return 0;
-                    }
-                })
-                .orElse(0);
     }
 }

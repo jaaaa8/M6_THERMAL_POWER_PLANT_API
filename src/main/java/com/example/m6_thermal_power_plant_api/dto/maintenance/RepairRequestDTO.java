@@ -60,7 +60,11 @@ public class RepairRequestDTO {
             b.requesterId(r.getRequester().getId())
                     .requesterUsername(r.getRequester().getUsername());
             if (r.getRequester().getEmployee() != null) {
-                b.requesterName(r.getRequester().getEmployee().getFullName());
+                try {
+                    b.requesterName(r.getRequester().getEmployee().getFullName());
+                } catch (jakarta.persistence.EntityNotFoundException e) {
+                    b.requesterName(r.getRequester().getUsername() + " (Đã xóa)");
+                }
             }
         }
         return b.build();

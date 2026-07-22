@@ -53,18 +53,16 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.40'
 
-    // 6. Lombok
     // Apache POI: đọc/ghi file Excel (.xlsx) cho chức năng import CCDC hàng loạt
     implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
-    // 4. Lombok
+    // 6. Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 
     // 7. Testing
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

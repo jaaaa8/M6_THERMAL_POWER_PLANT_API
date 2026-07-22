@@ -15,10 +15,9 @@ import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
-import com.example.m6_thermal_power_plant_api.exception.TimeOverlapException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
-import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssuesService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,26 +39,29 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderMemberRepository workOrderMemberRepository;
     private final WorkOrderExtensionRepository workOrderExtensionRepository;
     private final EmployeeRepository employeeRepository;
-    private final ISparePartIssuesService sparePartIssuesService;
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
+    private final IRepairHistoryService repairHistoryService;
 
-    public MaintenanceService(RepairRequestRepository repairRequestRepository,
-                              WorkOrderRepository workOrderRepository,
+    private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
+
+    public MaintenanceService(WorkOrderRepository workOrderRepository,
+                              RepairRequestRepository repairRequestRepository,
                               WorkOrderMemberRepository workOrderMemberRepository,
                               WorkOrderExtensionRepository workOrderExtensionRepository,
                               EmployeeRepository employeeRepository,
-                              ISparePartIssuesService sparePartIssuesService,
+                              com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService) {
-        this.repairRequestRepository = repairRequestRepository;
+                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService) {
         this.workOrderRepository = workOrderRepository;
+        this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
         this.workOrderExtensionRepository = workOrderExtensionRepository;
         this.employeeRepository = employeeRepository;
-        this.sparePartIssuesService = sparePartIssuesService;
+        this.equipmentRepository = equipmentRepository;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
+        this.repairHistoryService = repairHistoryService;
     }
 
     @Override
@@ -104,7 +106,6 @@ public class MaintenanceService implements IMaintenanceService {
                 .directSupervisor(directSupervisor)
                 .safetySupervisor(safetySupervisor)
                 .startTime(request.getStartTime())
-                .expectedEndTime(request.getExpectedEndTime())
                 .repairDescription(repairDescription)
                 .status(WorkOrderStatus.OPEN)
                 .createdAt(request.getCreatedAt() != null ? request.getCreatedAt() : LocalDateTime.now())
@@ -182,50 +183,25 @@ public class MaintenanceService implements IMaintenanceService {
      * được BỎ QUA — nhờ đó luồng "huỷ phiếu cũ → tạo phiếu mới nội dung tương tự"
      * hoạt động bình thường.
      *
-     * Với mỗi phiếu đang sống, phiếu mới bị TỪ CHỐI (409) nếu:
-     *  (a) trùng leader, direct supervisor, HOẶC safety supervisor — nhân viên
-     *      thường (members) được phép trùng, riêng 3 vai trò này thì KHÔNG
-     *      ({@link DuplicateHumanResourceException}); HOẶC
-     *  (b) khung giờ [startTime, expectedEndTime] CHỒNG LẤN nhau
-     *      ({@link TimeOverlapException}).
+     * Với mỗi phiếu đang sống, phiếu mới bị TỪ CHỐI (409) khi trùng leader,
+     * direct supervisor, HOẶC safety supervisor — nhân viên thường (members)
+     * được phép trùng, riêng 3 vai trò này thì KHÔNG
+     * ({@link DuplicateHumanResourceException}).
      *
-     * Hai phiếu song song chỉ hợp lệ khi KHÁC cả 3 vai trò trên VÀ giờ không đè.
-     *
-     * Để kiểm tra (b), khi đã có ít nhất 1 phiếu sống thì phiếu mới BẮT BUỘC khai
-     * báo cả startTime lẫn expectedEndTime (nếu thiếu → 409, kèm gợi ý huỷ phiếu cũ).
+     * KHÔNG còn kiểm tra chồng lấn khung giờ: từ V13 phiếu không khai báo mốc
+     * kết thúc dự kiến nữa (end_time là giờ kết thúc THỰC TẾ, chỉ có khi phiếu
+     * hoàn thành) nên không có khoảng thời gian nào để so.
      */
     private void validateActiveWorkOrderConstraints(RepairRequest repairRequest, CreateWorkOrderRequest input) {
-        if (input.getStartTime() != null && input.getExpectedEndTime() != null
-                && !input.getExpectedEndTime().isAfter(input.getStartTime())) {
-            throw new IllegalArgumentException("expectedEndTime phai sau startTime.");
-        }
-
         List<WorkOrder> liveWorkOrders = workOrderRepository.findByRepairRequest_Id(repairRequest.getId())
                 .stream()
                 .filter(MaintenanceService::isLive)
                 .toList();
 
-        if (liveWorkOrders.isEmpty()) {
-            return; // chưa có phiếu sống nào → tạo tự do
-        }
-
-        // Đã có phiếu sống → buộc khai báo đủ mốc thời gian để kiểm tra chồng lấn.
-        if (input.getStartTime() == null || input.getExpectedEndTime() == null) {
-            throw new IllegalStateException(
-                    "Yeu cau nay dang co phieu cong tac hoat dong. Phieu moi phai khai bao startTime va "
-                            + "expectedEndTime de kiem tra khong trung thoi gian, hoac hay huy (CANCELLED) phieu cu truoc.");
-        }
-
         for (WorkOrder live : liveWorkOrders) {
             checkDuplicateRole(live, input.getLeaderId(), WorkOrder::getLeader, "Nguoi lanh dao cong viec");
             checkDuplicateRole(live, input.getDirectSupervisorId(), WorkOrder::getDirectSupervisor, "Chi huy truc tiep");
             checkDuplicateRole(live, input.getSafetySupervisorId(), WorkOrder::getSafetySupervisor, "Nguoi giam sat an toan");
-
-            if (timeOverlaps(input.getStartTime(), input.getExpectedEndTime(), live.getStartTime(), live.getExpectedEndTime())) {
-                throw new TimeOverlapException(
-                        "Thoi gian lam viec chong lan voi phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
-                                + "Hay chon khung gio khac hoac huy phieu cu (CANCELLED).");
-            }
         }
     }
 
@@ -248,11 +224,26 @@ public class MaintenanceService implements IMaintenanceService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<WorkOrderDTO> listWorkOrders(String search, Pageable pageable) {
-        boolean hasSearch = search != null && !search.isBlank();
-        Page<WorkOrder> page = hasSearch
-                ? workOrderRepository.searchWorkOrders(search, pageable)
-                : workOrderRepository.findAll(pageable);
+    public Page<WorkOrderDTO> listWorkOrders(String code, String description,
+                                             java.time.LocalDate fromDate, java.time.LocalDate toDate,
+                                             Pageable pageable) {
+        // Luôn đi qua searchWorkOrders (mọi bộ lọc rỗng = lấy tất cả) để danh
+        // sách mặc định cũng được sắp theo tiến độ như khi tìm kiếm.
+        String codeKeyword = (code == null || code.isBlank()) ? null : code.trim();
+        String descKeyword = (description == null || description.isBlank()) ? null : description.trim();
+        Integer searchId = null;
+        if (codeKeyword != null) {
+            try {
+                searchId = Integer.valueOf(codeKeyword);
+            } catch (NumberFormatException ignored) {
+                // từ khoá không phải số → chỉ tìm theo text
+            }
+        }
+        // toDate là NGÀY bao gồm → cận trên loại trừ = đầu ngày hôm sau.
+        LocalDateTime startFrom = fromDate == null ? null : fromDate.atStartOfDay();
+        LocalDateTime startTo = toDate == null ? null : toDate.plusDays(1).atStartOfDay();
+        Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
+                codeKeyword, searchId, descKeyword, startFrom, startTo, pageable);
         return page.map(wo -> {
             List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
             return WorkOrderDTO.from(wo, members);
@@ -271,9 +262,8 @@ public class MaintenanceService implements IMaintenanceService {
         return WorkOrderDetailDTO.builder()
                 .workOrder(WorkOrderDTO.from(workOrder, members))
                 .memberHistory(buildMemberHistory(members))
-                .sparePartsIssues(sparePartIssuesService.getByWorkOrder(workOrderId))
                 .extensions(workOrderExtensionRepository
-                        .findByWorkOrder_IdOrderByExtendedUntilAsc(workOrderId)
+                        .findByWorkOrder_IdOrderByRequestedAtAsc(workOrderId)
                         .stream().map(WorkOrderExtensionDTO::from).toList())
                 .build();
     }
@@ -310,13 +300,20 @@ public class MaintenanceService implements IMaintenanceService {
         return events;
     }
 
+
+    // tìm danh sách các WO không ở trạng thái CANCELLED/COMPLETE
+    // => còn lại là những WO có nhân viên bận
     @Override
     @Transactional(readOnly = true)
-    public List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId) {
+    public List<Integer> getBusyEmployeeIds(Integer excludeWorkOrderId, List<WorkOrderStatus> statuses) {
         java.util.Set<Integer> busy = new java.util.LinkedHashSet<>();
-        List<WorkOrderStatus> liveStatuses = List.of(
-                WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.WAITING_FOR_APPROVAL,
-                WorkOrderStatus.APPROVED, WorkOrderStatus.STOPPED);
+        // Không truyền statuses → xét mọi phiếu sống (hành vi cũ); truyền vào thì
+        // chỉ xét các trạng thái đó (VD IN_PROGRESS cho ô Người giám sát an toàn).
+        List<WorkOrderStatus> liveStatuses = (statuses == null || statuses.isEmpty())
+                ? List.of(WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS,
+                        WorkOrderStatus.WAITING_FOR_APPROVAL, WorkOrderStatus.APPROVED,
+                        WorkOrderStatus.STOPPED)
+                : statuses;
         for (Object[] row : workOrderRepository.findRoleHolderEmployeeIds(liveStatuses, excludeWorkOrderId)) {
             for (Object id : row) {
                 if (id != null) {
@@ -392,6 +389,11 @@ public class MaintenanceService implements IMaintenanceService {
         }
 
         workOrder.setStatus(WorkOrderStatus.COMPLETED);
+        // Giờ kết thúc THỰC TẾ của phiếu — chỉ đóng dấu MỘT lần (V13).
+        if (workOrder.getEndTime() == null) {
+            workOrder.setEndTime(LocalDateTime.now());
+        }
+        repairHistoryService.createRepairHistory(workOrder);
         workOrderRepository.save(workOrder);
 
         // Đóng băng bản lưu PDF cuối cùng (PCT + phiếu cấp vật tư) — best-effort,
@@ -417,11 +419,11 @@ public class MaintenanceService implements IMaintenanceService {
 
         // Dòng gia hạn CHƯA có người duyệt = bằng chứng "đang chờ Trưởng ca ký bản
         // giấy" — được in vào mục "Cho phép làm việc và kết thúc công tác hàng ngày"
-        // của bản PDF để đưa tay cho Trưởng ca.
+        // của bản PDF để đưa tay cho Trưởng ca. requestedAt tự điền lúc insert;
+        // NGÀY cho phép làm tiếp do Trưởng ca chốt lúc duyệt (allowedDate).
         workOrderExtensionRepository.save(WorkOrderExtension.builder()
                 .workOrder(workOrder)
                 .reason(request.getReason())
-                .extendedUntil(request.getExtendedUntil())
                 .build());
 
         workOrder.setStatus(WorkOrderStatus.WAITING_FOR_APPROVAL);
@@ -431,7 +433,8 @@ public class MaintenanceService implements IMaintenanceService {
 
     @Override
     @Transactional
-    public WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername) {
+    public WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername,
+                                         java.time.LocalDate allowedDate) {
         WorkOrder workOrder = loadWorkOrder(workOrderId);
 
         if (workOrder.getStatus() != WorkOrderStatus.WAITING_FOR_APPROVAL) {
@@ -447,13 +450,16 @@ public class MaintenanceService implements IMaintenanceService {
         // Dòng chờ duyệt = dòng MỚI NHẤT chưa có approvedBy. Người bấm xác nhận
         // online chịu trách nhiệm nhập đúng theo bản giấy Trưởng ca đã ký.
         WorkOrderExtension pending = workOrderExtensionRepository
-                .findByWorkOrder_IdOrderByExtendedUntilAsc(workOrderId).stream()
+                .findByWorkOrder_IdOrderByRequestedAtAsc(workOrderId).stream()
                 .filter(e -> e.getApprovedBy() == null)
                 .reduce((first, second) -> second)
                 .orElseThrow(() -> new IllegalStateException(
                         "Phieu cong tac (" + workOrder.getOrderCode()
                                 + ") khong co dong gia han nao dang cho duyet."));
 
+        // Mỗi lần gia hạn kéo dài đúng 1 ngày: không truyền ngày thì mặc định là
+        // hôm sau ngày gửi duyệt — đúng ca làm việc kế tiếp.
+        pending.setAllowedDate(allowedDate != null ? allowedDate : nextDayAfterRequest(pending));
         pending.setApprovedBy(approvedBy);
         workOrderExtensionRepository.save(pending);
 
@@ -507,9 +513,6 @@ public class MaintenanceService implements IMaintenanceService {
         if (request.getStartTime() != null) {
             workOrder.setStartTime(request.getStartTime());
         }
-        if (request.getExpectedEndTime() != null) {
-            workOrder.setExpectedEndTime(request.getExpectedEndTime());
-        }
         if (request.getRepairDescription() != null && !request.getRepairDescription().isBlank()) {
             workOrder.setRepairDescription(request.getRepairDescription());
         }
@@ -517,6 +520,15 @@ public class MaintenanceService implements IMaintenanceService {
         workOrderRepository.save(workOrder);
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
+
+    // cập nhập trạng thái của WO
+    // 1. Sau khi có nguời tạo WO mới, sẽ in ra phiếu này ở trạng thái là OPEN (ONLINE)
+    // 2. Đem phiếu CT này đến SHIFT_LEADER, SHIFT_LEADER đồng ý, trạng thái chuyển sang APPROVED, nhân viên kiểm tra phiếu trạng thái APPROVED, sẽ báo xuống nơi thiết bị sửa chữa để cô lập thiết bị.
+    // 3. Sau khi cô lập thiết bị hoàn tất, cập nhập lại thời gian cho phép trên phiếu (ONLINE và phiếu giấy),-> status thành IN_PROGRESS
+    // 4. Nếu làm đến cuối ngày không xong, TEAM_LEADER cập nhập status thành STOPPED, đem đơn vật lý gửi lại phòng của SHIFT_LEADER
+    // 5. TEAM_LEADER bấm "Gửi duyệt gia hạn" (chỉ nhập lý do) -> tạo dòng WorkOrderExtension, status -> WAITING_FOR_APPROVAL
+    // 6. SHIFT_LEADER duyệt và CHỌN NGÀY cho phép làm tiếp (allowedDate, mặc định hôm sau) -> status APPROVED -> IN_PROGRESS
+    //    Lặp lại 4-6 cho tới khi xong; lúc COMPLETED hệ thống đóng dấu end_time (giờ kết thúc thực tế).
 
     @Override
     @Transactional
@@ -537,7 +549,7 @@ public class MaintenanceService implements IMaintenanceService {
                 // hạn) và duyệt gia hạn (WAITING_FOR_APPROVAL — gắn approvedBy vào
                 // dòng gia hạn đang chờ, tái dùng logic sẵn có).
                 if (current == WorkOrderStatus.WAITING_FOR_APPROVAL) {
-                    return approveExtension(workOrderId, username);
+                    return approveExtension(workOrderId, username, request.getAllowedDate());
                 }
                 if (current != WorkOrderStatus.OPEN) {
                     throw new IllegalStateException(
@@ -564,18 +576,15 @@ public class MaintenanceService implements IMaintenanceService {
                 workOrder.setStatus(WorkOrderStatus.STOPPED);
             }
             case WAITING_FOR_APPROVAL -> {
-                // Gửi duyệt gia hạn: cần lý do + ngày (in lên bản giấy) — tái dùng
-                // stopWorkOrder để tạo dòng gia hạn.
-                if (request.getReason() == null || request.getReason().isBlank()
-                        || request.getExtendedUntil() == null) {
-                    throw new IllegalArgumentException(
-                            "Gui duyet gia han can ly do (reason) va ngay xin phep (extendedUntil).");
+                // Gửi duyệt gia hạn: chỉ cần lý do (in lên bản giấy) — ngày cho
+                // làm tiếp do Trưởng ca chốt lúc duyệt. Tái dùng stopWorkOrder.
+                if (request.getReason() == null || request.getReason().isBlank()) {
+                    throw new IllegalArgumentException("Gui duyet gia han can ly do (reason).");
                 }
-                return stopWorkOrder(workOrderId,
-                        new StopWorkOrderRequest(request.getReason().trim(), request.getExtendedUntil()));
+                return stopWorkOrder(workOrderId, new StopWorkOrderRequest(request.getReason().trim()));
             }
             case COMPLETED -> {
-                return completeWorkOrder(workOrderId); // giữ nguyên guard + đóng băng PDF
+                return completeWorkOrder(workOrderId);// giữ nguyên guard + đóng băng PDF
             }
             case CANCELLED -> {
                 return cancelWorkOrder(workOrderId); // giữ nguyên side effect (trả yêu cầu về hàng chờ, archive)
@@ -586,6 +595,15 @@ public class MaintenanceService implements IMaintenanceService {
 
         workOrderRepository.save(workOrder);
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    /**
+     * Ngày mặc định cho làm tiếp = hôm sau ngày Tổ trưởng gửi duyệt. Dòng gia hạn
+     * cũ (trước V12) không có requestedAt thì lấy hôm sau ngày hiện tại.
+     */
+    private static java.time.LocalDate nextDayAfterRequest(WorkOrderExtension extension) {
+        LocalDateTime requestedAt = extension.getRequestedAt();
+        return (requestedAt != null ? requestedAt.toLocalDate() : java.time.LocalDate.now()).plusDays(1);
     }
 
     private WorkOrder loadWorkOrder(Integer workOrderId) {
@@ -605,18 +623,6 @@ public class MaintenanceService implements IMaintenanceService {
                 || wo.getStatus() == WorkOrderStatus.WAITING_FOR_APPROVAL
                 || wo.getStatus() == WorkOrderStatus.APPROVED
                 || wo.getStatus() == WorkOrderStatus.STOPPED;
-    }
-
-    /**
-     * Hai khoảng [s1,e1) và [s2,e2) chồng lấn khi {@code s1 < e2 && s2 < e1}
-     * (chạm đúng điểm cuối — e1 == s2 — KHÔNG tính là trùng). Thiếu bất kỳ mốc
-     * nào (null) thì coi như không khẳng định được chồng lấn → trả false.
-     */
-    private static boolean timeOverlaps(LocalDateTime s1, LocalDateTime e1, LocalDateTime s2, LocalDateTime e2) {
-        if (s1 == null || e1 == null || s2 == null || e2 == null) {
-            return false;
-        }
-        return s1.isBefore(e2) && s2.isBefore(e1);
     }
 
     /**

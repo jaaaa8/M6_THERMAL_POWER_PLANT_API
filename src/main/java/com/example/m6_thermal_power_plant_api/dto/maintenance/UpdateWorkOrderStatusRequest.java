@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * Cập nhật trạng thái phiếu công tác (PATCH /work-orders/{id}/status) — modal
@@ -18,8 +18,9 @@ import java.time.LocalDateTime;
  *   WAITING_FOR_APPROVAL ──duyệt gia hạn──► APPROVED ──► ... ──► COMPLETED
  *   (mọi trạng thái sống ──huỷ──► CANCELLED)
  *
- * reason + extendedUntil chỉ bắt buộc khi target = WAITING_FOR_APPROVAL
- * (được in vào mục gia hạn trên bản giấy PCT đưa Trưởng ca ký).
+ * reason chỉ bắt buộc khi target = WAITING_FOR_APPROVAL (được in vào mục gia hạn
+ * trên bản giấy PCT đưa Trưởng ca ký); allowedDate chỉ dùng khi target =
+ * APPROVED từ WAITING_FOR_APPROVAL — Trưởng ca chốt ngày cho làm tiếp.
  */
 @Getter
 @Setter
@@ -33,6 +34,10 @@ public class UpdateWorkOrderStatusRequest {
     /** Lý do xin gia hạn — bắt buộc khi targetStatus = WAITING_FOR_APPROVAL. */
     private String reason;
 
-    /** Xin phép làm việc đến ngày — bắt buộc khi targetStatus = WAITING_FOR_APPROVAL. */
-    private LocalDateTime extendedUntil;
+    /**
+     * NGÀY Trưởng ca cho phép làm tiếp — chỉ đọc khi duyệt gia hạn (targetStatus
+     * = APPROVED trên phiếu đang WAITING_FOR_APPROVAL). Bỏ trống = ngày hôm sau
+     * ngày gửi duyệt.
+     */
+    private LocalDate allowedDate;
 }
