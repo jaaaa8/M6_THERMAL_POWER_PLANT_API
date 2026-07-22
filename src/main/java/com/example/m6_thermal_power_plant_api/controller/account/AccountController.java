@@ -10,13 +10,18 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// Quản trị tài khoản (xem/tạo/sửa/khoá/reset) — mặc định HR_STAFF; ADMIN luôn
+// pass nhờ RoleHierarchy (xem SecurityConfig). Riêng tạo tài khoản công nhân
+// (worker) còn mở cho Thủ kho CCDC — override method-level bên dưới.
 @RestController
 @RequestMapping("/api/v1/accounts")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('HR_STAFF')")
 public class AccountController {
 
     private final IAccountService accountService;
@@ -38,6 +43,7 @@ public class AccountController {
         return new ResponseEntity<>(createdAccount, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER', 'HR_STAFF')")
     @PostMapping("/worker")
     public ResponseEntity<WorkerAccountResponse> createWorkerAccount(@Valid @RequestBody WorkerAccountRequest req) {
         return new ResponseEntity<>(accountService.createWorkerAccount(req), HttpStatus.CREATED);

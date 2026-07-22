@@ -57,4 +57,10 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
 
     Page<Equipment> findBySystemId(Integer systemId,Pageable pageable);
 
+    /** Dashboard: đếm thiết bị theo trạng thái → Pie chart */
+    @Query("SELECT e.status, COUNT(e) FROM Equipment e GROUP BY e.status")
+    List<Object[]> countByStatusGrouped();
+
+    /** Dashboard: đếm tổng thiết bị (không bao gồm đã xóa mềm) */
+    long count();
 }

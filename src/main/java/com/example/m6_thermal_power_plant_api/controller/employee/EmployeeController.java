@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,6 +40,7 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getAllEmployeeAccounts());
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
     @PostMapping
     public ResponseEntity<EmployeeResponseDTO> createEmployee(@Valid @RequestBody EmployeeDTO employeeDTO) {
         EmployeeResponseDTO createdEmployee = employeeService.createEmployee(employeeDTO);
@@ -73,12 +75,14 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.searchEmployees(searchRequest, pageable));
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
     @PutMapping("/{id}")
     public ResponseEntity<EmployeeResponseDTO> updateEmployee(@PathVariable Integer id, @jakarta.validation.Valid @RequestBody EmployeeDTO employeeDTO) {
         EmployeeResponseDTO updated = employeeService.updateEmployee(id, employeeDTO);
         return ResponseEntity.ok(updated);
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Integer id) {
         employeeService.deleteEmployee(id);

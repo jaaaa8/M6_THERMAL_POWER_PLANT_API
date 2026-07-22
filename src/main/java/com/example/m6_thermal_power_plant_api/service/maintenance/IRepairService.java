@@ -2,6 +2,9 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateRepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestStatsDTO;
+import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
+import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -15,10 +18,18 @@ public interface IRepairService {
     Page<RepairRequestDTO> getPendingRepairRequests(Pageable pageable);
 
     /**
-     * Lấy danh sách TẤT CẢ các yêu cầu sửa chữa, có thể lọc theo trạng thái nếu cần.
-     * CÓ PHÂN TRANG.
+     * Lấy danh sách yêu cầu sửa chữa, lọc gộp theo trạng thái + độ ưu tiên + từ khoá
+     * (mã YC / mã KKS / tên thiết bị) — tham số nào null thì bỏ qua. CÓ PHÂN TRANG.
      */
-    Page<RepairRequestDTO> getAllRepairRequests(com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus status, Pageable pageable);
+    Page<RepairRequestDTO> getAllRepairRequests(RepairRequestStatus status,
+                                                RepairPriority priority,
+                                                String search,
+                                                Pageable pageable);
+
+    /**
+     * Số liệu tổng hợp (đếm trên toàn bộ, không phụ thuộc trang) cho stat cards + pill counts.
+     */
+    RepairRequestStatsDTO getStats();
 
     /**
      * Tạo mới một yêu cầu sửa chữa.

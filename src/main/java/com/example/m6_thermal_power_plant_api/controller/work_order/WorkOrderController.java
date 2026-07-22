@@ -20,6 +20,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,9 +34,19 @@ import org.springframework.web.bind.annotation.RestController;
  * API cho Quản đốc sửa chữa / Tổ trưởng — Sprint 1 :
  *  - Xem danh sách yêu cầu sửa chữa đang chờ xử lý (phân trang).
  *  - Tạo phiếu công tác (PCT) từ một yêu cầu.
+ *
+ * Phân vai (chốt 2026-07-20, đúng user story #37/#38):
+ *  - MAINTENANCE_FOREMAN/TEAM_LEADER (class-level mặc định): HỒ SƠ phiếu —
+ *    tạo PCT từ request, sửa thông tin, thành viên, PDF, cấp vật tư.
+ *  - SHIFT_LEADER/CREW_LEADER (override method-level): MỌI bước chuyển trạng
+ *    thái — duyệt, mở/đóng hằng ngày, gia hạn, khoá khi hoàn thành, huỷ
+ *    (cancel/complete/stop/reopen/approve-extension/status; service còn chặn
+ *    thêm lớp nữa qua requireWorkOrderStatusRole cho đường gọi gián tiếp).
+ *  - GET list/detail: mở cho cả 2 nhóm (đều cần xem).
  */
 @RestController
 @RequestMapping("/api/v1/work-orders")
+@PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN', 'TEAM_LEADER')")
 public class WorkOrderController {
 
     private final IMaintenanceService maintenanceService;
@@ -60,6 +71,7 @@ public class WorkOrderController {
      * một transaction riêng. Nếu orderCode trùng (hiếm) → constraint DB ném lỗi,
      * transaction rollback sạch, executor sinh lại mã + chạy lại toàn bộ thao tác.
      */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN', 'TEAM_LEADER', 'SHIFT_LEADER', 'CREW_LEADER')")
     @PostMapping
     public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request,
                                                         java.security.Principal principal) {
@@ -92,6 +104,7 @@ public class WorkOrderController {
      * để sau tạo phiếu mới. Sau khi huỷ, nếu yêu cầu không còn phiếu nào đang
      * hoạt động thì yêu cầu quay lại trạng thái PENDING.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
     @PatchMapping("/{id}/cancel")
     public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id) {
         return maintenanceService.cancelWorkOrder(id);
@@ -102,6 +115,7 @@ public class WorkOrderController {
      * COMPLETED, không sửa trường nào khác. Idempotent nếu đã COMPLETED;
      * 409 nếu CANCELLED hoặc đang chờ duyệt gia hạn.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
     @PatchMapping("/{id}/complete")
     public WorkOrderDTO completeWorkOrder(@PathVariable Integer id) {
         return maintenanceService.completeWorkOrder(id);
@@ -112,6 +126,7 @@ public class WorkOrderController {
      * dòng gia hạn chờ duyệt + status → WAITING_FOR_APPROVAL. Bước duyệt diễn ra
      * NGOÀI hệ thống: bản giấy PCT được đưa tận tay Trưởng ca ký.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
     @PatchMapping("/{id}/stop")
     public WorkOrderDTO stopWorkOrder(@PathVariable Integer id,
                                       @Valid @RequestBody StopWorkOrderRequest request) {
@@ -134,6 +149,7 @@ public class WorkOrderController {
      * thái": duyệt phiếu, bắt đầu, tạm dừng, gửi duyệt gia hạn, duyệt gia hạn,
      * hoàn thành, huỷ. Bước chuyển không hợp lệ trả 409.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
     @PatchMapping("/{id}/status")
     public WorkOrderDTO updateWorkOrderStatus(@PathVariable Integer id,
                                               @Valid @RequestBody UpdateWorkOrderStatusRequest request,
@@ -147,6 +163,7 @@ public class WorkOrderController {
      * nhập được lưu vào approvedBy (người bấm chịu trách nhiệm nhập đúng theo
      * bản giấy) + status → APPROVED.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
     @PatchMapping("/{id}/approve-extension")
     public WorkOrderDTO approveExtension(@PathVariable Integer id, java.security.Principal principal) {
         return maintenanceService.approveExtension(id, principal.getName());
@@ -156,6 +173,7 @@ public class WorkOrderController {
      * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc
      * APPROVED → IN_PROGRESS (bật lại nút đã tắt hôm trước, sau khi duyệt).
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
     @PatchMapping("/{id}/reopen")
     public WorkOrderDTO reopenWorkOrder(@PathVariable Integer id) {
         return maintenanceService.reopenWorkOrder(id);
@@ -167,7 +185,12 @@ public class WorkOrderController {
      * Mac dinh trang 20 dong, sap xep createdAt giam dan.
      *
      * @param search tu khoa tim trong orderCode / requestCode / noi dung.
+     *
+     * Mở cho cả role "duyệt" (SHIFT_LEADER/CREW_LEADER) — họ cần xem danh
+     * sách để biết phiếu nào đang chờ duyệt (khác class-level mặc định chỉ
+     * cho vận hành, vì đây thuần là xem, không phải thao tác trạng thái).
      */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN', 'TEAM_LEADER', 'SHIFT_LEADER', 'CREW_LEADER')")
     @GetMapping
     public PagedModel<WorkOrderDTO> listWorkOrders(
             @RequestParam(required = false) String search,
@@ -182,6 +205,7 @@ public class WorkOrderController {
      *
      * @param excludeWorkOrderId bỏ qua phiếu này khi xét (thao tác trên chính nó).
      */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN', 'TEAM_LEADER', 'SHIFT_LEADER', 'CREW_LEADER')")
     @GetMapping("/busy-employees")
     public java.util.List<Integer> getBusyEmployees(
             @RequestParam(required = false) Integer excludeWorkOrderId) {
@@ -192,7 +216,10 @@ public class WorkOrderController {
      * Chi tiết một phiếu công tác: thông tin chung + thành viên hiện tại
      * (leftAt null = đang trong khu vực làm việc) + DÒNG THỜI GIAN ra/vào
      * (JOINED/LEFT tăng dần theo thời gian) + các phiếu cấp vật tư thay thế.
+     *
+     * Mở cho cả role "duyệt" — xem chi tiết trước khi bấm duyệt/duyệt gia hạn.
      */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN', 'TEAM_LEADER', 'SHIFT_LEADER', 'CREW_LEADER')")
     @GetMapping("/{id}")
     public WorkOrderDetailDTO getWorkOrderDetail(@PathVariable Integer id) {
         return maintenanceService.getWorkOrderDetail(id);

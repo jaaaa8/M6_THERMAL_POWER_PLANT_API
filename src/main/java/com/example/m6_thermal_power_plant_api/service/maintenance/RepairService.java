@@ -2,6 +2,9 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateRepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestStatsDTO;
+import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
@@ -29,11 +32,27 @@ public class RepairService implements IRepairService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<RepairRequestDTO> getAllRepairRequests(RepairRequestStatus status, Pageable pageable) {
-        if (status != null) {
-            return repairRequestRepository.findByStatus(status, pageable).map(RepairRequestDTO::from);
-        }
-        return repairRequestRepository.findAll(pageable).map(RepairRequestDTO::from);
+    public Page<RepairRequestDTO> getAllRepairRequests(RepairRequestStatus status,
+                                                       RepairPriority priority,
+                                                       String search,
+                                                       Pageable pageable) {
+        String kw = (search == null || search.isBlank()) ? null : search.trim();
+        return repairRequestRepository.search(status, priority, kw, pageable)
+                .map(RepairRequestDTO::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RepairRequestStatsDTO getStats() {
+        return RepairRequestStatsDTO.builder()
+                .total(repairRequestRepository.count())
+                .pending(repairRequestRepository.countByStatus(RepairRequestStatus.PENDING))
+                .approved(repairRequestRepository.countByStatus(RepairRequestStatus.APPROVED))
+                .inProgress(repairRequestRepository.countByStatus(RepairRequestStatus.IN_PROGRESS))
+                .completed(repairRequestRepository.countByStatus(RepairRequestStatus.COMPLETED))
+                .emergencyPending(repairRequestRepository.countByStatusAndPriority(
+                        RepairRequestStatus.PENDING, RepairPriority.EMERGENCY))
+                .build();
     }
 
     @Override
@@ -41,6 +60,10 @@ public class RepairService implements IRepairService {
     public RepairRequestDTO createRepairRequest(CreateRepairRequestDTO dto, String requesterUsername) {
         com.example.m6_thermal_power_plant_api.entity.Equipment equipment = equipmentRepository.findById(dto.getEquipmentId())
                 .orElseThrow(() -> new ObjectNotFoundException("Không tìm thấy thiết bị với ID: " + dto.getEquipmentId()));
+
+        // Thiết bị có yêu cầu sửa chữa → đánh dấu Sự cố. equipment là managed entity trong
+        // method @Transactional nên dirty-checking tự flush, không cần gọi save riêng.
+        equipment.setStatus(EquipmentStatus.FAILURE);
 
         com.example.m6_thermal_power_plant_api.entity.Account requester = accountRepository.findAccountByUsername(requesterUsername)
                 .orElseThrow(() -> new ObjectNotFoundException("Không tìm thấy tài khoản người tạo: " + requesterUsername));

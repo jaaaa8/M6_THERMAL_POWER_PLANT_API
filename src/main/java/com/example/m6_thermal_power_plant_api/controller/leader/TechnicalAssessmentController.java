@@ -7,6 +7,7 @@ import com.example.m6_thermal_power_plant_api.entity.TechnicalAssessment;
 import com.example.m6_thermal_power_plant_api.service.leader.technical_assessment.ITechnicalAssessmentService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -34,6 +35,7 @@ public class TechnicalAssessmentController {
         return ResponseEntity.ok(form);
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
     @PostMapping(
             value = "/add",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -70,6 +72,7 @@ public class TechnicalAssessmentController {
         return ResponseEntity.ok(existingAssessment);
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
     @PostMapping(value = "/edit",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> edit(

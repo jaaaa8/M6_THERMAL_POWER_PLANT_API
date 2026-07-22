@@ -11,6 +11,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderExtensionDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
+import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
@@ -23,6 +24,10 @@ import com.example.m6_thermal_power_plant_api.service.spare_part.ISparePartIssue
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +50,7 @@ public class MaintenanceService implements IMaintenanceService {
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
     private final IRepairHistoryService repairHistoryService;
+    private final RoleHierarchy roleHierarchy;
 
     private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
 
@@ -56,7 +62,8 @@ public class MaintenanceService implements IMaintenanceService {
                               com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               ISparePartIssuesService sparePartIssuesService,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService) {
+                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService,
+                              RoleHierarchy roleHierarchy) {
         this.workOrderRepository = workOrderRepository;
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
@@ -67,6 +74,39 @@ public class MaintenanceService implements IMaintenanceService {
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
         this.repairHistoryService = repairHistoryService;
+        this.roleHierarchy = roleHierarchy;
+    }
+
+    /**
+     * MỌI bước chuyển trạng thái PCT (duyệt, bắt đầu, tạm dừng, gửi/duyệt gia
+     * hạn, hoàn thành/khoá, huỷ, mở lại) đều thuộc Trưởng ca / Trưởng kíp —
+     * user story #37/#38: "TC/TK mở/đóng PCT hằng ngày, khoá phiếu khi đơn vị
+     * sửa chữa hoàn thành". Quản đốc SC / Tổ trưởng chỉ quản lý HỒ SƠ phiếu
+     * (tạo, sửa thông tin, thành viên, vật tư, PDF), không đổi trạng thái.
+     * Dùng ở MỌI nơi dispatch tới các bước này — kể cả khi gọi gián tiếp qua
+     * {@code updateWorkOrderStatus} — nên chỉ cần đặt 1 chỗ trong từng method
+     * đích, không phải lặp lại ở từng call site.
+     */
+    private void requireWorkOrderStatusRole() {
+        requireAnyRole("ROLE_SHIFT_LEADER", "ROLE_CREW_LEADER");
+    }
+
+    /**
+     * Kiểm tra role thật của người gọi hiện tại (mở rộng qua {@link RoleHierarchy}
+     * nên ADMIN luôn qua — cùng cơ chế với {@code @PreAuthorize hasAnyRole} ở
+     * controller, không hardcode ADMIN riêng). Endpoint /status là 1 method gộp
+     * nhiều bước chuyển có yêu cầu role khác nhau nên @PreAuthorize ở controller
+     * chỉ chặn được thô (ai có 1 trong các role liên quan PCT mới gọi được);
+     * kiểm tra tinh ở đây mới quyết định đúng bước chuyển nào ai được làm.
+     */
+    private void requireAnyRole(String... roles) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        var reachable = roleHierarchy.getReachableGrantedAuthorities(authentication.getAuthorities());
+        java.util.Set<String> roleSet = java.util.Set.of(roles);
+        boolean allowed = reachable.stream().map(GrantedAuthority::getAuthority).anyMatch(roleSet::contains);
+        if (!allowed) {
+            throw new AccessDeniedException("Ban khong co quyen thuc hien buoc chuyen trang thai nay.");
+        }
     }
 
     @Override
@@ -130,6 +170,7 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional
     public WorkOrderDTO cancelWorkOrder(Integer workOrderId) {
+        requireWorkOrderStatusRole();
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay phieu cong tac voi id: " + workOrderId));
@@ -382,6 +423,7 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional
     public WorkOrderDTO completeWorkOrder(Integer workOrderId) {
+        requireWorkOrderStatusRole();
         WorkOrder workOrder = loadWorkOrder(workOrderId);
 
         // Idempotent: đã hoàn thành thì trả về nguyên trạng (giống cancelWorkOrder).
@@ -405,12 +447,28 @@ public class MaintenanceService implements IMaintenanceService {
         // không bao giờ làm hỏng việc hoàn thành phiếu.
         workOrderArchiveService.archiveOnClose(workOrderId);
 
+        // Cascade trạng thái khi không còn phiếu sống nào cho cùng yêu cầu:
+        // - RepairRequest → COMPLETED (yêu cầu sửa chữa đã xử lý xong).
+        // - Equipment → ACTIVE (thiết bị đã sửa xong, trở lại hoạt động).
+        RepairRequest repairRequest = workOrder.getRepairRequest();
+        if (repairRequest != null && !hasLiveWorkOrder(repairRequest.getId())) {
+            repairRequest.setStatus(RepairRequestStatus.COMPLETED);
+            repairRequestRepository.save(repairRequest);
+
+            Equipment equipment = repairRequest.getEquipment();
+            if (equipment != null) {
+                equipment.setStatus(EquipmentStatus.ACTIVE);
+                equipmentRepository.save(equipment);
+            }
+        }
+
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
 
     @Override
     @Transactional
     public WorkOrderDTO stopWorkOrder(Integer workOrderId, StopWorkOrderRequest request) {
+        requireWorkOrderStatusRole();
         WorkOrder workOrder = loadWorkOrder(workOrderId);
 
         // Môi trường làm việc thay đổi liên tục → cho gửi duyệt từ MỌI trạng thái
@@ -439,6 +497,7 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional
     public WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername) {
+        requireWorkOrderStatusRole();
         WorkOrder workOrder = loadWorkOrder(workOrderId);
 
         if (workOrder.getStatus() != WorkOrderStatus.WAITING_FOR_APPROVAL) {
@@ -472,6 +531,7 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional
     public WorkOrderDTO reopenWorkOrder(Integer workOrderId) {
+        requireWorkOrderStatusRole();
         WorkOrder workOrder = loadWorkOrder(workOrderId);
 
         if (workOrder.getStatus() != WorkOrderStatus.OPEN
@@ -551,6 +611,7 @@ public class MaintenanceService implements IMaintenanceService {
                             "Chi duyet duoc phieu dang cho duyet (OPEN / WAITING_FOR_APPROVAL) — phieu ("
                                     + workOrder.getOrderCode() + ") dang " + current + ".");
                 }
+                requireWorkOrderStatusRole();
                 workOrder.setStatus(WorkOrderStatus.APPROVED);
             }
             case IN_PROGRESS -> {
@@ -560,6 +621,7 @@ public class MaintenanceService implements IMaintenanceService {
                             "Phieu (" + workOrder.getOrderCode() + ") phai duoc duyet (APPROVED) truoc khi "
                                     + "bat dau lam viec — dang " + current + ".");
                 }
+                requireWorkOrderStatusRole();
                 workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
             }
             case STOPPED -> {
@@ -568,6 +630,7 @@ public class MaintenanceService implements IMaintenanceService {
                             "Chi tam dung duoc phieu dang thuc hien (IN_PROGRESS) — phieu ("
                                     + workOrder.getOrderCode() + ") dang " + current + ".");
                 }
+                requireWorkOrderStatusRole();
                 workOrder.setStatus(WorkOrderStatus.STOPPED);
             }
             case WAITING_FOR_APPROVAL -> {
