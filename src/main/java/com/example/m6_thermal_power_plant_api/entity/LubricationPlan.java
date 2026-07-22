@@ -11,23 +11,14 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Kế hoạch bảo dưỡng dầu mỡ cho thiết bị.
- * Table: lubrication_plans
- *
- * Soft delete: xem {@link BaseSoftDeleteEntity}. Equipment / Consumable đều đã
- * @SQLRestriction nên 2 quan hệ dưới đây KHÔNG cần khai báo lại restriction;
- * cả hai gắn @CascadeSoftDelete để kế hoạch bị ẩn cùng thiết bị / danh mục vật tư.
- *
- * LƯU Ý (sau merge): lubrication_history KHÔNG còn FK trỏ tới bảng này — nó tham
- * chiếu trực tiếp tới equipment_id (xem {@link LubricationHistory}).
- */
 @Entity
 @Table(name = "lubrication_plans")
 @SQLRestriction("is_deleted = false")
-@Getter @Setter
+@Getter
+@Setter
 @SuperBuilder
-@NoArgsConstructor @AllArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class LubricationPlan extends BaseSoftDeleteEntity {
@@ -36,30 +27,54 @@ public class LubricationPlan extends BaseSoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    /**
+     * Mã kế hoạch bảo dưỡng
+     * VD: LP-20260722-001
+     */
+    @Column(name = "lubrication_code", length = 50, unique = true)
+    private String lubricationCode;
+
+    /**
+     * Thiết bị cần bảo dưỡng
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "equipment_id")
+    @JoinColumn(name = "equipment_id", nullable = false)
     @CascadeSoftDelete
     private Equipment equipment;
 
-    /** Chu kỳ bảo dưỡng tính theo tháng */
-    @Column(name = "cycle_months")
-    private Integer cycleMonths;
+    /**
+     * Chu kỳ bảo dưỡng
+     * 7, 30, 90, 180 (ngày)
+     */
+    @Column(name = "cycle_days", nullable = false)
+    private Integer cycleDays;
 
-    /** Ngày đến hạn bảo dưỡng tiếp theo (dùng để gửi thông báo trước 3 ngày) */
-    @Column(name = "next_due_date")
+    /**
+     * Ngày bảo dưỡng tiếp theo
+     */
+    @Column(name = "next_due_date", nullable = false)
     private LocalDate nextDueDate;
 
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 50)
-    private LubricationStatus status = LubricationStatus.NOT_LUBRICATED;
-
-    /** Liên kết vật tư tiêu hao (dầu/mỡ) trong danh mục kho */
+    /**
+     * Dầu/mỡ sử dụng
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "consumable_id")
+    @JoinColumn(name = "consumable_id", nullable = false)
     @CascadeSoftDelete
     private Consumable consumable;
 
-    @Column(precision = 10, scale = 2)
+    /**
+     * Số lượng dầu/mỡ cần dùng
+     */
+    @Column(name = "quantity", precision = 10, scale = 2, nullable = false)
     private BigDecimal quantity;
+
+    /**
+     * Trạng thái bảo dưỡng
+     */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 50)
+    private LubricationStatus status =
+            LubricationStatus.NOT_LUBRICATED;
 }
