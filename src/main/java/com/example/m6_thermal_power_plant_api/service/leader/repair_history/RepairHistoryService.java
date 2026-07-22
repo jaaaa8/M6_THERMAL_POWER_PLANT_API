@@ -263,6 +263,16 @@ public class RepairHistoryService implements IRepairHistoryService {
         repairHistoryRepository.save(history);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<RepairHistoryResponseDto> findByEquipment(Integer equipmentId) {
+        return repairHistoryRepository
+                .findByEquipmentIdOrderByRepairDateDesc(equipmentId)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
     @Transactional
     public WorkOrder complete(Integer id){
 

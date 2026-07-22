@@ -16,8 +16,8 @@ public class AccountDto {
     private String username;
 
 
-    @NotBlank(message = "Email không được để trống")
-    @Email(message = "Email không đúng định dạng")
+     @NotBlank(message = "Email không được để trống")
+     @Email(message = "Email không đúng định dạng")
     private String email;
 
     @Valid

@@ -4,6 +4,7 @@ import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentDTO;
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentCreateDTO;
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentUpdateDTO;
 import com.example.m6_thermal_power_plant_api.entity.Department;
+import com.example.m6_thermal_power_plant_api.exception.DuplicateResourceException;
 import com.example.m6_thermal_power_plant_api.repository.department.IDepartmentRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import lombok.RequiredArgsConstructor;
@@ -36,14 +37,19 @@ public class DepartmentService implements IDepartmentService {
     @Override
     @Transactional
     public DepartmentDTO createDepartment(DepartmentCreateDTO dto) {
-        String deptCode;
-        do {
-            deptCode = "DEPT" + System.currentTimeMillis();
-        } while (departmentRepository.existsByDepartmentCode(deptCode));
+        String deptCode = dto.getDepartmentCode().trim().toUpperCase();
+        if (departmentRepository.existsByDepartmentCode(deptCode)) {
+            throw new DuplicateResourceException("Mã phòng ban '" + deptCode + "' đã tồn tại.");
+        }
+
+        String name = dto.getName().trim();
+        if (departmentRepository.existsByNameIgnoreCase(name)) {
+            throw new DuplicateResourceException("Tên phòng ban '" + name + "' đã tồn tại.");
+        }
 
         Department dept = Department.builder()
                 .departmentCode(deptCode)
-                .name(dto.getName())
+                .name(name)
                 .description(dto.getDescription())
                 .build();
         Department saved = departmentRepository.save(dept);
@@ -97,7 +103,13 @@ public class DepartmentService implements IDepartmentService {
     public DepartmentDTO updateDepartment(Integer id, DepartmentUpdateDTO dto) {
         Department dept = departmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Department not found for id: " + id));
-        dept.setName(dto.getName());
+
+        String name = dto.getName().trim();
+        if (departmentRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
+            throw new DuplicateResourceException("Tên phòng ban '" + name + "' đã tồn tại.");
+        }
+
+        dept.setName(name);
         dept.setDescription(dto.getDescription());
         Department saved = departmentRepository.save(dept);
         return DepartmentDTO.builder()

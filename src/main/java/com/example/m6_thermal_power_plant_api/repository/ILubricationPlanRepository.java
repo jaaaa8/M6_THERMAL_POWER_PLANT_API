@@ -1,11 +1,14 @@
 package com.example.m6_thermal_power_plant_api.repository;
 
+import com.example.m6_thermal_power_plant_api.entity.LubricationHistory;
 import com.example.m6_thermal_power_plant_api.entity.LubricationPlan;
 import com.example.m6_thermal_power_plant_api.entity.enums.LubricationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
 
 public interface ILubricationPlanRepository extends JpaRepository<LubricationPlan, Integer> {
     @Query("""
