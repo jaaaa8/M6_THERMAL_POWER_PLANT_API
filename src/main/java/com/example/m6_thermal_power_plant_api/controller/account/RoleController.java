@@ -34,7 +34,6 @@ public class RoleController {
     // Đây là API cấu hình ma trận role x permission — thay TOÀN BỘ danh sách
     // permission của role này và bump permission_version cho mọi account đang
     // giữ role đó (cơ chế Cách 2 đã học). Chỉ ADMIN được cấu hình.
-    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/permissions")
     public ResponseEntity<List<PermissionDTO>> updateRolePermissions(
             @PathVariable Integer id,

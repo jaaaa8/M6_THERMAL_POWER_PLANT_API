@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -25,7 +26,10 @@ public class WorkOrderExtensionDTO {
 
     private Integer id;
     private String reason;
-    private LocalDateTime extendedUntil;
+    /** Lúc Tổ trưởng gửi duyệt gia hạn. */
+    private LocalDateTime requestedAt;
+    /** Ngày Trưởng ca cho phép làm tiếp — null khi chưa duyệt. */
+    private LocalDate allowedDate;
     private Integer approvedById;
     private String approvedByName;
 
@@ -40,7 +44,8 @@ public class WorkOrderExtensionDTO {
         return WorkOrderExtensionDTO.builder()
                 .id(extension.getId())
                 .reason(extension.getReason())
-                .extendedUntil(extension.getExtendedUntil())
+                .requestedAt(extension.getRequestedAt())
+                .allowedDate(extension.getAllowedDate())
                 .approvedById(approvedBy != null ? approvedBy.getId() : null)
                 .approvedByName(approvedByName)
                 .build();
