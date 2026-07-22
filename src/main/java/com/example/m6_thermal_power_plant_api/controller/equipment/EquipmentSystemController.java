@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -32,6 +33,7 @@ public class EquipmentSystemController {
 
 //    @GetMapping("/{id")
 //    public ResponseEntity<>
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PostMapping()
     public ResponseEntity<SystemListDTO> createSystem(
             @Valid @RequestBody CreateSystemDTO dto)
@@ -46,6 +48,7 @@ public class EquipmentSystemController {
     ){
         return ResponseEntity.ok(equipmentSystemService.getById(id));
     }
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PutMapping("/{id}")
     public  ResponseEntity<SystemListDTO> updateSystem(
             @PathVariable (name="id") int id,
@@ -54,6 +57,7 @@ public class EquipmentSystemController {
     {
         return ResponseEntity.ok(equipmentSystemService.updateSystem(id,dto));
     }
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable(name = "id") Integer id){
         equipmentSystemService.delete(id);

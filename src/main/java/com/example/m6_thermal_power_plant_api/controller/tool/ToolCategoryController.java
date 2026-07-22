@@ -7,6 +7,7 @@ import com.example.m6_thermal_power_plant_api.service.impl.IToolCategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,18 +19,21 @@ public class ToolCategoryController {
 
     private final IToolCategoryService toolCategoryService;
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ToolCategoryResponse> create(@Valid @RequestBody ToolCategoryRequest request) {
         return ApiResponse.success("Tạo chủng loại thành công", toolCategoryService.create(request));
     }
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PutMapping("/{id}")
     public ApiResponse<ToolCategoryResponse> update(@PathVariable Integer id,
                                                     @Valid @RequestBody ToolCategoryRequest request) {
         return ApiResponse.success("Cập nhật chủng loại thành công", toolCategoryService.update(id, request));
     }
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Integer id) {
         toolCategoryService.delete(id);

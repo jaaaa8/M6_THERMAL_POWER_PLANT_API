@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,7 +24,7 @@ public class ToolBorrowLogController {
     private final IToolBorrowLogService toolBorrowLogService;
     private final ToolBorrowOverdueNotifier toolBorrowOverdueNotifier;
 
-    /** Nhân sự đăng ký mượn CCDC */
+    /** Nhân sự đăng ký mượn CCDC — mọi tài khoản đã đăng nhập đều tạo được. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ToolBorrowLogResponse> createBorrowRequest(
@@ -33,6 +34,7 @@ public class ToolBorrowLogController {
     }
 
     /** Thủ kho duyệt và giao CCDC */
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PatchMapping("/{id}/approve")
     public ApiResponse<ToolBorrowLogResponse> approve(@PathVariable Integer id,
                                                         @RequestParam Integer approvedByAccountId) {
@@ -40,6 +42,7 @@ public class ToolBorrowLogController {
     }
 
     /** Thủ kho từ chối phiếu mượn */
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PatchMapping("/{id}/reject")
     public ApiResponse<ToolBorrowLogResponse> reject(@PathVariable Integer id,
                                                        @RequestParam Integer approvedByAccountId,
@@ -48,6 +51,7 @@ public class ToolBorrowLogController {
     }
 
     /** Thủ kho xác nhận nhận lại CCDC */
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PatchMapping("/{id}/return")
     public ApiResponse<ToolBorrowLogResponse> returnTool(@PathVariable Integer id,
                                                            @Valid @RequestBody ToolBorrowReturnRequest request) {

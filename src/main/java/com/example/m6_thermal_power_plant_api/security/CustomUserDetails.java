@@ -43,12 +43,10 @@ public class CustomUserDetails implements UserDetails {
     }
 
     // Build từ JWT claims (filter dùng — không cần password, không cần query DB).
-    // authorities gồm 2 loại: "ROLE_xxx" và permission code thô.
-    public static CustomUserDetails fromClaims(Integer accountId, String username,
-                                                List<String> roles, List<String> permissions) {
-        List<GrantedAuthority> authorities = new java.util.ArrayList<>();
-        roles.forEach(r -> authorities.add(new SimpleGrantedAuthority("ROLE_" + r)));
-        permissions.forEach(p -> authorities.add(new SimpleGrantedAuthority(p)));
+    public static CustomUserDetails fromClaims(Integer accountId, String username, List<String> roles) {
+        List<GrantedAuthority> authorities = roles.stream()
+                .map(r -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + r))
+                .collect(Collectors.toList());
         return new CustomUserDetails(accountId, username, null, true, authorities);
     }
 

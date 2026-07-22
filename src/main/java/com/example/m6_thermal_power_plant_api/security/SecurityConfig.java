@@ -8,6 +8,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -68,5 +72,31 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Cây phân cấp vai trò: ADMIN đứng trên MỌI role khác → hasAnyRole('X') tự pass
+     * cho ADMIN mà không phải liệt kê ADMIN ở từng @PreAuthorize. Đây là cách xử lý
+     * dứt điểm "ADMIN full quyền" (thay cho special-case cũ từng gây blocker 403).
+     */
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.withDefaultRolePrefix()
+                .role("ADMIN").implies(
+                        "WORKER", "MATERIALS_STOREKEEPER", "TOOLS_STOREKEEPER", "WORKSHOP_FOREMAN",
+                        "SHIFT_LEADER", "CREW_LEADER", "MAINTENANCE_FOREMAN", "TEAM_LEADER",
+                        "SAFETY_SUPERVISOR", "HR_STAFF")
+                .build();
+    }
+
+    /**
+     * Cho @PreAuthorize/@PostAuthorize áp RoleHierarchy ở trên. Bean PHẢI static để
+     * khởi tạo sớm trước method-security interceptor (khuyến nghị của Spring Security).
+     */
+    @Bean
+    static MethodSecurityExpressionHandler methodSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
+        DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+        handler.setRoleHierarchy(roleHierarchy);
+        return handler;
     }
 }
