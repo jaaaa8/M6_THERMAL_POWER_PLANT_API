@@ -47,6 +47,7 @@ class DepartmentServiceTest {
                 .build();
 
         when(departmentRepository.existsByDepartmentCode(anyString())).thenReturn(false);
+        when(departmentRepository.existsByNameIgnoreCase(anyString())).thenReturn(false);
         when(departmentRepository.save(any(Department.class))).thenReturn(department);
 
         DepartmentDTO result = departmentService.createDepartment(createDTO);
@@ -56,6 +57,65 @@ class DepartmentServiceTest {
         assertThat(result.getDepartmentCode()).isEqualTo("DEPT");
         assertThat(result.getName()).isEqualTo("Technical Department");
         verify(departmentRepository).save(any(Department.class));
+    }
+
+    @Test
+    void createDepartment_duplicateCode_throwsDuplicateResourceException() {
+        DepartmentCreateDTO createDTO = DepartmentCreateDTO.builder()
+                .departmentCode("DEPT")
+                .name("Technical Department")
+                .description("Handles technical issues")
+                .build();
+
+        when(departmentRepository.existsByDepartmentCode("DEPT")).thenReturn(true);
+
+        assertThatThrownBy(() -> departmentService.createDepartment(createDTO))
+                .isInstanceOf(com.example.m6_thermal_power_plant_api.exception.DuplicateResourceException.class)
+                .hasMessageContaining("Mã phòng ban 'DEPT' đã tồn tại.");
+
+        verify(departmentRepository, never()).save(any(Department.class));
+    }
+
+    @Test
+    void createDepartment_duplicateName_throwsDuplicateResourceException() {
+        DepartmentCreateDTO createDTO = DepartmentCreateDTO.builder()
+                .departmentCode("DEPT")
+                .name("Technical Department")
+                .description("Handles technical issues")
+                .build();
+
+        when(departmentRepository.existsByDepartmentCode("DEPT")).thenReturn(false);
+        when(departmentRepository.existsByNameIgnoreCase("Technical Department")).thenReturn(true);
+
+        assertThatThrownBy(() -> departmentService.createDepartment(createDTO))
+                .isInstanceOf(com.example.m6_thermal_power_plant_api.exception.DuplicateResourceException.class)
+                .hasMessageContaining("Tên phòng ban 'Technical Department' đã tồn tại.");
+
+        verify(departmentRepository, never()).save(any(Department.class));
+    }
+
+    @Test
+    void updateDepartment_duplicateName_throwsDuplicateResourceException() {
+        DepartmentUpdateDTO updateDTO = DepartmentUpdateDTO.builder()
+                .name("Technical Department")
+                .description("Updated description")
+                .build();
+
+        Department existingDepartment = Department.builder()
+                .id(1)
+                .departmentCode("DEPT01")
+                .name("Old Department")
+                .description("Handles technical issues")
+                .build();
+
+        when(departmentRepository.findById(1)).thenReturn(Optional.of(existingDepartment));
+        when(departmentRepository.existsByNameIgnoreCaseAndIdNot("Technical Department", 1)).thenReturn(true);
+
+        assertThatThrownBy(() -> departmentService.updateDepartment(1, updateDTO))
+                .isInstanceOf(com.example.m6_thermal_power_plant_api.exception.DuplicateResourceException.class)
+                .hasMessageContaining("Tên phòng ban 'Technical Department' đã tồn tại.");
+
+        verify(departmentRepository, never()).save(any(Department.class));
     }
 
     @Test

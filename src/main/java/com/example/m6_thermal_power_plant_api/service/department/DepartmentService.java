@@ -42,9 +42,14 @@ public class DepartmentService implements IDepartmentService {
             throw new DuplicateResourceException("Mã phòng ban '" + deptCode + "' đã tồn tại.");
         }
 
+        String name = dto.getName().trim();
+        if (departmentRepository.existsByNameIgnoreCase(name)) {
+            throw new DuplicateResourceException("Tên phòng ban '" + name + "' đã tồn tại.");
+        }
+
         Department dept = Department.builder()
                 .departmentCode(deptCode)
-                .name(dto.getName())
+                .name(name)
                 .description(dto.getDescription())
                 .build();
         Department saved = departmentRepository.save(dept);
@@ -98,7 +103,13 @@ public class DepartmentService implements IDepartmentService {
     public DepartmentDTO updateDepartment(Integer id, DepartmentUpdateDTO dto) {
         Department dept = departmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Department not found for id: " + id));
-        dept.setName(dto.getName());
+
+        String name = dto.getName().trim();
+        if (departmentRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
+            throw new DuplicateResourceException("Tên phòng ban '" + name + "' đã tồn tại.");
+        }
+
+        dept.setName(name);
         dept.setDescription(dto.getDescription());
         Department saved = departmentRepository.save(dept);
         return DepartmentDTO.builder()
