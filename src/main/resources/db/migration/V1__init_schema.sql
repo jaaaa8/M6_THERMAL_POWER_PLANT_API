@@ -243,22 +243,52 @@ CREATE TABLE `lubrication_history` (
   CONSTRAINT `FK7xq0a8gydmnetd2jwabpcxpaf` FOREIGN KEY (`equipment_id`) REFERENCES `equipment` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-CREATE TABLE `lubrication_plans` (
-  `consumable_id` int DEFAULT NULL,
-  `cycle_months` int DEFAULT NULL,
-  `equipment_id` int DEFAULT NULL,
-  `id` int NOT NULL AUTO_INCREMENT,
-  `is_deleted` bit(1) NOT NULL,
-  `next_due_date` date DEFAULT NULL,
-  `quantity` decimal(10,2) DEFAULT NULL,
-  `deleted_at` datetime(6) DEFAULT NULL,
-  `status` enum('DUE_FOR_LUBRICATION','DUE_SOON','LUBRICATED','NOT_LUBRICATED','OVERDUE') DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `FKflxexh0dkwi396p6w0qomiodi` (`consumable_id`),
-  KEY `FKcidiek3nnw3w16hsl6j9di8tw` (`equipment_id`),
-  CONSTRAINT `FKcidiek3nnw3w16hsl6j9di8tw` FOREIGN KEY (`equipment_id`) REFERENCES `equipment` (`id`),
-  CONSTRAINT `FKflxexh0dkwi396p6w0qomiodi` FOREIGN KEY (`consumable_id`) REFERENCES `consumable` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE lubrication_plans (
+                                   id INT NOT NULL AUTO_INCREMENT,
+
+                                   lubrication_code VARCHAR(50) NOT NULL,
+
+                                   equipment_id INT NOT NULL,
+
+                                   consumable_id INT NOT NULL,
+
+                                   cycle_days INT NOT NULL,
+
+                                   next_due_date DATE NOT NULL,
+
+                                   quantity DECIMAL(10,2) NOT NULL,
+
+                                   status ENUM(
+                                       'DUE_FOR_LUBRICATION',
+                                       'DUE_SOON',
+                                       'LUBRICATED',
+                                       'NOT_LUBRICATED',
+                                       'OVERDUE'
+                                       ) NOT NULL DEFAULT 'NOT_LUBRICATED',
+
+                                   is_deleted BIT(1) NOT NULL DEFAULT b'0',
+
+                                   deleted_at DATETIME(6) NULL,
+
+                                   PRIMARY KEY (id),
+
+                                   UNIQUE KEY UK_lubrication_code (lubrication_code),
+
+                                   KEY IDX_LUBRICATION_EQUIPMENT (equipment_id),
+
+                                   KEY IDX_LUBRICATION_CONSUMABLE (consumable_id),
+
+                                   CONSTRAINT FK_LUBRICATION_EQUIPMENT
+                                       FOREIGN KEY (equipment_id)
+                                           REFERENCES equipment(id),
+
+                                   CONSTRAINT FK_LUBRICATION_CONSUMABLE
+                                       FOREIGN KEY (consumable_id)
+                                           REFERENCES consumable(id)
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `parameter_catalog` (
   `id` int NOT NULL AUTO_INCREMENT,

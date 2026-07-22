@@ -310,13 +310,23 @@ INSERT INTO tool_borrow_logs (
       (2, 3, 3, 1, 'Insulation test on MCC panel',      'APPROVED', '2026-06-15 08:10:00', '2026-06-15 08:30:00', '2026-06-15 20:00:00', null, null, 4, false),
       (3, 4, 6, 1, 'Lockout for electrical isolation',  'APPROVED', '2026-06-15 08:15:00', '2026-06-15 08:35:00', '2026-06-15 20:00:00', null, null, 4, false);
 
-INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
-) VALUES
-      (1, 1, 3, '2026-09-10', 1, 25.00, 'NOT_LUBRICATED', false),
-      (2, 3, 2, '2026-08-05', 2, 3.00, 'NOT_LUBRICATED', false),
-      (3, 5, 1, '2026-07-15', 2, 1.50, 'NOT_LUBRICATED', false);
-
+INSERT INTO lubrication_plans
+(
+    lubrication_code,
+    equipment_id,
+    consumable_id,
+    cycle_days,
+    next_due_date,
+    quantity,
+    status,
+    is_deleted
+)
+VALUES
+    ('LP-001',1,1,7,'2026-07-29',2.50,'NOT_LUBRICATED',b'0'),
+    ('LP-002',2,3,30,'2026-08-22',5.00,'DUE_SOON',b'0'),
+    ('LP-003',3,2,90,'2026-10-20',8.00,'NOT_LUBRICATED',b'0'),
+    ('LP-004',1,2,180,'2027-01-18',12.00,'LUBRICATED',b'0'),
+    ('LP-005',2,1,30,'2026-07-15',3.00,'OVERDUE',b'0');
 INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted
 ) VALUES
@@ -367,10 +377,6 @@ INSERT INTO consumable_issues (
 ) VALUES
     (4, 'CI-2026-0004', 3, 1, 'export', 8.00, 4, '2026-06-18 14:05:00', false);
 
-INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
-) VALUES
-    (4, 6, 3, '2026-09-18', 1, 20.00, 'NOT_LUBRICATED', false);
 
 INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted
