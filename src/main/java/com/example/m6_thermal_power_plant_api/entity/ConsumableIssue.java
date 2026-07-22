@@ -10,6 +10,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.example.m6_thermal_power_plant_api.entity.enums.ConsumableIssueStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
@@ -77,6 +78,16 @@ public class ConsumableIssue extends BaseSoftDeleteEntity {
 
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
+
+    /** URL bản lưu PDF phiếu đề nghị cấp phát trên Cloudinary (V14). */
+    @Column(name = "pdf_path", length = 500)
+    private String pdfPath;
+
+    @Column(name = "attachment_path", length = 500)
+    private String attachmentPath;
+
+    @Builder.Default
+    private ConsumableIssueStatus status = ConsumableIssueStatus.PENDING;
 
     @OneToMany(mappedBy = "issue")
     private List<ConsumableIssueDetail> details;

@@ -54,14 +54,36 @@ public class SparePartsIssueController {
     }
 
     @PostMapping("/update")
-    public ResponseEntity<SparePartsIssueRequestDto> updateSparePartsIssue(@RequestBody SparePartsIssueRequestDto sparePartsIssueRequestDto) {
-        SparePartsIssueRequestDto updatedSparePartsIssue = sparePartsIssueService.update(sparePartsIssueRequestDto);
-        return ResponseEntity.ok(updatedSparePartsIssue);
+    public ResponseEntity<?> updateSparePartsIssue(@RequestBody SparePartsIssueRequestDto dto) {
+        try {
+            return ResponseEntity.ok(sparePartsIssueService.update(dto));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(java.util.Map.of("message", e.getMessage()));
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
+        }
     }
+
 
     @GetMapping("/detail/{id}")
     public ResponseEntity<SparePartsIssueRequestDto> getSparePartsIssueDetail(@PathVariable("id") Integer id) {
         SparePartsIssueRequestDto sparePartsIssueRequestDto = sparePartsIssueService.findById(id);
         return ResponseEntity.ok(sparePartsIssueRequestDto);
+    }
+
+    @PostMapping("/upload-spare-parts-issue")
+    public ResponseEntity<?> uploadSparePartsIssuePdf(
+            @RequestParam("id") Integer id,
+            @RequestParam("pdf") MultipartFile pdf
+    ) {
+        try {
+            SparePartsIssueRequestDto result = sparePartsIssueService.uploadSignedPdf(id, pdf);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Tải lên file PDF thất bại: " + e.getMessage());
+        }
     }
 }

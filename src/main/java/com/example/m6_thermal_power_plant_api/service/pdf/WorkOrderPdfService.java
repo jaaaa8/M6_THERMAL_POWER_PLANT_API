@@ -34,9 +34,10 @@ import java.util.Map;
  * với public_id = orderCode (overwrite — bản mới đè bản cũ, pdf_path không đổi
  * giữa các lần render) rồi lưu URL vào work_orders.pdf_path.
  *
- * Các mục trên phiếu KHÔNG có trong hệ thống (Người cho phép, giờ cho phép bắt
- * đầu của Trưởng ca, cột giờ bắt đầu/kết thúc của bảng gia hạn hàng ngày) được
- * in dòng chấm (…) để Trưởng ca điền TAY — đúng quy trình vận hành theo ca.
+ * Các mục trên phiếu KHÔNG có trong hệ thống (Người cho phép, toàn bộ mục 2 —
+ * thủ tục cho phép công tác, mục 3.1/3.2, toàn bộ mục 6 — kết thúc công tác,
+ * cột Bậc ATĐ và 2 cột ký của bảng 4 và bảng 5) được in dòng chấm (…) hoặc ô
+ * trống để điền TAY — đúng quy trình vận hành theo ca.
  */
 @Service
 @RequiredArgsConstructor
@@ -109,7 +110,7 @@ public class WorkOrderPdfService {
     private byte[] renderBytes(WorkOrder workOrder) {
         List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(workOrder.getId());
         List<WorkOrderExtension> extensions =
-                workOrderExtensionRepository.findByWorkOrder_IdOrderByExtendedUntilAsc(workOrder.getId());
+                workOrderExtensionRepository.findByWorkOrder_IdOrderByRequestedAtAsc(workOrder.getId());
         return pdfService.renderPdf("pdf/work-order", buildModel(workOrder, members, extensions));
     }
 
@@ -159,8 +160,11 @@ public class WorkOrderPdfService {
 
         model.put("description", workOrder.getRepairDescription() != null
                 ? workOrder.getRepairDescription() : DOTS);
-        model.put("plannedFrom", format(workOrder.getStartTime(), TIME_DATE));
-        model.put("plannedTo", format(workOrder.getExpectedEndTime(), TIME_DATE));
+        // 1.6 in dạng "…giờ…phút, ngày…tháng…năm…" nên cần từng thành phần.
+        // Giờ kết thúc là mốc THỰC TẾ, chỉ có khi phiếu đã hoàn thành — phiếu
+        // đang sống in dòng chấm để điền tay.
+        putTimeParts(model, "plannedStart", workOrder.getStartTime());
+        putTimeParts(model, "actualEnd", workOrder.getEndTime());
 
         LocalDateTime issued = workOrder.getCreatedAt();
         model.put("issuedDay", issued != null ? String.format("%02d", issued.getDayOfMonth()) : "......");
@@ -173,11 +177,7 @@ public class WorkOrderPdfService {
                 .filter(java.util.Objects::nonNull)
                 .min(Comparator.naturalOrder())
                 .orElse(null);
-        model.put("actualStartHour", actualStart != null ? String.format("%02d", actualStart.getHour()) : "......");
-        model.put("actualStartMinute", actualStart != null ? String.format("%02d", actualStart.getMinute()) : "......");
-        model.put("actualStartDay", actualStart != null ? String.format("%02d", actualStart.getDayOfMonth()) : "......");
-        model.put("actualStartMonth", actualStart != null ? String.format("%02d", actualStart.getMonthValue()) : "......");
-        model.put("actualStartYear", actualStart != null ? String.valueOf(actualStart.getYear()) : "......");
+        putTimeParts(model, "actualStart", actualStart);
 
         // Số NHÂN VIÊN (distinct) — 1 người rời rồi vào lại tạo 2 dòng member nhưng vẫn là 1 người.
         long memberCount = members.stream()
@@ -188,6 +188,7 @@ public class WorkOrderPdfService {
         model.put("memberCount", memberCount);
 
         // Bảng vào/ra vị trí: mỗi dòng member một cặp JOINED/LEFT, theo giờ vào tăng dần.
+        // (Bậc ATĐ + 2 cột ký không có trong hệ thống — in trống để điền tay.)
         List<Map<String, String>> memberRows = new ArrayList<>();
         members.stream()
                 .sorted(Comparator.comparing(WorkOrderMember::getJoinedAt,
@@ -195,32 +196,45 @@ public class WorkOrderPdfService {
                 .forEach(m -> {
                     Map<String, String> row = new HashMap<>();
                     row.put("name", m.getEmployees() != null ? m.getEmployees().getFullName() : DOTS);
-                    row.put("role", m.getRoleInTask() != null ? m.getRoleInTask() : "");
                     row.put("joinedAt", format(m.getJoinedAt(), TIME_DATE));
                     row.put("leftAt", format(m.getLeftAt(), TIME_DATE));
                     memberRows.add(row);
                 });
         while (memberRows.size() < MIN_MEMBER_ROWS) {
-            memberRows.add(Map.of("name", "", "role", "", "joinedAt", "", "leftAt", ""));
+            memberRows.add(Map.of("name", "", "joinedAt", "", "leftAt", ""));
         }
         model.put("memberRows", memberRows);
 
-        // Bảng cho phép làm việc hàng ngày: in các gia hạn đã có (giờ bắt đầu/kết
-        // thúc từng ngày Trưởng ca điền TAY), bù thêm dòng trống cho những ngày sau.
+        // Bảng cho phép làm việc hàng ngày: in các gia hạn đã có (2 cột ký do
+        // Người chỉ huy trực tiếp / Trưởng ca ký TAY), bù thêm dòng trống.
         List<Map<String, String>> extensionRows = new ArrayList<>();
         for (WorkOrderExtension extension : extensions) {
             Map<String, String> row = new HashMap<>();
-            row.put("allowedUntil", format(extension.getExtendedUntil(), DATE));
+            row.put("stoppedAt", format(extension.getRequestedAt(), TIME_DATE));
             row.put("reason", extension.getReason() != null ? extension.getReason() : "");
-            row.put("approvedBy", nameOf(extension.getApprovedBy()));
+            row.put("allowedDate", extension.getAllowedDate() != null
+                    ? extension.getAllowedDate().format(DATE) : "");
             extensionRows.add(row);
         }
         while (extensionRows.size() < MIN_EXTENSION_ROWS) {
-            extensionRows.add(Map.of("allowedUntil", "", "reason", "", "approvedBy", ""));
+            extensionRows.add(Map.of("stoppedAt", "", "reason", "", "allowedDate", ""));
         }
         model.put("extensionRows", extensionRows);
 
         return model;
+    }
+
+    /**
+     * Đưa từng thành phần "giờ/phút/ngày/tháng/năm" của một mốc thời gian vào model
+     * (key = prefix + Hour/Minute/Day/Month/Year) — phiếu in dạng
+     * "…giờ…phút, ngày…tháng…năm…". Null thì in "......" để điền tay.
+     */
+    private static void putTimeParts(Map<String, Object> model, String prefix, LocalDateTime value) {
+        model.put(prefix + "Hour", value != null ? String.format("%02d", value.getHour()) : "......");
+        model.put(prefix + "Minute", value != null ? String.format("%02d", value.getMinute()) : "......");
+        model.put(prefix + "Day", value != null ? String.format("%02d", value.getDayOfMonth()) : "......");
+        model.put(prefix + "Month", value != null ? String.format("%02d", value.getMonthValue()) : "......");
+        model.put(prefix + "Year", value != null ? String.valueOf(value.getYear()) : "......");
     }
 
     private static String format(LocalDateTime value, DateTimeFormatter formatter) {

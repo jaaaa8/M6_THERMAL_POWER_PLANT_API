@@ -71,8 +71,14 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Column(name = "start_time")
     private LocalDateTime startTime;
 
+    /**
+     * Thời điểm kết thúc THỰC TẾ — null suốt đời phiếu, chỉ được đóng dấu khi
+     * phiếu chuyển COMPLETED (xem MaintenanceService#completeWorkOrder). KHÔNG
+     * phải "dự kiến kết thúc": mốc dự kiến nhập lúc tạo không bao giờ đúng nên
+     * đã bỏ (V13).
+     */
     @Column(name = "end_time")
-    private LocalDateTime expectedEndTime;
+    private LocalDateTime endTime;
 
     @Column(name = "repair_description")
     private String repairDescription;

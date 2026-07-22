@@ -16,4 +16,5 @@ public interface IRepairHistoryService {
     RepairHistoryResponseDto findById(Integer id);
 
     void createRepairHistory(WorkOrder workOrder);
+    List<RepairHistoryResponseDto> findByEquipment(Integer equipmentId);
 }
