@@ -4,6 +4,7 @@ import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentDTO;
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentCreateDTO;
 import com.example.m6_thermal_power_plant_api.dto.employee.DepartmentUpdateDTO;
 import com.example.m6_thermal_power_plant_api.entity.Department;
+import com.example.m6_thermal_power_plant_api.exception.DuplicateResourceException;
 import com.example.m6_thermal_power_plant_api.repository.department.IDepartmentRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +37,10 @@ public class DepartmentService implements IDepartmentService {
     @Override
     @Transactional
     public DepartmentDTO createDepartment(DepartmentCreateDTO dto) {
-        String deptCode;
-        do {
-            deptCode = "DEPT" + System.currentTimeMillis();
-        } while (departmentRepository.existsByDepartmentCode(deptCode));
+        String deptCode = dto.getDepartmentCode().trim().toUpperCase();
+        if (departmentRepository.existsByDepartmentCode(deptCode)) {
+            throw new DuplicateResourceException("Mã phòng ban '" + deptCode + "' đã tồn tại.");
+        }
 
         Department dept = Department.builder()
                 .departmentCode(deptCode)
