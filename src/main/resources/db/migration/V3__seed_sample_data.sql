@@ -311,11 +311,11 @@ INSERT INTO tool_borrow_logs (
       (3, 4, 6, 1, 'Lockout for electrical isolation',  'APPROVED', '2026-06-15 08:15:00', '2026-06-15 08:35:00', '2026-06-15 20:00:00', null, null, 4, false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
+    id, equipment_id, lubrication_code, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
 ) VALUES
-      (1, 1, 3, '2026-09-10', 1, 25.00, 'NOT_LUBRICATED', false),
-      (2, 3, 2, '2026-08-05', 2, 3.00, 'NOT_LUBRICATED', false),
-      (3, 5, 1, '2026-07-15', 2, 1.50, 'NOT_LUBRICATED', false);
+      (1, 1, 'LPL-2026-001', 3, '2026-09-10', 1, 25.00, 'NOT_LUBRICATED', false),
+      (2, 3, 'LPL-2026-002', 2, '2026-08-05', 2, 3.00, 'NOT_LUBRICATED', false),
+      (3, 5, 'LPL-2026-003', 1, '2026-07-15', 2, 1.50, 'NOT_LUBRICATED', false);
 
 INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted
@@ -368,9 +368,9 @@ INSERT INTO consumable_issues (
     (4, 'CI-2026-0004', 3, 1, 'export', 8.00, 4, '2026-06-18 14:05:00', false);
 
 INSERT INTO lubrication_plans (
-    id, equipment_id, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
+    id, equipment_id, lubrication_code, cycle_months, next_due_date, consumable_id, quantity, status, is_deleted
 ) VALUES
-    (4, 6, 3, '2026-09-18', 1, 20.00, 'NOT_LUBRICATED', false);
+    (4, 6, 'LPL-2026-000',3, '2026-09-18', 1, 20.00, 'NOT_LUBRICATED', false);
 
 INSERT INTO lubrication_history (
     id, equipment_id, performed_date, notes, is_deleted

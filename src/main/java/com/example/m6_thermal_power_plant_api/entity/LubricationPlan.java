@@ -35,6 +35,8 @@ public class LubricationPlan extends BaseSoftDeleteEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+    @Column(name = "lubrication_code", length = 50)
+    private String lubricationCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "equipment_id")

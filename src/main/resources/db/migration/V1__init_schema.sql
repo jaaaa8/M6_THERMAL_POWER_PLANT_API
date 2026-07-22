@@ -248,6 +248,7 @@ CREATE TABLE `lubrication_plans` (
   `cycle_months` int DEFAULT NULL,
   `equipment_id` int DEFAULT NULL,
   `id` int NOT NULL AUTO_INCREMENT,
+  `lubrication_code` varchar(50) DEFAULT NULL,
   `is_deleted` bit(1) NOT NULL,
   `next_due_date` date DEFAULT NULL,
   `quantity` decimal(10,2) DEFAULT NULL,
