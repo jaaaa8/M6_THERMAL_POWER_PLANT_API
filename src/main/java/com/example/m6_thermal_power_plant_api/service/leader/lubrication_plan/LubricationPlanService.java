@@ -11,7 +11,12 @@ import com.example.m6_thermal_power_plant_api.repository.ILubricationPlanReposit
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class LubricationPlanService implements ILubricationPlanService {
@@ -171,5 +176,112 @@ public class LubricationPlanService implements ILubricationPlanService {
         plan.setIsDeleted(true);
 
         lubricationPlanRepository.save(plan);
+    }
+
+    @Override
+    public Page<LubricationPlanDto> checklist(
+            Integer systemId,
+            LubricationStatus status,
+            Pageable pageable
+    ) {
+
+        LocalDate dueDate =
+                LocalDate.now().plusDays(7);
+
+        return lubricationPlanRepository
+                .checklist(
+                        systemId,
+                        status,
+                        dueDate,
+                        pageable
+                )
+                .map(this::convertToDto);
+    }
+
+    @Override
+    @Transactional
+    public void loadStatus() {
+
+        LocalDate today = LocalDate.now();
+
+        List<LubricationPlan> plans =
+                lubricationPlanRepository.findPlansNeedUpdate(
+                        today.plusDays(7)
+                );
+
+
+        boolean hasChange = false;
+
+
+        for (LubricationPlan plan : plans) {
+
+            LocalDate dueDate = plan.getNextDueDate();
+
+            if (dueDate == null) {
+                continue;
+            }
+
+
+            LubricationStatus newStatus;
+
+
+            // Đã quá hạn
+            if (dueDate.isBefore(today)) {
+
+                newStatus = LubricationStatus.OVERDUE;
+
+            }
+
+            // Đúng ngày bảo dưỡng
+            else if (dueDate.isEqual(today)) {
+
+                newStatus = LubricationStatus.DUE_FOR_LUBRICATION;
+
+            }
+
+            // Trong vòng 7 ngày tới
+            else {
+
+                newStatus = LubricationStatus.DUE_SOON;
+
+            }
+
+
+
+            // chỉ update khi trạng thái thay đổi
+            if (plan.getStatus() != newStatus) {
+
+                plan.setStatus(newStatus);
+
+                hasChange = true;
+            }
+
+        }
+
+
+        if (hasChange) {
+            lubricationPlanRepository.saveAll(plans);
+        }
+
+    }
+
+    @Override
+    public void updateNextDueDateAndStatus(Integer lubricationPlanId) {
+
+        LubricationPlan plan = lubricationPlanRepository
+                .findById(lubricationPlanId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy kế hoạch bôi trơn"));
+        plan.setNextDueDate(
+                plan.getNextDueDate().plusDays(plan.getCycleDays())
+        );
+        plan.setStatus(LubricationStatus.LUBRICATED);
+
+    }
+
+    @Scheduled(cron = "0 0 0 * * ?")
+    public void autoUpdateLubricationStatus(){
+
+        loadStatus();
+
     }
 }

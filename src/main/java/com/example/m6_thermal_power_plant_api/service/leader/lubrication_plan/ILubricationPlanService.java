@@ -12,4 +12,8 @@ public interface ILubricationPlanService {
             LubricationPlanDto dto
     );
     void deleteById(Integer id);
+
+    Page<LubricationPlanDto> checklist(Integer systemId, LubricationStatus status, Pageable pageable);
+    void loadStatus();
+    void updateNextDueDateAndStatus(Integer lubricationPlanId);
 }
