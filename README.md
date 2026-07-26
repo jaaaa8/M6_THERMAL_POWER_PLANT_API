@@ -24,6 +24,9 @@ MySQL từ chối. Kiểm tra:
 **Không bao giờ commit file `.env`.** Thêm biến môi trường mới thì cập nhật
 `.env.example` trong cùng PR, kèm mô tả và giá trị giả — không kèm giá trị thật.
 
+Quy ước đặt tên, cách khai báo biến mới, xử lý sự cố: xem
+[`BIEN_MOI_TRUONG.md`](BIEN_MOI_TRUONG.md) — áp dụng cho cả frontend.
+
 ## Ghi chú DB
 
 Nhớ sau khi chạy dự án thì phải copy 2 file MySQL script ở thư mục resources/db
