@@ -58,4 +58,21 @@ public class LubricationPlanController {
         lubricationPlanService.deleteById(id);
         return ResponseEntity.ok("Xóa kế hoạch thành công");
     }
+
+    @PreAuthorize(("hasAnyRole('TEAM_LEADER')"))
+    @GetMapping("/checklist")
+    public ResponseEntity<Page<LubricationPlanDto>> getLubricationChecklist(
+            @RequestParam(required = false) Integer systemId,
+            @RequestParam(required = false) LubricationStatus status,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+                lubricationPlanService.checklist(
+                        systemId,
+                        status,
+                        pageable
+                )
+        );
+    }
+
 }
