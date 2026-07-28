@@ -173,15 +173,19 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 sparePartsIssue.getIssuedAt(),
                 sparePartsIssue.getAttachmentPath(),
                 sparePartsIssue.getStatus().name(),
-                sparePartsIssue.getDetails().stream().map(detail -> new SparePartsIssueDetailRequestDto(
-                        detail.getSparePart().getId(),
-                        detail.getSparePart().getSparePartCode(),
-                        detail.getSparePart().getName(),
-                        detail.getQuantity(),
-                        detail.getSparePart().getUnit().getName(),
-                        detail.getSparePart().getImgPath(),
-                        sparePartRepository.getStockQuantity(detail.getSparePart().getId())
-                )).toList());
+                sparePartsIssue.getDetails().stream().map(detail -> {
+                    SparePartsIssueDetailRequestDto detailDto = new SparePartsIssueDetailRequestDto(
+                            detail.getSparePart().getId(),
+                            detail.getSparePart().getSparePartCode(),
+                            detail.getSparePart().getName(),
+                            detail.getQuantity(),
+                            detail.getSparePart().getUnit().getName(),
+                            detail.getSparePart().getImgPath(),
+                            sparePartRepository.getStockQuantity(detail.getSparePart().getId())
+                    );
+                    detailDto.setActualQuantity(detail.getActualQuantity() != null ? detail.getActualQuantity() : (SparePartsIssueStatus.COMPLETED.equals(sparePartsIssue.getStatus()) ? detail.getQuantity() : null));
+                    return detailDto;
+                }).toList());
     }
 
     @Override
@@ -236,6 +240,7 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 detailDto.setSparePartCode(detail.getSparePart().getSparePartCode());
                 detailDto.setSparePartName(detail.getSparePart().getName());
                 detailDto.setQuantity(detail.getQuantity());
+                detailDto.setActualQuantity(detail.getActualQuantity() != null ? detail.getActualQuantity() : (SparePartsIssueStatus.COMPLETED.equals(entity.getStatus()) ? detail.getQuantity() : null));
                 detailDto.setUnit(detail.getSparePart().getUnit().getName());
                 detailDto.setImgPath(detail.getSparePart().getImgPath());
                 detailDto.setCurrentStock(sparePartRepository.getStockQuantity(detail.getSparePart().getId()));
@@ -282,16 +287,23 @@ public class SparePartsIssueService implements ISparePartsIssueService {
             throw new IllegalStateException("Yêu cầu tải lên phiếu cấp vật tư bản cứng (file PDF) đã có chữ ký của thủ kho trước khi hoàn thành.");
         }
     }
+
     private void validateStock(SparePartsIssue issue) {
-        for (SparePartsIssueDetail detail : issue.getDetails()) {
-            BigDecimal stock = sparePartRepository.getStockQuantity(detail.getSparePart().getId());
-            BigDecimal reqQty = BigDecimal.valueOf(detail.getQuantity());
-            if (stock.compareTo(reqQty) < 0) {
-                throw new IllegalStateException("Không đủ số lượng tồn kho cho vật tư: "
-                        + detail.getSparePart().getName() + " (Yêu cầu: " + reqQty + ", Tồn hiện tại: " + stock + ")");
+        boolean hasAnyStock = false;
+        if (issue.getDetails() != null) {
+            for (SparePartsIssueDetail detail : issue.getDetails()) {
+                BigDecimal stock = sparePartRepository.getStockQuantity(detail.getSparePart().getId());
+                if (stock != null && stock.compareTo(BigDecimal.ZERO) > 0) {
+                    hasAnyStock = true;
+                    break;
+                }
             }
         }
+        if (!hasAnyStock && issue.getDetails() != null && !issue.getDetails().isEmpty()) {
+            throw new IllegalStateException("Kho hiện tại không có vật tư nào khả dụng để xuất. Vui lòng nhập kho trước khi hoàn thành.");
+        }
     }
+
     private void exportSpareParts(SparePartsIssue issue, Account account) {
         Equipment equipment = null;
         if (issue.getWorkOrder() != null
@@ -299,10 +311,50 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 && issue.getWorkOrder().getRepairRequest().getEquipment() != null) {
             equipment = issue.getWorkOrder().getRepairRequest().getEquipment();
         }
-        for (SparePartsIssueDetail detail : issue.getDetails()) {
-            BigDecimal reqQty = BigDecimal.valueOf(detail.getQuantity());
-            createInventoryLedgerEntry(detail, account, reqQty);
-            createExportRecord(issue, detail, account, equipment, reqQty);
+
+        List<SparePartsIssueDetail> remainingDetailsForNewIssue = new ArrayList<>();
+
+        if (issue.getDetails() != null) {
+            for (SparePartsIssueDetail detail : issue.getDetails()) {
+                int reqQty = detail.getQuantity() != null ? detail.getQuantity() : 0;
+                BigDecimal stock = sparePartRepository.getStockQuantity(detail.getSparePart().getId());
+                int stockInt = stock != null ? stock.intValue() : 0;
+
+                int actualQty = stockInt >= reqQty ? reqQty : (stockInt > 0 ? stockInt : 0);
+                int remainingQty = reqQty - actualQty;
+
+                if (actualQty > 0) {
+                    createInventoryLedgerEntry(detail, account, BigDecimal.valueOf(actualQty));
+                    createExportRecord(issue, detail, account, equipment, BigDecimal.valueOf(reqQty), BigDecimal.valueOf(actualQty));
+                }
+
+                detail.setActualQuantity(actualQty);
+                detail.setQuantity(actualQty);
+                sparePartsIssueDetailRepository.save(detail);
+
+                if (remainingQty > 0) {
+                    SparePartsIssueDetail remainingDetail = new SparePartsIssueDetail();
+                    remainingDetail.setSparePart(detail.getSparePart());
+                    remainingDetail.setQuantity(remainingQty);
+                    remainingDetailsForNewIssue.add(remainingDetail);
+                }
+            }
+        }
+
+        // Tự động tạo Phiếu cấp lần 2 (Đợt 2) nếu còn số lượng chưa được cấp đủ
+        if (!remainingDetailsForNewIssue.isEmpty()) {
+            SparePartsIssue nextIssue = new SparePartsIssue();
+            nextIssue.setIssueCode(TimeStampCodeGenerator.generate(SparePartsIssue.class));
+            nextIssue.setWorkOrder(issue.getWorkOrder());
+            nextIssue.setIssuedBy(account);
+            nextIssue.setIssuedAt(LocalDateTime.now());
+            nextIssue.setStatus(SparePartsIssueStatus.PENDING);
+            SparePartsIssue savedNextIssue = sparePartsIssueRepository.save(nextIssue);
+
+            for (SparePartsIssueDetail remainingDetail : remainingDetailsForNewIssue) {
+                remainingDetail.setIssue(savedNextIssue);
+                sparePartsIssueDetailRepository.save(remainingDetail);
+            }
         }
     }
 
@@ -316,13 +368,14 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 .build();
         sparePartInventoryRepository.save(inventory);
     }
-    private void createExportRecord(SparePartsIssue issue, SparePartsIssueDetail detail, Account account, Equipment equipment, BigDecimal reqQty) {
+
+    private void createExportRecord(SparePartsIssue issue, SparePartsIssueDetail detail, Account account, Equipment equipment, BigDecimal reqQty, BigDecimal actualQty) {
         SparePartExport export = SparePartExport.builder()
                 .exportCode(TimeStampCodeGenerator.generate(SparePartExport.class))
                 .sparePartsIssue(issue)
                 .sparePart(detail.getSparePart())
                 .requestedQuantity(reqQty)
-                .actualQuantity(reqQty)
+                .actualQuantity(actualQty)
                 .equipment(equipment)
                 .exportedBy(account)
                 .exportedAt(LocalDateTime.now())

@@ -50,6 +50,7 @@ public class ConsumableIssueDTO {
         private String consumableName;
         private String unitName;
         private BigDecimal quantity;
+        private BigDecimal actualQuantity;
         private BigDecimal currentStock;
 
         public static LineDTO from(ConsumableIssueDetail d) {
@@ -61,6 +62,7 @@ public class ConsumableIssueDTO {
                     .unitName(d.getConsumable() != null && d.getConsumable().getUnit() != null
                             ? d.getConsumable().getUnit().getName() : null)
                     .quantity(d.getQuantity())
+                    .actualQuantity(d.getActualQuantity() != null ? d.getActualQuantity() : (d.getIssue() != null && com.example.m6_thermal_power_plant_api.entity.enums.ConsumableIssueStatus.COMPLETED.equals(d.getIssue().getStatus()) ? d.getQuantity() : null))
                     .build();
         }
     }

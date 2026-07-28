@@ -46,4 +46,7 @@ public class SparePartsIssueDetail extends BaseSoftDeleteEntity {
     private SparePart sparePart;
 
     private Integer quantity;
+
+    @Column(name = "actual_quantity")
+    private Integer actualQuantity;
 }
