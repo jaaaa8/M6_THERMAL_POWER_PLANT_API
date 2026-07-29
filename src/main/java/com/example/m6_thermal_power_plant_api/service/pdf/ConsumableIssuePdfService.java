@@ -120,6 +120,11 @@ public class ConsumableIssuePdfService {
                 ? workOrder.getOrderCode() : DOTS);
         model.put("description", workOrder != null && workOrder.getRepairDescription() != null
                 ? workOrder.getRepairDescription() : DOTS);
+        model.put("kks", workOrder != null && workOrder.getRepairRequest() != null
+                && workOrder.getRepairRequest().getEquipment() != null
+                && workOrder.getRepairRequest().getEquipment().getKksCode() != null
+                ? workOrder.getRepairRequest().getEquipment().getKksCode() : DOTS);
+        model.put("issueCode", issue.getConsumableCode() != null ? issue.getConsumableCode() : DOTS);
 
         List<Map<String, String>> itemRows = new ArrayList<>();
         for (ConsumableIssueDetail detail : details) {
