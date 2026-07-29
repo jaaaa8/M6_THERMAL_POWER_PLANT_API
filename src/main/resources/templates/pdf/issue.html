@@ -107,7 +107,7 @@
         <hr style="width: 60%; border: 0; border-top: 1px solid black; margin: 5px auto;"/>
     </div>
     <div class="header-right">
-        Biểu số 03-TT<br/>
+        Biểu số ...-TT<br/>
         <i>(Ban hành theo quyết định số 15/2006/QĐ-BTC ngày<br/>
         20/03/2006 của Bộ Tài Chính)</i>
     </div>
@@ -119,9 +119,20 @@
 </div>
 
 <div class="header-details">
-    Xuất tại kho: ......................................................<br/>
-    Số phiếu xuất: <span th:text="${issueCode}">....................................................</span><br/>
-    Ngày: .................................................................
+    <table style="border: none; margin-left: auto; text-align: left;">
+        <tr>
+            <td style="padding: 0 5px 0 0;">Xuất tại kho:</td>
+            <td style="padding: 0;">......................................................</td>
+        </tr>
+        <tr>
+            <td style="padding: 0 5px 0 0;">Số phiếu xuất:</td>
+            <td style="padding: 0;"><span th:text="${issueCode}">....................................................</span></td>
+        </tr>
+        <tr>
+            <td style="padding: 0 5px 0 0;">Ngày:</td>
+            <td style="padding: 0;">......................................................</td>
+        </tr>
+    </table>
 </div>
 
 <div style="text-align: center; font-weight: bold; margin-top: 15px; margin-bottom: 15px;">
@@ -136,8 +147,8 @@
     <tr>
         <td style="vertical-align: top;">2. Lý do sử dụng:</td>
         <td style="width: 50%; vertical-align: top;" th:text="${description}">[Lý do sử dụng]</td>
-        <td style="vertical-align: top; width: 15%;">WO: &nbsp;&nbsp;&nbsp;<span th:text="${orderCode}">[Mã công tác]</span></td>
-        <td style="vertical-align: top;">KKS: &nbsp;&nbsp;&nbsp;<span th:text="${kks}">[KKS]</span></td>
+        <td style="vertical-align: top; width: 20%; white-space: nowrap;">WO: &#160;&#160;&#160;<span th:text="${orderCode}">[Mã công tác]</span></td>
+        <td style="vertical-align: top; white-space: nowrap;">KKS: &#160;&#160;&#160;<span th:text="${kks}">[KKS]</span></td>
     </tr>
     <tr>
         <td colspan="4" style="padding-top: 10px;">3. Đề nghị lĩnh số vật tư dưới đây:</td>
@@ -157,8 +168,8 @@
         <th>Cần</th>
         <th>Cấp</th>
     </tr>
-    <tr th:each="row, it : ${itemRows}">
-        <td th:text="${row.name != '' ? it.count : ''}">1</td>
+    <tr th:each="row, it : ${itemRows}" th:if="${row.name != null and row.name != ''}">
+        <td th:text="${it.count}">1</td>
         <td th:text="${row.code}"></td>
         <td style="text-align: left;" th:text="${row.name}"></td>
         <td th:text="${row.unit}"></td>
