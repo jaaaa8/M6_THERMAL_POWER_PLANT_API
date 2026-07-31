@@ -32,6 +32,7 @@ public class ConsumableController {
 
 
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @PostMapping
     public ConsumableDTO create(@Valid @RequestBody ConsumableDTO dto){
         return consumableService.create(dto);
@@ -57,11 +58,13 @@ public class ConsumableController {
         return consumableService.search(code, name, manufacturer, price, status, pageable);
     }
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @PutMapping("/{id}")
     public ConsumableDTO update(@PathVariable Integer id,@Valid @RequestBody ConsumableDTO consumableDTO){
         return consumableService.update(id, consumableDTO);
     }
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Integer id){
         consumableService.delete(id);
@@ -77,6 +80,7 @@ public class ConsumableController {
         return consumableInventoryService.searchStock(code, name, manufacturer, status, pageable);
     }
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @PostMapping("/receipts")
     public ResponseEntity<?> importConsumable(
             @Valid @RequestBody ConsumableReceiptCreateDTO dto,

@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,17 +31,20 @@ public class ToolController {
     private final IToolService toolService;
     private final ToolExcelService toolExcelService;
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ToolResponse> create(@Valid @RequestBody ToolRequest request) {
         return ApiResponse.success("Tạo CCDC thành công", toolService.create(request));
     }
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PutMapping("/{id}")
     public ApiResponse<ToolResponse> update(@PathVariable Integer id, @Valid @RequestBody ToolRequest request) {
         return ApiResponse.success("Cập nhật CCDC thành công", toolService.update(id, request));
     }
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Integer id) {
         toolService.delete(id);
@@ -60,12 +64,14 @@ public class ToolController {
         return ApiResponse.success(toolService.search(keyword, categoryId, pageable));
     }
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PatchMapping("/{id}/quantity")
     public ApiResponse<ToolResponse> addQuantity(@PathVariable Integer id,
                                                   @Valid @RequestBody ToolQuantityUpdateRequest request) {
         return ApiResponse.success("Nhập kho thành công", toolService.addQuantity(id, request));
     }
 
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PatchMapping("/{id}/damage")
     public ApiResponse<ToolResponse> markDamaged(@PathVariable Integer id,
                                                   @Valid @RequestBody ToolDamageRequest request) {
@@ -94,12 +100,14 @@ public class ToolController {
     }
 
     /** Xem trước dữ liệu import (chưa lưu) — trả về kết quả kiểm tra từng dòng */
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PostMapping(value = "/import/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<ToolImportResult> previewImport(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success(toolExcelService.preview(file));
     }
 
     /** Xác nhận import — all-or-nothing, chỉ lưu khi tất cả dòng hợp lệ */
+    @PreAuthorize("hasAnyRole('TOOLS_STOREKEEPER')")
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<ToolImportResult> importTools(@RequestParam("file") MultipartFile file) {
         ToolImportResult result = toolExcelService.importTools(file);

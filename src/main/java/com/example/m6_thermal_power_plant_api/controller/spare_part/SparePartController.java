@@ -35,6 +35,7 @@ public class SparePartController {
     private final ISparePartService sparePartService;
     private final ISparePartInventoryService sparePartInventoryService;
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @PostMapping
     public SparePartDTO create(@Valid @RequestBody SparePartDTO dto) {
         return sparePartService.create(dto);
@@ -60,11 +61,13 @@ public class SparePartController {
         return sparePartService.search(code, name, manufacturer, price, status, pageable);
     }
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @PutMapping("/{id}")
     public SparePartDTO updateSparePartDTO(@PathVariable Integer id, @Valid @RequestBody SparePartDTO dto) {
         return sparePartService.update(id, dto);
     }
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Integer id){
         sparePartService.delete(id);
@@ -80,6 +83,7 @@ public class SparePartController {
         return sparePartInventoryService.searchStock(code, name, manufacturer, status, pageable);
     }
 
+    @PreAuthorize("hasAnyRole('MATERIALS_STOREKEEPER')")
     @PostMapping("/receipts")
     public ResponseEntity<?> importConsumable(
             @Valid @RequestBody SparePartReceiptCreateDTO dto,

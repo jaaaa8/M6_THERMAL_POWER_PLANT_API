@@ -59,6 +59,8 @@ public class RepairRequestDTO {
         if (r.getRequester() != null) {
             b.requesterId(r.getRequester().getId())
                     .requesterUsername(r.getRequester().getUsername());
+            // Mặc định hiển thị username; ghi đè bằng tên nhân viên nếu có hồ sơ.
+            b.requesterName(r.getRequester().getUsername());
             if (r.getRequester().getEmployee() != null) {
                 try {
                     b.requesterName(r.getRequester().getEmployee().getFullName());

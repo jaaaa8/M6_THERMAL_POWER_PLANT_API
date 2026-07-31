@@ -5,6 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.Leader.res.RepairHistoryRespon
 import com.example.m6_thermal_power_plant_api.service.leader.repair_history.RepairHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class RepairHistoryController {
         );
     }
 
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
     @PostMapping
     public ResponseEntity<RepairHistoryResponseDto>
     create(

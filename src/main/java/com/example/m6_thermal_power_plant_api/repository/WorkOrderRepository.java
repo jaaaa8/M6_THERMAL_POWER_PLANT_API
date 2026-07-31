@@ -77,4 +77,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
     List<Object[]> findRoleHolderEmployeeIds(
             @Param("statuses") java.util.Collection<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses,
             @Param("excludeId") Integer excludeId);
+
+    /** Dashboard: đếm PCT theo trạng thái */
+    long countByStatus(com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus status);
 }

@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,12 +25,14 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentService.getAllDepartments());
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
     @PostMapping
     public ResponseEntity<DepartmentDTO> createDepartment(@Valid @RequestBody DepartmentCreateDTO dto) {
         DepartmentDTO created = departmentService.createDepartment(dto);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDepartment(@PathVariable Integer id) {
         departmentService.deleteDepartment(id);
@@ -44,6 +47,7 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentService.searchDepartments(searchRequest, pageable));
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
     @PutMapping("/{id}")
     public ResponseEntity<DepartmentDTO> updateDepartment(
             @PathVariable Integer id,
