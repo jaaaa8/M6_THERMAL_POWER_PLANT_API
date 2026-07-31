@@ -11,9 +11,9 @@ public class ToolBorrowReturnRequest {
     /** Ghi chú tình trạng công cụ khi trả */
     private String returnNote;
 
-    /** Số lượng thực tế trả (có thể nhỏ hơn số đã mượn — trả một phần) */
-    @Min(value = 1, message = "Số lượng trả phải ít nhất là 1")
-    private Integer returnQuantity;
+    /** Số lượng trả tốt (có thể 0 nếu tất cả đều hư). Tổng trả tốt + hư phải ≥ 1 — kiểm ở service. */
+    @Min(value = 0, message = "Số lượng trả không được âm")
+    private Integer returnQuantity = 0;
 
     /** Số lượng bị hư hỏng phát hiện khi trả (nếu có) */
     @Min(value = 0, message = "Số lượng hư hỏng không được âm")
