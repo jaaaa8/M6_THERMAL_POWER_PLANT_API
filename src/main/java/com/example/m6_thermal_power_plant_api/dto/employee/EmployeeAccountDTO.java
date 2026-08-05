@@ -18,7 +18,7 @@ public class EmployeeAccountDTO {
     private DepartmentDTO department;
     private PositionDTO position;
     private ExpertiseDTO expertise;
-    private Boolean isActive;
+    private String isActive;
     private String imgPath;
 
     // Thuộc tính của Account

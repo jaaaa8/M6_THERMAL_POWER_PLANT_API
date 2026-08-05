@@ -5,4 +5,5 @@ import java.util.List;
 
 public interface IExpertiseService {
     List<ExpertiseDTO> getAllExpertises();
+    ExpertiseDTO createExpertise(ExpertiseDTO dto);
 }

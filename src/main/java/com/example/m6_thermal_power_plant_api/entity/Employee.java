@@ -81,8 +81,8 @@ public class Employee extends BaseSoftDeleteEntity {
     private Expertise expertise;
 
     @Builder.Default
-    @Column(name = "is_active")
-    private Boolean isActive = true;
+    @Column(name = "is_active", length = 50)
+    private String isActive = "ACTIVE";
 
     /** Đường dẫn file ảnh đính kèm */
     @Column(name = "img_path", columnDefinition = "TEXT")

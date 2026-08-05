@@ -10,6 +10,8 @@ import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCasc
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,7 +25,7 @@ public class DepartmentService implements IDepartmentService {
 
     @Override
     public List<DepartmentDTO> getAllDepartments() {
-        return departmentRepository.findAll().stream()
+        return departmentRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
                 .filter(d -> !Boolean.TRUE.equals(d.getIsDeleted()))
                 .map(d -> DepartmentDTO.builder()
                         .id(d.getId())
@@ -90,7 +92,16 @@ public class DepartmentService implements IDepartmentService {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
-        return departmentRepository.findAll(spec, pageable).map(d -> DepartmentDTO.builder()
+        org.springframework.data.domain.Pageable sortedPageable = pageable;
+        if (pageable.getSort().isUnsorted()) {
+            sortedPageable = PageRequest.of(
+                    pageable.getPageNumber(), 
+                    pageable.getPageSize(), 
+                    Sort.by(Sort.Direction.DESC, "id")
+            );
+        }
+
+        return departmentRepository.findAll(spec, sortedPageable).map(d -> DepartmentDTO.builder()
                 .id(d.getId())
                 .departmentCode(d.getDepartmentCode())
                 .name(d.getName())
