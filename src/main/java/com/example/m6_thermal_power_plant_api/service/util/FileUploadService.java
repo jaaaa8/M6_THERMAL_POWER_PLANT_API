@@ -133,6 +133,44 @@ public class FileUploadService {
         log.info("Da xoa file Cloudinary: {}", publicId);
     }
 
+    /**
+     * Trich xuat public ID tu URL Cloudinary.
+     * Ho tro URL dang:
+     * https://res.cloudinary.com/cloud_name/image/upload/v12345678/folder/subfolder/filename.jpg
+     */
+    public static String extractPublicIdFromUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        int uploadIdx = url.indexOf("/upload/");
+        if (uploadIdx == -1) {
+            uploadIdx = url.indexOf("/private/");
+            if (uploadIdx == -1) {
+                uploadIdx = url.indexOf("/authenticated/");
+                if (uploadIdx == -1) {
+                    return null;
+                }
+            }
+        }
+        
+        // Cat chuoi tu sau "/upload/" hoac "/private/" hoac "/authenticated/"
+        // Vi du: v1720846513/consumables/mo-bo-tron.jpg
+        String path = url.substring(url.indexOf("/", uploadIdx + 1) + 1);
+        
+        // Loai bo version prefix neu co (vi du: v1720846513/)
+        if (path.matches("^v\\d+/.*")) {
+            path = path.substring(path.indexOf("/") + 1);
+        }
+        
+        // Loai bo duoi mo rong file (.jpg, .png, ...)
+        int dotIdx = path.lastIndexOf(".");
+        if (dotIdx != -1) {
+            path = path.substring(0, dotIdx);
+        }
+        
+        return path;
+    }
+
     private static FileUploadResult toResult(Map<?, ?> uploadResult) {
         Object bytes = uploadResult.get("bytes");
         return new FileUploadResult(

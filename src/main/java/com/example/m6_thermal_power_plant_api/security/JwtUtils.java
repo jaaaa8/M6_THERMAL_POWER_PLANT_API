@@ -25,17 +25,13 @@ public class JwtUtils {
     @Value("${scms.jwt.refresh-token-expiration}")
     private long refreshExpiration;
 
-    // Hàm 1: Sinh ra token chứa accountId, username, roles, permissions và permVer
-    // (permVer = Account.permissionVersion tại thời điểm phát hành — dùng để
-    // jwtAuthFilter phát hiện permission đã cũ, xem Account.permissionVersion)
-    public String generateAccessToken(Integer accountId, String username, List<String> roles,
-                                       List<String> permissions, Integer permVer) {
+    // Hàm 1: Sinh ra token chứa accountId, username, roles — phân quyền theo
+    // ROLE (xem SecurityConfig#roleHierarchy), không còn permission rời.
+    public String generateAccessToken(Integer accountId, String username, List<String> roles) {
         return Jwts.builder()
                 .setSubject(username)
                 .claim("accountId", accountId)
                 .claim("roles", roles)
-                .claim("permissions", permissions)
-                .claim("permVer", permVer)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)

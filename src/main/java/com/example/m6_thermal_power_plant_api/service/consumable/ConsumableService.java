@@ -7,7 +7,9 @@ import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
 import com.example.m6_thermal_power_plant_api.repository.IConsumableRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IUnitRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
+import com.example.m6_thermal_power_plant_api.service.util.FileUploadService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,11 +21,13 @@ import java.math.BigDecimal;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class ConsumableService implements IConsumableService{
 
     private final IConsumableRepository consumableRepository;
     private final IUnitRepository unitRepository;
     private final SoftDeleteCascadeService softDeleteCascadeService;
+    private final FileUploadService fileUploadService;
 
 
     @Override
@@ -112,6 +116,24 @@ public class ConsumableService implements IConsumableService{
     public void delete(Integer id) {
         Consumable consumable = consumableRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vật tư tiêu hao với id = " + id));
+
+        // Tu dong don dep anh tren Cloudinary truoc khi xoa mem
+        if (consumable.getImgPath() != null && !consumable.getImgPath().isBlank()) {
+            String[] urls = consumable.getImgPath().split("[|;]");
+            for (String url : urls) {
+                String trimmedUrl = url.trim();
+                if (!trimmedUrl.isEmpty()) {
+                    String publicId = FileUploadService.extractPublicIdFromUrl(trimmedUrl);
+                    if (publicId != null) {
+                        try {
+                            fileUploadService.deleteFile(publicId, "image");
+                        } catch (Exception e) {
+                            log.error("Loi khi xoa anh tren Cloudinary cho vat tu tieu hao id=" + id + ", url=" + trimmedUrl, e);
+                        }
+                    }
+                }
+            }
+        }
 
         softDeleteCascadeService.softDelete(consumable);
     }

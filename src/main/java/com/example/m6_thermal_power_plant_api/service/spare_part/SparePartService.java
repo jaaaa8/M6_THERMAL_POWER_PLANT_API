@@ -7,8 +7,10 @@ import com.example.m6_thermal_power_plant_api.entity.enums.PartStatus;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IUnitRepository;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
+import com.example.m6_thermal_power_plant_api.service.util.FileUploadService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,11 +20,13 @@ import java.math.BigDecimal;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class SparePartService implements ISparePartService{
 
     private final ISparePartRepository sparePartRepository;
     private final IUnitRepository unitRepository;
     private final SoftDeleteCascadeService softDeleteCascadeService;
+    private final FileUploadService fileUploadService;
 
     @Override
     public SparePartDTO create(SparePartDTO dto) {
@@ -112,6 +116,24 @@ public class SparePartService implements ISparePartService{
     public void delete(Integer id) {
         SparePart sparePart = sparePartRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vật tư thay thế với id = " + id));
+
+        // Tu dong don dep anh tren Cloudinary truoc khi xoa mem
+        if (sparePart.getImgPath() != null && !sparePart.getImgPath().isBlank()) {
+            String[] urls = sparePart.getImgPath().split("[|;]");
+            for (String url : urls) {
+                String trimmedUrl = url.trim();
+                if (!trimmedUrl.isEmpty()) {
+                    String publicId = FileUploadService.extractPublicIdFromUrl(trimmedUrl);
+                    if (publicId != null) {
+                        try {
+                            fileUploadService.deleteFile(publicId, "image");
+                        } catch (Exception e) {
+                            log.error("Loi khi xoa anh tren Cloudinary cho vat tu thay the id=" + id + ", url=" + trimmedUrl, e);
+                        }
+                    }
+                }
+            }
+        }
 
         softDeleteCascadeService.softDelete(sparePart);
     }

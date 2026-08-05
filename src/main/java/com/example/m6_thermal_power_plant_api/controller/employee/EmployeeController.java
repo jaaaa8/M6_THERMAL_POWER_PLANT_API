@@ -11,11 +11,18 @@ import com.example.m6_thermal_power_plant_api.service.department.IDepartmentServ
 import com.example.m6_thermal_power_plant_api.service.employee.IEmployeeService;
 import com.example.m6_thermal_power_plant_api.service.expertise.IExpertiseService;
 import com.example.m6_thermal_power_plant_api.service.position.IPositionService;
+import com.example.m6_thermal_power_plant_api.dto.file.FileUploadResult;
+import com.example.m6_thermal_power_plant_api.service.util.FileUploadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 import java.util.List;
 
@@ -28,6 +35,7 @@ public class EmployeeController {
     private final IDepartmentService departmentService;
     private final IPositionService positionService;
     private final IExpertiseService expertiseService;
+    private final FileUploadService fileUploadService;
 
     @GetMapping
     public ResponseEntity<List<EmployeeResponseDTO>> getAllEmployees() {
@@ -39,8 +47,15 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getAllEmployeeAccounts());
     }
 
-    @PostMapping
-    public ResponseEntity<EmployeeResponseDTO> createEmployee(@Valid @RequestBody EmployeeDTO employeeDTO) {
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<EmployeeResponseDTO> createEmployee(
+            @RequestPart("employee") @Valid EmployeeDTO employeeDTO,
+            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
+        if (image != null && !image.isEmpty()) {
+            FileUploadResult uploadResult = fileUploadService.uploadImage(image);
+            employeeDTO.setImgPath(uploadResult.secureUrl());
+        }
         EmployeeResponseDTO createdEmployee = employeeService.createEmployee(employeeDTO);
         return new ResponseEntity<>(createdEmployee, HttpStatus.CREATED);
     }
@@ -65,6 +80,20 @@ public class EmployeeController {
         return ResponseEntity.ok(expertiseService.getAllExpertises());
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
+    @PostMapping("/positions")
+    public ResponseEntity<PositionDTO> createPosition(@Valid @RequestBody PositionDTO positionDTO) {
+        PositionDTO created = positionService.createPosition(positionDTO);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
+    @PostMapping("/expertises")
+    public ResponseEntity<ExpertiseDTO> createExpertise(@Valid @RequestBody ExpertiseDTO expertiseDTO) {
+        ExpertiseDTO created = expertiseService.createExpertise(expertiseDTO);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
     @GetMapping("/search")
     public ResponseEntity<org.springframework.data.domain.Page<EmployeeResponseDTO>> searchEmployees(
             @ModelAttribute com.example.m6_thermal_power_plant_api.dto.employee.EmployeeSearchRequestDTO searchRequest,
@@ -73,12 +102,21 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.searchEmployees(searchRequest, pageable));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<EmployeeResponseDTO> updateEmployee(@PathVariable Integer id, @jakarta.validation.Valid @RequestBody EmployeeDTO employeeDTO) {
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<EmployeeResponseDTO> updateEmployee(
+            @PathVariable Integer id,
+            @RequestPart("employee") @Valid EmployeeDTO employeeDTO,
+            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
+        if (image != null && !image.isEmpty()) {
+            FileUploadResult uploadResult = fileUploadService.uploadImage(image);
+            employeeDTO.setImgPath(uploadResult.secureUrl());
+        }
         EmployeeResponseDTO updated = employeeService.updateEmployee(id, employeeDTO);
         return ResponseEntity.ok(updated);
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Integer id) {
         employeeService.deleteEmployee(id);

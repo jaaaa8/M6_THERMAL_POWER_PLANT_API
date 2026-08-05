@@ -61,4 +61,11 @@ public interface ISparePartRepository extends JpaRepository<SparePart, Integer>,
             @Param("status") PartStatus status,
             Pageable pageable
     );
+
+    @Query("""
+        select coalesce(sum(case when spi.transactionType = com.example.m6_thermal_power_plant_api.entity.enums.TransactionType.IMPORT then spi.quantity else -spi.quantity end), 0)
+        from SparePartsInventory spi
+        where spi.sparePart.id = :sparePartId and spi.isDeleted = false
+    """)
+    BigDecimal getStockQuantity(@Param("sparePartId") Integer sparePartId);
 }

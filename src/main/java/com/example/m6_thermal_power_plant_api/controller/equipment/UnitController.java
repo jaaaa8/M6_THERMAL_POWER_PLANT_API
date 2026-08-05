@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,16 +33,19 @@ public class UnitController {
         return ResponseEntity.ok(unitService.getAll(pageable));
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PostMapping
     public ResponseEntity<UnitListDTO> createUnit( @Valid @RequestBody UnitDTO dto){
         UnitListDTO unit = unitService.createUnit(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(unit);
     }
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUnit(@PathVariable (name="id") Integer id){
         unitService.deleteUnit(id);
         return ResponseEntity.noContent().build();
     }
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PutMapping("/{id}")
     public ResponseEntity<UnitListDTO> updateUnit(@Valid @PathVariable (name="id") Integer id,
                                                   @RequestBody UnitDTO dto){

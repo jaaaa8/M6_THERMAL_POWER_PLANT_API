@@ -23,4 +23,6 @@ public class SparePartsIssueDetailRequestDto {
     private String unit;
 
     private String imgPath;
+
+    private BigDecimal currentStock;
 }

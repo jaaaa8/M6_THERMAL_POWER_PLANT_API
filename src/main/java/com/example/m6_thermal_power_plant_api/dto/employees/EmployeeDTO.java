@@ -19,7 +19,7 @@ public class EmployeeDTO {
     private String departmentName;
     private String positionName;
     private String expertiseName;
-    private Boolean isActive;
+    private String isActive;
     private String imgPath;
 
     public static EmployeeDTO from(Employee employee) {

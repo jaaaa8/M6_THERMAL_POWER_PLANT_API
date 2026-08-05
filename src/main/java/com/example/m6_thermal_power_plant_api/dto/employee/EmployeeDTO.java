@@ -41,4 +41,6 @@ public class EmployeeDTO {
     @NotNull(message = "Position ID cannot be null")
     @Digits(integer = 10, fraction = 0, message = "Position ID must be a number")
     private Integer positionId;
+
+    private String isActive;
 }

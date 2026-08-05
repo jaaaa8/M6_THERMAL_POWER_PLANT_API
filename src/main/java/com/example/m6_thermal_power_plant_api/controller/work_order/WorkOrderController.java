@@ -21,6 +21,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -63,6 +64,7 @@ public class WorkOrderController {
      * một transaction riêng. Nếu orderCode trùng (hiếm) → constraint DB ném lỗi,
      * transaction rollback sạch, executor sinh lại mã + chạy lại toàn bộ thao tác.
      */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PostMapping
     public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request,
                                                         java.security.Principal principal) {
@@ -95,6 +97,7 @@ public class WorkOrderController {
      * để sau tạo phiếu mới. Sau khi huỷ, nếu yêu cầu không còn phiếu nào đang
      * hoạt động thì yêu cầu quay lại trạng thái PENDING.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/cancel")
     public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id) {
         return maintenanceService.cancelWorkOrder(id);
@@ -105,6 +108,7 @@ public class WorkOrderController {
      * COMPLETED, không sửa trường nào khác. Idempotent nếu đã COMPLETED;
      * 409 nếu CANCELLED hoặc đang chờ duyệt gia hạn.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/complete")
     public WorkOrderDTO completeWorkOrder(@PathVariable Integer id) {
         return maintenanceService.completeWorkOrder(id);
@@ -116,6 +120,7 @@ public class WorkOrderController {
      * lúc duyệt) + status → WAITING_FOR_APPROVAL. Bước duyệt diễn ra NGOÀI hệ
      * thống: bản giấy PCT được đưa tận tay Trưởng ca ký.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/stop")
     public WorkOrderDTO stopWorkOrder(@PathVariable Integer id,
                                       @Valid @RequestBody StopWorkOrderRequest request) {
@@ -127,6 +132,7 @@ public class WorkOrderController {
      * ghi đè): nhân sự phụ trách, thời gian, mô tả. Hiện trường thay đổi liên
      * tục nên KHÔNG áp ràng buộc lúc tạo; phiếu COMPLETED/CANCELLED trả 409.
      */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PatchMapping("/{id}")
     public WorkOrderDTO updateWorkOrder(@PathVariable Integer id,
                                         @RequestBody UpdateWorkOrderRequest request) {
@@ -138,6 +144,7 @@ public class WorkOrderController {
      * thái": duyệt phiếu, bắt đầu, tạm dừng, gửi duyệt gia hạn, duyệt gia hạn,
      * hoàn thành, huỷ. Bước chuyển không hợp lệ trả 409.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/status")
     public WorkOrderDTO updateWorkOrderStatus(@PathVariable Integer id,
                                               @Valid @RequestBody UpdateWorkOrderStatusRequest request,
@@ -154,6 +161,7 @@ public class WorkOrderController {
      * @param allowedDate ngày Trưởng ca cho phép làm tiếp (yyyy-MM-dd) — bỏ
      *                    trống thì lấy hôm sau ngày Tổ trưởng gửi duyệt.
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/approve-extension")
     public WorkOrderDTO approveExtension(
             @PathVariable Integer id,
@@ -166,6 +174,7 @@ public class WorkOrderController {
      * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc
      * APPROVED → IN_PROGRESS (bật lại nút đã tắt hôm trước, sau khi duyệt).
      */
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/reopen")
     public WorkOrderDTO reopenWorkOrder(@PathVariable Integer id) {
         return maintenanceService.reopenWorkOrder(id);
@@ -227,6 +236,7 @@ public class WorkOrderController {
      * Thêm nhân viên vào phiếu đang chạy (join). Nhân viên từng rời có thể vào
      * lại — tạo dòng member mới nên lịch sử giữ đủ các cặp JOINED/LEFT.
      */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PostMapping("/{id}/members")
     public ResponseEntity<WorkOrderMemberDTO> addMember(
             @PathVariable Integer id,
@@ -235,6 +245,7 @@ public class WorkOrderController {
     }
 
     /** Đánh dấu thành viên rời khu vực làm việc (set leftAt = now, idempotent). */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PatchMapping("/{id}/members/{memberId}/leave")
     public WorkOrderMemberDTO leaveMember(@PathVariable Integer id, @PathVariable Integer memberId) {
         return maintenanceService.leaveMember(id, memberId);

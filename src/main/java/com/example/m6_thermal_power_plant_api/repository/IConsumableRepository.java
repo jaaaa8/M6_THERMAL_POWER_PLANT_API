@@ -59,6 +59,10 @@ public interface IConsumableRepository extends JpaRepository<Consumable, Integer
             Pageable pageable
     );
 
-
-
+    @Query("""
+        select coalesce(sum(case when ci.transactionType = com.example.m6_thermal_power_plant_api.entity.enums.TransactionType.IMPORT then ci.quantity else -ci.quantity end), 0)
+        from ConsumableInventory ci
+        where ci.consumable.id = :consumableId and ci.isDeleted = false
+    """)
+    BigDecimal getStockQuantity(@Param("consumableId") Integer consumableId);
 }

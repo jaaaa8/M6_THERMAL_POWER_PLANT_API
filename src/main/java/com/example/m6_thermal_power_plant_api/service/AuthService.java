@@ -16,7 +16,6 @@ import com.example.m6_thermal_power_plant_api.repository.RefreshTokenRepository;
 import com.example.m6_thermal_power_plant_api.security.CustomUserDetails;
 import com.example.m6_thermal_power_plant_api.security.JwtUtils;
 import com.example.m6_thermal_power_plant_api.security.TokenHasher;
-import com.example.m6_thermal_power_plant_api.service.account.IPermissionService;
 import com.example.m6_thermal_power_plant_api.dto.ChangePasswordRequestDTO;
 import com.example.m6_thermal_power_plant_api.exception.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,7 +47,6 @@ public class AuthService implements IAuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
-    private final IPermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${scms.jwt.refresh-token-expiration}")
@@ -70,21 +68,17 @@ public class AuthService implements IAuthService {
         }
 
         CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
-        // Chỉ lấy authority có prefix ROLE_ (loại trừ các authority khác như permission)
         List<String> roleList = principal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(a -> a.startsWith(ROLE_PREFIX))
                 .map(a -> a.substring(ROLE_PREFIX.length()))
                 .toList();
 
-        // Fetch đầy đủ employee + department + roles.permissions (eager qua @EntityGraph)
-        // — cần fetch TRƯỚC khi sinh access token vì token giờ mang theo permissions + permVer.
+        // Fetch đầy đủ employee + department (eager qua @EntityGraph) để build UserInfoDTO.
         Account account = accountRepository.findWithEmployeeById(principal.getAccountId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tài khoản không tồn tại"));
 
-        List<String> permissionCodes = permissionService.resolvePermissionCodes(account);
-        String accessToken = jwtUtils.generateAccessToken(principal.getAccountId(), principal.getUsername(),
-                roleList, permissionCodes, account.getPermissionVersion());
+        String accessToken = jwtUtils.generateAccessToken(principal.getAccountId(), principal.getUsername(), roleList);
         String refreshToken = jwtUtils.generateRefreshToken(principal.getUsername());
 
         // Xoá refresh token cũ (1 user 1 session theo @OneToOne hiện tại)
@@ -116,7 +110,6 @@ public class AuthService implements IAuthService {
                 .username(account.getUsername())
                 .fullName(fullName)
                 .roles(roles)
-                .permissions(permissionService.resolvePermissionCodes(account))
                 .employeeCode(emp != null ? emp.getEmployeeCode() : null)
                 .departmentName(emp != null && emp.getDepartment() != null ? emp.getDepartment().getName() : null)
                 .position(emp != null && emp.getPosition() != null ? emp.getPosition().getName() : null)
@@ -161,12 +154,10 @@ public class AuthService implements IAuthService {
             throw new InvalidTokenException("Refresh Token đã hết hạn. Vui lòng đăng nhập lại!");
         }
 
+        // Resolve LẠI roles từ DB (không phải copy từ token cũ) — đổi role có
+        // hiệu lực ngay ở lần refresh kế tiếp.
         List<String> roles = account.getRoles().stream().map(r -> r.getName()).toList();
-        // Đây chính là "điểm làm mới permission" — resolve LẠI từ DB (không phải
-        // copy từ token cũ), nên permission mới nhất luôn được nhét vào token mới.
-        List<String> permissionCodes = permissionService.resolvePermissionCodes(account);
-        String newAccessToken = jwtUtils.generateAccessToken(account.getId(), username, roles,
-                permissionCodes, account.getPermissionVersion());
+        String newAccessToken = jwtUtils.generateAccessToken(account.getId(), username, roles);
         String newRefreshToken = jwtUtils.generateRefreshToken(username);
 
         // ROTATION: xoá token cũ, lưu hash của token mới.
@@ -213,7 +204,6 @@ public class AuthService implements IAuthService {
         }
 
         account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        account.setPermissionVersion(account.getPermissionVersion() + 1);
         accountRepository.save(account);
 
         refreshTokenRepository.deleteByAccount(account);

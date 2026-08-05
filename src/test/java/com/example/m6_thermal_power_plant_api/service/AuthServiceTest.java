@@ -7,7 +7,6 @@ import com.example.m6_thermal_power_plant_api.exception.ResourceNotFoundExceptio
 import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.RefreshTokenRepository;
 import com.example.m6_thermal_power_plant_api.security.JwtUtils;
-import com.example.m6_thermal_power_plant_api.service.account.IPermissionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,9 +39,6 @@ class AuthServiceTest {
     private AuthenticationManager authenticationManager;
 
     @Mock
-    private IPermissionService permissionService;
-
-    @Mock
     private PasswordEncoder passwordEncoder;
 
     @InjectMocks
@@ -60,7 +56,6 @@ class AuthServiceTest {
                 .id(accountId)
                 .username("testuser")
                 .passwordHash("encoded_old_password")
-                .permissionVersion(5)
                 .build();
 
         when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
@@ -73,7 +68,6 @@ class AuthServiceTest {
 
         // Assert
         assertThat(account.getPasswordHash()).isEqualTo("encoded_new_password");
-        assertThat(account.getPermissionVersion()).isEqualTo(6);
 
         verify(accountRepository).findById(accountId);
         verify(passwordEncoder).matches("old_password", "encoded_old_password");

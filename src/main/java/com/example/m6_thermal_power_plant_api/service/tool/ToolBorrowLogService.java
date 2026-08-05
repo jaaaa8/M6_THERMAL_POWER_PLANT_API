@@ -127,28 +127,36 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
             throw new BadRequestException("Chỉ có thể trả CCDC đang ở trạng thái đã duyệt và chưa trả");
         }
 
-        int alreadyReturned = log.getReturnedQuantity() == null ? 0 : log.getReturnedQuantity();
-        int remaining = log.getQuantity() - alreadyReturned;
+        // Số đã giải quyết (đã trả tốt + đã báo hư) tích lũy từ các lần trước
+        int alreadyResolved = log.getReturnedQuantity() == null ? 0 : log.getReturnedQuantity();
+        int remaining = log.getQuantity() - alreadyResolved;
 
-        int returnQuantity = request.getReturnQuantity() == null ? remaining : request.getReturnQuantity();
-        if (returnQuantity > remaining) {
-            throw new BadRequestException("Số lượng trả không thể vượt quá số còn đang mượn (" + remaining + ")");
+        // "Trả tốt" và "báo hư" là 2 số ĐỘC LẬP, cộng lại = số giải quyết lần này
+        int returnQuantity = request.getReturnQuantity() == null ? 0 : request.getReturnQuantity();
+        int damagedQuantity = request.getDamagedQuantity() == null ? 0 : request.getDamagedQuantity();
+        if (returnQuantity < 0 || damagedQuantity < 0) {
+            throw new BadRequestException("Số lượng không được âm");
         }
-
-        Integer damagedQuantity = request.getDamagedQuantity() == null ? 0 : request.getDamagedQuantity();
-        if (damagedQuantity > returnQuantity) {
-            throw new BadRequestException("Số lượng hư hỏng không thể vượt quá số lượng trả");
+        int resolvedNow = returnQuantity + damagedQuantity;
+        if (resolvedNow <= 0) {
+            throw new BadRequestException("Phải nhập số lượng trả tốt hoặc số lượng hư (ít nhất 1)");
+        }
+        if (resolvedNow > remaining) {
+            throw new BadRequestException("Tổng trả tốt + hư (" + resolvedNow
+                    + ") không thể vượt quá số còn đang mượn (" + remaining + ")");
         }
 
         Tool tool = log.getTool();
-        tool.setQuantityBorrowed(tool.getQuantityBorrowed() - returnQuantity);
+        // Cả hàng trả tốt lẫn hàng hư đều rời khỏi "đang mượn";
+        // riêng hàng hư còn cộng thêm vào "hư hỏng" (không quay lại khả dụng).
+        tool.setQuantityBorrowed(tool.getQuantityBorrowed() - resolvedNow);
         tool.setQuantityDamaged(tool.getQuantityDamaged() + damagedQuantity);
         toolRepository.save(tool);
 
-        log.setReturnedQuantity(alreadyReturned + returnQuantity);
+        log.setReturnedQuantity(alreadyResolved + resolvedNow);
         log.setReturnNote(request.getReturnNote());
 
-        // Chỉ đóng phiếu (RETURNED) khi đã trả đủ; còn thiếu thì vẫn "đang mượn"
+        // Phiếu DONE khi (trả tốt + hư) = số mượn; còn thiếu (chưa trả) thì vẫn "đang mượn"
         if (log.getReturnedQuantity() >= log.getQuantity()) {
             log.setStatus(BorrowStatus.RETURNED);
             log.setActualReturnDate(LocalDateTime.now());

@@ -34,6 +34,8 @@ public class ConsumableIssueDTO {
     private Integer issuedById;
     private String issuedByName;
     private LocalDateTime issuedAt;
+    private String status;
+    private String attachmentPath;
     private List<LineDTO> details;
 
     @Getter
@@ -48,6 +50,7 @@ public class ConsumableIssueDTO {
         private String consumableName;
         private String unitName;
         private BigDecimal quantity;
+        private BigDecimal currentStock;
 
         public static LineDTO from(ConsumableIssueDetail d) {
             return LineDTO.builder()
@@ -75,6 +78,8 @@ public class ConsumableIssueDTO {
                         ? issue.getIssuedBy().getEmployee().getFullName()
                         : (issue.getIssuedBy() != null ? issue.getIssuedBy().getUsername() : null))
                 .issuedAt(issue.getIssuedAt())
+                .status(issue.getStatus() != null ? issue.getStatus().name() : null)
+                .attachmentPath(issue.getAttachmentPath())
                 .details(details != null ? details.stream().map(LineDTO::from).toList() : List.of())
                 .build();
     }

@@ -20,4 +20,6 @@ public interface ISparePartsIssueService {
             SparePartsIssueStatus status,
             Pageable pageable
     );
+
+    SparePartsIssueRequestDto uploadSignedPdf(Integer id, MultipartFile file);
 }
