@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/v1/tool-borrow-logs/test-email").permitAll()
+                        .requestMatchers("/api/v1/tts").permitAll()
                         // Tất cả các request khác đều phải có token hợp lệ
                         .anyRequest().authenticated()
                 )
