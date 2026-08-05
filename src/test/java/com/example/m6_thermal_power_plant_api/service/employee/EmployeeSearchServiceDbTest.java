@@ -87,7 +87,7 @@ public class EmployeeSearchServiceDbTest {
                 .gmail("an@gmail.com")
                 .phone("0912345678")
                 .department(dept1)
-                .isActive(true)
+                .isActive("ACTIVE")
                 .build();
         emp1.setIsDeleted(false);
         emp1 = employeeRepository.save(emp1);
@@ -98,7 +98,7 @@ public class EmployeeSearchServiceDbTest {
                 .gmail("binh@yahoo.com")
                 .phone("0987654321")
                 .department(dept1)
-                .isActive(false)
+                .isActive("INACTIVE")
                 .build();
         emp2.setIsDeleted(false);
         emp2 = employeeRepository.save(emp2);
@@ -109,7 +109,7 @@ public class EmployeeSearchServiceDbTest {
                 .gmail("cuong@gmail.com")
                 .phone("0900000000")
                 .department(dept2)
-                .isActive(true)
+                .isActive("ACTIVE")
                 .build();
         emp3.setIsDeleted(false);
         emp3 = employeeRepository.save(emp3);
@@ -120,7 +120,7 @@ public class EmployeeSearchServiceDbTest {
                 .gmail("an@gmail.com")
                 .phone("0912345678")
                 .department(dept1)
-                .isActive(true)
+                .isActive("ACTIVE")
                 .build();
         emp4.softDelete(); // Marks isDeleted = true
         emp4 = employeeRepository.save(emp4);
@@ -189,7 +189,7 @@ public class EmployeeSearchServiceDbTest {
     @Test
     void search_byIsActive() {
         EmployeeSearchRequestDTO request = EmployeeSearchRequestDTO.builder()
-                .isActive(false)
+                .isActive("INACTIVE")
                 .build();
         Page<EmployeeResponseDTO> result = employeeService.searchEmployees(request, PageRequest.of(0, 10));
 
@@ -203,7 +203,7 @@ public class EmployeeSearchServiceDbTest {
         EmployeeSearchRequestDTO request = EmployeeSearchRequestDTO.builder()
                 .name("Van")
                 .departmentId(dept1.getId())
-                .isActive(true)
+                .isActive("ACTIVE")
                 .build();
         Page<EmployeeResponseDTO> result = employeeService.searchEmployees(request, PageRequest.of(0, 10));
 

@@ -5,4 +5,5 @@ import java.util.List;
 
 public interface IPositionService {
     List<PositionDTO> getAllPositions();
+    PositionDTO createPosition(PositionDTO dto);
 }

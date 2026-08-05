@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface IExpertiseRepository extends JpaRepository<Expertise, Integer> {
+    boolean existsByExpertiseCode(String expertiseCode);
+    boolean existsByNameIgnoreCase(String name);
 }

@@ -75,21 +75,21 @@ public class AccountSearchServiceDbTest {
 
         // Create employees
         emp1 = Employee.builder()
-                .employeeCode("TEST_EMP01")
-                .fullName("Nguyen Van An")
-                .gmail("an@gmail.com")
-                .phone("0912345678")
-                .isActive(true)
-                .build();
+            .employeeCode("TEST_EMP01")
+            .fullName("Nguyen Van An")
+            .gmail("an@gmail.com")
+            .phone("0912345678")
+            .isActive("ACTIVE")
+            .build();
         emp1 = employeeRepository.save(emp1);
 
         emp2 = Employee.builder()
-                .employeeCode("TEST_EMP02")
-                .fullName("Tran Thi Binh")
-                .gmail("binh@yahoo.com")
-                .phone("0987654321")
-                .isActive(true)
-                .build();
+            .employeeCode("TEST_EMP02")
+            .fullName("Tran Thi Binh")
+            .gmail("binh@yahoo.com")
+            .phone("0987654321")
+            .isActive("ACTIVE")
+            .build();
         emp2 = employeeRepository.save(emp2);
 
         // Create accounts
