@@ -14,5 +14,5 @@ public class EmployeeSearchRequestDTO {
     private String phone;
     private String gmail;
     private Integer departmentId;
-    private Boolean isActive;
+    private String isActive;
 }

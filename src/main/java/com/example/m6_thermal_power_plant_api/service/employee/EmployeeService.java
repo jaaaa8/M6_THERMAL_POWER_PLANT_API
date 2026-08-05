@@ -10,6 +10,8 @@ import com.example.m6_thermal_power_plant_api.repository.employee.IEmployeeRepos
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 
@@ -128,14 +130,14 @@ public class EmployeeService implements IEmployeeService {
     }
 
     public List<EmployeeResponseDTO> getAllEmployees() {
-        return employeeRepository.findAll().stream()
+        return employeeRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
                 .filter(e -> !Boolean.TRUE.equals(e.getIsDeleted()))
                 .map(this::mapToResponseDTO)
                 .collect(java.util.stream.Collectors.toList());
     }
 
     public List<com.example.m6_thermal_power_plant_api.dto.employee.EmployeeAccountDTO> getAllEmployeeAccounts() {
-        return employeeRepository.findAll().stream()
+        return employeeRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
                 .filter(e -> !Boolean.TRUE.equals(e.getIsDeleted()))
                 .map(e -> {
                     com.example.m6_thermal_power_plant_api.entity.Account a = null;
@@ -243,6 +245,9 @@ public class EmployeeService implements IEmployeeService {
         employee.setGmail(dto.getGmail());
         employee.setPhone(dto.getPhone());
         employee.setImgPath(saveBase64Image(dto.getImgPath()));
+        if (dto.getIsActive() != null) {
+            employee.setIsActive(dto.getIsActive());
+        }
         
         // Cấp mã nhân viên tự động và đảm bảo không trùng
         String empCode;
@@ -344,14 +349,23 @@ public class EmployeeService implements IEmployeeService {
             if (searchRequest.getDepartmentId() != null) {
                 predicates.add(cb.equal(root.get("department").get("id"), searchRequest.getDepartmentId()));
             }
-            if (searchRequest.getIsActive() != null) {
-                predicates.add(cb.equal(root.get("isActive"), searchRequest.getIsActive()));
+            if (searchRequest.getIsActive() != null && !searchRequest.getIsActive().trim().isEmpty()) {
+                predicates.add(cb.equal(root.get("isActive"), searchRequest.getIsActive().trim()));
             }
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
-        return employeeRepository.findAll(spec, pageable).map(this::mapToResponseDTO);
+        org.springframework.data.domain.Pageable sortedPageable = pageable;
+        if (pageable.getSort().isUnsorted()) {
+            sortedPageable = PageRequest.of(
+                    pageable.getPageNumber(), 
+                    pageable.getPageSize(), 
+                    Sort.by(Sort.Direction.DESC, "id")
+            );
+        }
+
+        return employeeRepository.findAll(spec, sortedPageable).map(this::mapToResponseDTO);
     }
 
     @Override
@@ -373,6 +387,10 @@ public class EmployeeService implements IEmployeeService {
         
         // Handle image path (decode and save base64 if needed)
         existing.setImgPath(saveBase64Image(dto.getImgPath()));
+
+        if (dto.getIsActive() != null) {
+            existing.setIsActive(dto.getIsActive());
+        }
 
         if (dto.getDepartmentId() != null) {
             existing.setDepartment(entityManager.getReference(Department.class, dto.getDepartmentId()));

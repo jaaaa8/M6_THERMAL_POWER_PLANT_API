@@ -20,7 +20,7 @@ public class EmployeeResponseDTO {
     private DepartmentDTO department;
     private PositionDTO position;
     private ExpertiseDTO expertise;
-    private Boolean isActive;
+    private String isActive;
     private String imgPath;
     private AccountInfo account;
 
