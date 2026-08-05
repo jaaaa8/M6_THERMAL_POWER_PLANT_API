@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -110,4 +111,5 @@ public class EquipmentController {
             List<MultipartFile> images) throws IOException {
         return ResponseEntity.ok(equipmentService.update(id, dto, images));
     }
+
 }

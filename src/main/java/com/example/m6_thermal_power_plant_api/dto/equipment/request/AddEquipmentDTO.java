@@ -27,7 +27,7 @@ public class AddEquipmentDTO {
 
     @NotNull (message = "Trạng thái không được để trống !")
     private EquipmentStatus status;
-
+    private String newEquipmentTypeName;
     private Integer installationYear;
 
     private String manufacturer;
