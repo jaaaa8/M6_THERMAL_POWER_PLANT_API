@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface ILubricationHistoryService {
     List<LubricationHistoryDTO> findByEquipment(Integer equipmentId);
+    void create(LubricationHistoryDTO dto);
 }
