@@ -280,8 +280,6 @@ public class LubricationPlanService implements ILubricationPlanService {
 
     @Scheduled(cron = "0 0 0 * * ?")
     public void autoUpdateLubricationStatus(){
-
         loadStatus();
-
     }
 }
