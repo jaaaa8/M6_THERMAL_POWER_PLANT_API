@@ -4,6 +4,7 @@ import com.example.m6_thermal_power_plant_api.dto.equipment.request.AddEquipment
 import com.example.m6_thermal_power_plant_api.dto.equipment.request.EquipmentUpdateDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.response.EquipmentAddDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.response.EquipmentDetailDTO;
+import com.example.m6_thermal_power_plant_api.dto.equipment.response.EquipmentPdfDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.response.ListEquipmentDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,5 +26,6 @@ public interface IEquipmentService {
             EquipmentUpdateDTO dto,List<MultipartFile> images
     ) throws IOException;
     void deleteById(Integer id);
+
 }
 
