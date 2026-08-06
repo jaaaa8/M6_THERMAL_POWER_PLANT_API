@@ -70,7 +70,7 @@ class WorkOrderRepositorySearchTest {
         WorkOrder inProgressNew = create(marker, WorkOrderStatus.IN_PROGRESS, base.minusHours(4));
 
         List<Integer> ids = workOrderRepository
-                .searchWorkOrders(null, null, marker, null, null, PageRequest.of(0, 20))
+                .searchWorkOrders(null, null, marker, null, null, null, PageRequest.of(0, 20))
                 .map(WorkOrder::getId)
                 .getContent();
 
@@ -86,7 +86,7 @@ class WorkOrderRepositorySearchTest {
         WorkOrder wo = create(marker, WorkOrderStatus.STOPPED, LocalDateTime.now().withNano(0));
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
-                String.valueOf(wo.getId()), wo.getId(), null, null, null, PageRequest.of(0, 50));
+                String.valueOf(wo.getId()), wo.getId(), null, null, null, null, PageRequest.of(0, 50));
 
         assertTrue(page.getContent().stream().anyMatch(w -> w.getId().equals(wo.getId())),
                 "Tim theo id phai tra ve dung phieu cong tac");
@@ -103,7 +103,7 @@ class WorkOrderRepositorySearchTest {
         create(marker, WorkOrderStatus.STOPPED, base, null, null); // phiếu chưa gán leader
 
         List<Integer> ids = workOrderRepository
-                .searchWorkOrders(leaderCode, null, marker, null, null, PageRequest.of(0, 20))
+                .searchWorkOrders(leaderCode, null, marker, null, null, null, PageRequest.of(0, 20))
                 .map(WorkOrder::getId)
                 .getContent();
 
@@ -117,7 +117,7 @@ class WorkOrderRepositorySearchTest {
         WorkOrder noLeader = create(marker, WorkOrderStatus.STOPPED, LocalDateTime.now().withNano(0));
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
-                noLeader.getOrderCode(), null, null, null, null, PageRequest.of(0, 50));
+                noLeader.getOrderCode(), null, null, null, null, null, PageRequest.of(0, 50));
 
         // LEFT JOIN leader: phiếu chưa gán leader vẫn phải tìm được theo orderCode.
         assertTrue(page.getContent().stream().anyMatch(w -> w.getId().equals(noLeader.getId())),
@@ -138,7 +138,7 @@ class WorkOrderRepositorySearchTest {
         // là đầu ngày hôm sau, loại trừ).
         List<Integer> ids = workOrderRepository
                 .searchWorkOrders(null, null, marker, day.atStartOfDay(),
-                        day.plusDays(1).atStartOfDay(), PageRequest.of(0, 20))
+                        day.plusDays(1).atStartOfDay(), null, PageRequest.of(0, 20))
                 .map(WorkOrder::getId)
                 .getContent();
 
@@ -152,7 +152,7 @@ class WorkOrderRepositorySearchTest {
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
                 wo.getOrderCode(), null, "khong-khop-" + UUID.randomUUID(), null, null,
-                PageRequest.of(0, 20));
+                null, PageRequest.of(0, 20));
 
         assertEquals(0, page.getTotalElements(),
                 "Code khop nhung description khong khop → AND phai loai phieu");

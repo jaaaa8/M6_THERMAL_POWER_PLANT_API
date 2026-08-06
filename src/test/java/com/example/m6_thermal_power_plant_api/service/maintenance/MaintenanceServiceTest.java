@@ -616,7 +616,7 @@ class MaintenanceServiceTest {
         Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
 
         when(equipmentRepository.findAllById(List.of(1, 2))).thenReturn(List.of(e1, e2));
-        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(workOrderRepository.findLiveHolders(any(), any(), any())).thenReturn(List.of());
         when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
         when(employeeRepository.findById(5)).thenReturn(Optional.of(technician));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
@@ -654,7 +654,7 @@ class MaintenanceServiceTest {
         Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
 
         when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
-        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(workOrderRepository.findLiveHolders(any(), any(), any())).thenReturn(List.of());
         when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
             WorkOrder wo = inv.getArgument(0);
@@ -691,7 +691,7 @@ class MaintenanceServiceTest {
     void createManualWorkOrder_equipmentInOtherLiveWorkOrder_throws() {
         Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
         when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
-        when(workOrderRepository.findLiveHolders(eq(List.of(1)), any()))
+        when(workOrderRepository.findLiveHolders(eq(List.of(1)), any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{1, "WO-55"})); // WO-55 dang giu thiet bi 1
 
         CreateWorkOrderRequest req = new CreateWorkOrderRequest();

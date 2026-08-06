@@ -15,9 +15,12 @@ import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.*;
+import com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService;
+import com.example.m6_thermal_power_plant_api.service.leader.lubrication.LubricationHistoryService;
 import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
@@ -49,6 +52,7 @@ public class MaintenanceService implements IMaintenanceService {
     private final WorkOrderArchiveService workOrderArchiveService;
     private final IRepairHistoryService repairHistoryService;
     private final WorkOrderEquipmentRepository workOrderEquipmentRepository;
+    private final ILubricationHistoryService lubricationHistoryService;
 
     private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
 
@@ -59,8 +63,8 @@ public class MaintenanceService implements IMaintenanceService {
                               EmployeeRepository employeeRepository,
                               com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService,
-                              WorkOrderEquipmentRepository workOrderEquipmentRepository) {
+                              WorkOrderArchiveService workOrderArchiveService, IRepairHistoryService repairHistoryService,
+                              WorkOrderEquipmentRepository workOrderEquipmentRepository, ILubricationHistoryService lubricationHistoryService) {
         this.workOrderRepository = workOrderRepository;
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
@@ -71,6 +75,7 @@ public class MaintenanceService implements IMaintenanceService {
         this.workOrderArchiveService = workOrderArchiveService;
         this.repairHistoryService = repairHistoryService;
         this.workOrderEquipmentRepository = workOrderEquipmentRepository;
+        this.lubricationHistoryService = lubricationHistoryService;
     }
 
     @Override
@@ -150,7 +155,7 @@ public class MaintenanceService implements IMaintenanceService {
 
         // 1 query cho cả danh sách — phủ CẢ WO thủ công lẫn WO sinh từ RepairRequest.
         List<Object[]> holders = workOrderRepository.findLiveHolders(ids,
-                List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS));
+                List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS), WorkOrderType.REPAIR);
         if (!holders.isEmpty()) {
             Map<Integer, String> kksById = equipments.stream()
                     .collect(Collectors.toMap(Equipment::getId, Equipment::getKksCode));
@@ -343,7 +348,7 @@ public class MaintenanceService implements IMaintenanceService {
         LocalDateTime startFrom = fromDate == null ? null : fromDate.atStartOfDay();
         LocalDateTime startTo = toDate == null ? null : toDate.plusDays(1).atStartOfDay();
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
-                codeKeyword, searchId, descKeyword, startFrom, startTo, pageable);
+                codeKeyword, searchId, descKeyword, startFrom, startTo, null, pageable);
         return page.map(wo -> {
             List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
             return WorkOrderDTO.from(wo, members);
@@ -506,6 +511,7 @@ public class MaintenanceService implements IMaintenanceService {
             workOrder.setEndTime(LocalDateTime.now());
         }
         repairHistoryService.createRepairHistory(workOrder);
+
         // Sau setStatus(COMPLETED) — để phiếu này không tự tính mình là phiếu sống.
         restoreEquipmentIfRepaired(workOrder);
         workOrderRepository.save(workOrder);
