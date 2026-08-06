@@ -4,6 +4,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderReq
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
+import com.example.m6_thermal_power_plant_api.dto.equipment.response.LubricationHistoryDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
@@ -29,6 +30,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -68,6 +70,10 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.repository.WorkOrderEquipmentRepository workOrderEquipmentRepository;
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.ILubricationPlanRepository lubricationPlanRepository;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService lubricationHistoryService;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.leader.lubrication_plan.ILubricationPlanService lubricationPlanService;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -972,5 +978,31 @@ class MaintenanceServiceTest {
         assertThat(saved.getWorkOrderEquipments()).hasSize(1);
         assertThat(saved.getWorkOrderEquipments().get(0).getLubricationPlan().getId()).isEqualTo(5);
         assertThat(saved.getWorkOrderEquipments().get(0).getEquipment().getId()).isEqualTo(1);
+    }
+
+    @Test
+    void completeWorkOrder_lubrication_createsHistoryAndUpdatesPlans() {
+        Equipment eq = Equipment.builder().id(1).kksCode("10LAC10AP001").name("Bom dau").build();
+        LubricationPlan plan = LubricationPlan.builder().id(5).build();
+        WorkOrderEquipment woe = WorkOrderEquipment.builder()
+                .id(20).equipment(eq).lubricationPlan(plan)
+                .status(WorkOrderEquipmentStatus.COMPLETED).build();
+        WorkOrder wo = WorkOrder.builder().id(1).type(WorkOrderType.LUBRICATION)
+                .status(WorkOrderStatus.STOPPED).repairDescription("Boi tron dinh ky")
+                .workOrderEquipments(List.of(woe)).build();
+
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(1)).thenReturn(List.of(woe));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        maintenanceService.completeWorkOrder(1);
+
+        ArgumentCaptor<LubricationHistoryDTO> captor = ArgumentCaptor.forClass(LubricationHistoryDTO.class);
+        verify(lubricationHistoryService).create(captor.capture());
+        assertThat(captor.getValue().getEquipmentId()).isEqualTo(1);
+        assertThat(captor.getValue().getPerformedDate()).isEqualTo(LocalDate.now());
+        assertThat(captor.getValue().getNotes()).isEqualTo("Boi tron dinh ky");
+        verify(lubricationPlanService).updateNextDueDateAndStatus(5);
+        verify(repairHistoryService, never()).createRepairHistory(any(WorkOrder.class));
     }
 }

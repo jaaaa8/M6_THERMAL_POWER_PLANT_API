@@ -10,6 +10,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderExtensionDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
+import com.example.m6_thermal_power_plant_api.dto.equipment.response.LubricationHistoryDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
@@ -21,8 +22,7 @@ import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.*;
 import com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService;
 import com.example.m6_thermal_power_plant_api.service.leader.lubrication.LubricationHistoryService;
-import com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService;
-import com.example.m6_thermal_power_plant_api.service.leader.lubrication.LubricationHistoryService;
+import com.example.m6_thermal_power_plant_api.service.leader.lubrication_plan.ILubricationPlanService;
 import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
@@ -32,6 +32,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -56,6 +57,7 @@ public class MaintenanceService implements IMaintenanceService {
     private final IRepairHistoryService repairHistoryService;
     private final WorkOrderEquipmentRepository workOrderEquipmentRepository;
     private final ILubricationHistoryService lubricationHistoryService;
+    private final ILubricationPlanService lubricationPlanService;
 
     private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
     private final ILubricationPlanRepository lubricationPlanRepository;
@@ -69,7 +71,8 @@ public class MaintenanceService implements IMaintenanceService {
                               ILubricationPlanRepository lubricationPlanRepository,
                               AccountRepository accountRepository,
                               WorkOrderArchiveService workOrderArchiveService, IRepairHistoryService repairHistoryService,
-                              WorkOrderEquipmentRepository workOrderEquipmentRepository, ILubricationHistoryService lubricationHistoryService) {
+                              WorkOrderEquipmentRepository workOrderEquipmentRepository, ILubricationHistoryService lubricationHistoryService,
+                              ILubricationPlanService lubricationPlanService) {
         this.workOrderRepository = workOrderRepository;
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
@@ -82,6 +85,7 @@ public class MaintenanceService implements IMaintenanceService {
         this.repairHistoryService = repairHistoryService;
         this.workOrderEquipmentRepository = workOrderEquipmentRepository;
         this.lubricationHistoryService = lubricationHistoryService;
+        this.lubricationPlanService = lubricationPlanService;
     }
 
     @Override
@@ -557,7 +561,21 @@ public class MaintenanceService implements IMaintenanceService {
         if (workOrder.getEndTime() == null) {
             workOrder.setEndTime(LocalDateTime.now());
         }
-        repairHistoryService.createRepairHistory(workOrder);
+        if (workOrder.getType() == WorkOrderType.LUBRICATION) {
+            LocalDate today = LocalDate.now();
+            for (WorkOrderEquipment woe : workOrder.getWorkOrderEquipments()) {
+                if (woe.getStatus() != WorkOrderEquipmentStatus.COMPLETED) continue;
+                if (woe.getLubricationPlan() == null) continue;
+                LubricationHistoryDTO dto = new LubricationHistoryDTO();
+                dto.setEquipmentId(woe.getEquipment().getId());
+                dto.setPerformedDate(today);
+                dto.setNotes(workOrder.getRepairDescription());
+                lubricationHistoryService.create(dto);
+                lubricationPlanService.updateNextDueDateAndStatus(woe.getLubricationPlan().getId());
+            }
+        } else {
+            repairHistoryService.createRepairHistory(workOrder);
+        }
 
         // Sau setStatus(COMPLETED) — để phiếu này không tự tính mình là phiếu sống.
         restoreEquipmentIfRepaired(workOrder);
