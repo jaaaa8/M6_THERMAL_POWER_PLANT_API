@@ -5,6 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderStatusRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateEquipmentStatusRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
@@ -154,6 +155,20 @@ public class WorkOrderController {
                                               java.security.Principal principal) {
         return maintenanceService.updateWorkOrderStatus(id, request,
                 principal != null ? principal.getName() : null);
+    }
+
+    /**
+     * Cập nhật trạng thái làm việc của MỘT thiết bị trong PCT thủ công nhiều
+     * thiết bị (IN_PROGRESS ↔ COMPLETED). Chỉ cho phiếu thủ công (không có
+     * RepairRequest) còn sống; phiếu từ yêu cầu / đã kết thúc / status CANCELED
+     * trả 409; thiết bị không thuộc phiếu trả 404.
+     */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
+    @PatchMapping("/{id}/equipment/{equipmentId}/status")
+    public WorkOrderDTO updateEquipmentStatus(@PathVariable Integer id,
+                                              @PathVariable Integer equipmentId,
+                                              @Valid @RequestBody UpdateEquipmentStatusRequest request) {
+        return maintenanceService.updateWorkOrderEquipmentStatus(id, equipmentId, request.getStatus());
     }
 
     /**

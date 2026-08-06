@@ -46,6 +46,7 @@ public class MaintenanceService implements IMaintenanceService {
     private final AccountRepository accountRepository;
     private final WorkOrderArchiveService workOrderArchiveService;
     private final IRepairHistoryService repairHistoryService;
+    private final WorkOrderEquipmentRepository workOrderEquipmentRepository;
 
     private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
 
@@ -56,7 +57,8 @@ public class MaintenanceService implements IMaintenanceService {
                               EmployeeRepository employeeRepository,
                               com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
                               AccountRepository accountRepository,
-                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService) {
+                              WorkOrderArchiveService workOrderArchiveService,IRepairHistoryService repairHistoryService,
+                              WorkOrderEquipmentRepository workOrderEquipmentRepository) {
         this.workOrderRepository = workOrderRepository;
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
@@ -66,6 +68,7 @@ public class MaintenanceService implements IMaintenanceService {
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
         this.repairHistoryService = repairHistoryService;
+        this.workOrderEquipmentRepository = workOrderEquipmentRepository;
     }
 
     @Override
@@ -667,6 +670,37 @@ public class MaintenanceService implements IMaintenanceService {
         }
 
         workOrderRepository.save(workOrder);
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO updateWorkOrderEquipmentStatus(Integer workOrderId, Integer equipmentId,
+                                                       WorkOrderEquipmentStatus status) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+
+        if (workOrder.getRepairRequest() != null) {
+            throw new IllegalStateException(
+                    "Chi ap dung cho phieu cong tac thu cong (khong co yeu cau sua chua).");
+        }
+        if (!isLive(workOrder)) {
+            // Message PHẢI chứa "ket thuc" — test Step 2 assert hasMessageContaining("ket thuc").
+            throw new IllegalStateException(
+                    "Phieu cong tac (" + workOrder.getOrderCode() + ") da ket thuc ("
+                            + workOrder.getStatus() + ") — khong the cap nhat trang thai thiet bi.");
+        }
+        if (status == WorkOrderEquipmentStatus.CANCELED) {
+            throw new IllegalStateException(
+                    "Khong the huy rieng le thiet bi; huy phieu cong tac de huy toan bo thiet bi.");
+        }
+
+        WorkOrderEquipment item = workOrderEquipmentRepository
+                .findByWorkOrder_IdAndEquipment_Id(workOrderId, equipmentId)
+                .orElseThrow(() -> new ObjectNotFoundException(
+                        "Khong tim thay thiet bi id " + equipmentId + " trong phieu cong tac id " + workOrderId));
+
+        item.setStatus(status);
+        workOrderEquipmentRepository.save(item);
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
 
