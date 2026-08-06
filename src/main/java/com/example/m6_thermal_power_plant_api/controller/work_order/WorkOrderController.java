@@ -63,7 +63,9 @@ public class WorkOrderController {
 
     /**
      * Tạo phiếu công tác: từ yêu cầu sửa chữa (repairRequestId) HOẶC thủ công
-     * nhiều thiết bị (equipmentIds). Dispatch dựa trên trường equipmentIds.
+     * nhiều thiết bị (equipmentIds) HOẶC bôi trơn (equipmentLines). Dispatch dựa
+     * trên repairRequestId — @AssertTrue của request đã bảo đảm đúng MỘT trong ba
+     * được cung cấp, nên "không có repairRequestId" = phiếu thủ công (cả 2 kiểu).
      *
      * Bọc bằng {@link UniqueCodeRetryExecutor}: vì controller KHÔNG @Transactional
      * nên mỗi lần gọi service method (vốn @Transactional) mở một transaction riêng.
@@ -76,7 +78,7 @@ public class WorkOrderController {
                                                         Principal principal) {
         String createdByUsername = principal != null ? principal.getName() : null;
         WorkOrderDTO created = codeRetryExecutor.execute(
-                () -> request.getEquipmentIds() != null && !request.getEquipmentIds().isEmpty()
+                () -> request.getRepairRequestId() == null
                         ? maintenanceService.createManualWorkOrder(request, createdByUsername)
                         : maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
