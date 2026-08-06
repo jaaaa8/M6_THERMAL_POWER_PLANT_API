@@ -208,13 +208,16 @@ public class ConsumableIssuesService implements IConsumableIssuesService {
 
     private void validateStock(ConsumableIssue issue) {
         List<ConsumableIssueDetail> details = detailRepository.findByIssue_Id(issue.getId());
+        boolean hasAnyStock = false;
         for (ConsumableIssueDetail detail : details) {
             BigDecimal stock = consumableRepository.getStockQuantity(detail.getConsumable().getId());
-            BigDecimal reqQty = detail.getQuantity();
-            if (stock.compareTo(reqQty) < 0) {
-                throw new IllegalStateException("Không đủ số lượng tồn kho cho vật tư tiêu hao: "
-                        + detail.getConsumable().getName() + " (Yêu cầu: " + reqQty + ", Tồn hiện tại: " + stock + ")");
+            if (stock != null && stock.compareTo(BigDecimal.ZERO) > 0) {
+                hasAnyStock = true;
+                break;
             }
+        }
+        if (!hasAnyStock && !details.isEmpty()) {
+            throw new IllegalStateException("Kho hiện tại không có vật tư nào khả dụng để xuất. Vui lòng nhập kho trước khi hoàn thành.");
         }
     }
 
@@ -225,32 +228,83 @@ public class ConsumableIssuesService implements IConsumableIssuesService {
                 && issue.getWorkOrder().getRepairRequest().getEquipment() != null) {
             equipment = issue.getWorkOrder().getRepairRequest().getEquipment();
         }
+
         List<ConsumableIssueDetail> details = detailRepository.findByIssue_Id(issue.getId());
+        List<ConsumableIssueDetail> remainingDetailsForNewIssue = new ArrayList<>();
+        BigDecimal currentIssueTotalActualQty = BigDecimal.ZERO;
+
         for (ConsumableIssueDetail detail : details) {
-            BigDecimal reqQty = detail.getQuantity();
-            createInventoryLedgerEntry(detail, account, reqQty);
-            createExportRecord(issue, detail, account, equipment, reqQty);
+            BigDecimal reqQty = detail.getQuantity() != null ? detail.getQuantity() : BigDecimal.ZERO;
+            BigDecimal stock = consumableRepository.getStockQuantity(detail.getConsumable().getId());
+            if (stock == null) stock = BigDecimal.ZERO;
+
+            BigDecimal actualQty = stock.compareTo(reqQty) >= 0 ? reqQty : (stock.compareTo(BigDecimal.ZERO) > 0 ? stock : BigDecimal.ZERO);
+            BigDecimal remainingQty = reqQty.subtract(actualQty);
+
+            if (actualQty.compareTo(BigDecimal.ZERO) > 0) {
+                createInventoryLedgerEntry(detail, account, actualQty);
+                createExportRecord(issue, detail, account, equipment, reqQty, actualQty);
+            }
+
+            detail.setActualQuantity(actualQty);
+            detail.setQuantity(actualQty);
+            detailRepository.save(detail);
+
+            currentIssueTotalActualQty = currentIssueTotalActualQty.add(actualQty);
+
+            if (remainingQty.compareTo(BigDecimal.ZERO) > 0) {
+                remainingDetailsForNewIssue.add(ConsumableIssueDetail.builder()
+                        .consumable(detail.getConsumable())
+                        .quantity(remainingQty)
+                        .build());
+            }
+        }
+
+        // Cập nhật lại tổng số lượng thực xuất của phiếu đợt 1
+        issue.setQuantity(currentIssueTotalActualQty);
+        issueRepository.save(issue);
+
+        // Tự động tạo Phiếu cấp lần 2 (Đợt 2) nếu còn số lượng chưa được cấp đủ
+        if (!remainingDetailsForNewIssue.isEmpty()) {
+            BigDecimal remainingTotalQty = remainingDetailsForNewIssue.stream()
+                    .map(ConsumableIssueDetail::getQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            ConsumableIssue nextIssue = issueRepository.save(ConsumableIssue.builder()
+                    .consumableCode(TimeStampCodeGenerator.generate(ConsumableIssue.class))
+                    .workOrder(issue.getWorkOrder())
+                    .transactionType("export")
+                    .quantity(remainingTotalQty)
+                    .issuedBy(account)
+                    .issuedAt(LocalDateTime.now())
+                    .status(ConsumableIssueStatus.PENDING)
+                    .build());
+
+            for (ConsumableIssueDetail remainingDetail : remainingDetailsForNewIssue) {
+                remainingDetail.setIssue(nextIssue);
+                detailRepository.save(remainingDetail);
+            }
         }
     }
 
-    private void createInventoryLedgerEntry(ConsumableIssueDetail detail, Account account, BigDecimal reqQty) {
+    private void createInventoryLedgerEntry(ConsumableIssueDetail detail, Account account, BigDecimal actualQty) {
         ConsumableInventory inventory = ConsumableInventory.builder()
                 .consumable(detail.getConsumable())
                 .account(account)
-                .quantity(reqQty)
+                .quantity(actualQty)
                 .transactionType(TransactionType.EXPORT)
                 .transactionDate(LocalDateTime.now())
                 .build();
         consumableInventoryRepository.save(inventory);
     }
 
-    private void createExportRecord(ConsumableIssue issue, ConsumableIssueDetail detail, Account account, Equipment equipment, BigDecimal reqQty) {
+    private void createExportRecord(ConsumableIssue issue, ConsumableIssueDetail detail, Account account, Equipment equipment, BigDecimal reqQty, BigDecimal actualQty) {
         ConsumableExport export = ConsumableExport.builder()
                 .exportCode(TimeStampCodeGenerator.generate(ConsumableExport.class))
                 .consumableIssue(issue)
                 .consumable(detail.getConsumable())
                 .requestedQuantity(reqQty)
-                .actualQuantity(reqQty)
+                .actualQuantity(actualQty)
                 .equipment(equipment)
                 .exportedBy(account)
                 .exportedAt(LocalDateTime.now())

@@ -46,4 +46,7 @@ public class ConsumableIssueDetail extends BaseSoftDeleteEntity {
     private Consumable consumable;
 
     private BigDecimal quantity;
+
+    @Column(name = "actual_quantity", precision = 10, scale = 2)
+    private BigDecimal actualQuantity;
 }
