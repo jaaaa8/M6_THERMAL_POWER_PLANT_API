@@ -29,9 +29,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
      * KHÔNG tìm theo requestCode / incidentDescription của yêu cầu. KHÔNG phân
      * biệt hoa/thường.
      *
-     * Sắp xếp mặc định theo TIẾN ĐỘ: OPEN → đang làm (APPROVED / IN_PROGRESS /
-     * STOPPED) → WAITING_FOR_APPROVAL → COMPLETED → CANCELLED; trong cùng nhóm
-     * phiếu mới tạo đứng trước.
+     * Sắp xếp mặc định theo TIẾN ĐỘ: đang sống (STOPPED / IN_PROGRESS) →
+     * COMPLETED → CANCELLED; trong cùng nhóm phiếu mới tạo đứng trước.
      */
     @Query("""
         SELECT wo FROM WorkOrder wo
@@ -45,13 +44,10 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
           AND (:startFrom IS NULL OR wo.startTime >= :startFrom)
           AND (:startTo IS NULL OR wo.startTime < :startTo)
         ORDER BY CASE
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.OPEN THEN 0
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.APPROVED THEN 1
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.IN_PROGRESS THEN 1
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 1
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.WAITING_FOR_APPROVAL THEN 2
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 3
-            ELSE 4
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 0
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.IN_PROGRESS THEN 0
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 1
+            ELSE 2
         END, wo.createdAt DESC
     """)
     Page<WorkOrder> searchWorkOrders(@Param("code") String code,
@@ -78,6 +74,25 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
     List<Object[]> findRoleHolderEmployeeIds(
             @Param("statuses") java.util.Collection<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses,
             @Param("excludeId") Integer excludeId);
+
+    /**
+     * Thiết bị còn PCT nào ĐANG SỐNG ngoài phiếu {@code excludeWorkOrderId} không —
+     * dùng khi khoá phiếu hoàn thành để quyết định có trả thiết bị về ACTIVE.
+     *
+     * Phải loại trừ chính phiếu đang khoá: lúc gọi thì nó đã sang COMPLETED trong
+     * bộ nhớ nhưng chưa chắc đã flush, không loại ra thì có thể tự tính mình là
+     * phiếu sống và chặn luôn việc phục hồi thiết bị.
+     */
+    @Query("""
+        SELECT COUNT(wo) > 0 FROM WorkOrder wo
+        WHERE wo.repairRequest.equipment.id = :equipmentId
+          AND wo.id <> :excludeWorkOrderId
+          AND wo.status IN :liveStatuses
+    """)
+    boolean existsOtherLiveWorkOrderForEquipment(
+            @Param("equipmentId") Integer equipmentId,
+            @Param("excludeWorkOrderId") Integer excludeWorkOrderId,
+            @Param("liveStatuses") java.util.Collection<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> liveStatuses);
 
     /** Dashboard: đếm PCT theo trạng thái */
     long countByStatus(com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus status);

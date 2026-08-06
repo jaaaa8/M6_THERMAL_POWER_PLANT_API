@@ -97,20 +97,24 @@ public class WorkOrderController {
 
     /**
      * Huỷ một phiếu công tác (đặt status = CANCELLED, KHÔNG xoá dòng — PCT là
-     * chứng từ pháp lý). Dùng khi kho không cấp được vật tư, cần tạm đóng phiếu
-     * để sau tạo phiếu mới. Sau khi huỷ, nếu yêu cầu không còn phiếu nào đang
-     * hoạt động thì yêu cầu quay lại trạng thái PENDING.
+     * chứng từ pháp lý). Dùng khi phiếu không còn cần thiết nữa. Sau khi huỷ, nếu
+     * yêu cầu không còn phiếu nào đang hoạt động thì quay lại trạng thái PENDING.
+     *
+     * Ba điều kiện chồng lên nhau: đúng role (chặn ở đây), ĐÚNG NGƯỜI TẠO phiếu
+     * và phiếu CHƯA chạy ngày công tác nào (cả hai chặn ở service — role thôi là
+     * chưa đủ vì mọi Tổ trưởng đều có cùng role).
      */
-    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
+    @PreAuthorize("hasAnyRole('TEAM_LEADER','MAINTENANCE_FOREMAN')")
     @PatchMapping("/{id}/cancel")
-    public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id) {
-        return maintenanceService.cancelWorkOrder(id);
+    public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id,
+                                        java.security.Principal principal) {
+        return maintenanceService.cancelWorkOrder(id, principal != null ? principal.getName() : null);
     }
 
     /**
-     * Hoàn thành phiếu công tác — endpoint cập nhật status DUY NHẤT sang
-     * COMPLETED, không sửa trường nào khác. Idempotent nếu đã COMPLETED;
-     * 409 nếu CANCELLED hoặc đang chờ duyệt gia hạn.
+     * "Khoá phiếu hoàn thành" — endpoint cập nhật status DUY NHẤT sang COMPLETED,
+     * không sửa trường nào khác. Đóng nốt ngày công tác còn đang mở. Idempotent
+     * nếu đã COMPLETED; 409 nếu CANCELLED.
      */
     @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/complete")
@@ -119,16 +123,15 @@ public class WorkOrderController {
     }
 
     /**
-     * Tổ trưởng gửi duyệt / tạm dừng phiếu (từ mọi trạng thái đang sống): tạo
-     * dòng gia hạn chờ duyệt (chỉ lý do — ngày cho làm tiếp do Trưởng ca chốt
-     * lúc duyệt) + status → WAITING_FOR_APPROVAL. Bước duyệt diễn ra NGOÀI hệ
-     * thống: bản giấy PCT được đưa tận tay Trưởng ca ký.
+     * "Khoá phiếu ngày" khi hết ngày mà chưa xong việc: đóng dòng nhật ký ngày
+     * đang mở (ghi chú tuỳ chọn) + status → STOPPED để hôm sau mở lại.
+     * 409 nếu phiếu không đang IN_PROGRESS.
      */
     @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
-    @PatchMapping("/{id}/stop")
-    public WorkOrderDTO stopWorkOrder(@PathVariable Integer id,
-                                      @Valid @RequestBody StopWorkOrderRequest request) {
-        return maintenanceService.stopWorkOrder(id, request);
+    @PatchMapping("/{id}/close-day")
+    public WorkOrderDTO closeWorkDay(@PathVariable Integer id,
+                                     @RequestBody(required = false) StopWorkOrderRequest request) {
+        return maintenanceService.closeWorkDay(id, request);
     }
 
     /**
@@ -144,9 +147,14 @@ public class WorkOrderController {
     }
 
     /**
-     * Cập nhật trạng thái phiếu — endpoint DUY NHẤT cho modal "Cập nhật trạng
-     * thái": duyệt phiếu, bắt đầu, tạm dừng, gửi duyệt gia hạn, duyệt gia hạn,
-     * hoàn thành, huỷ. Bước chuyển không hợp lệ trả 409.
+     * Cập nhật trạng thái phiếu cho modal "Cập nhật trạng thái": mở phiếu ngày,
+     * khoá phiếu ngày, khoá phiếu hoàn thành. Bước chuyển không hợp lệ trả 409.
+     *
+     * KHÔNG dùng cho HUỶ phiếu, dù switch trong service có nhánh CANCELLED:
+     * huỷ thuộc về người CẤP phiếu (Tổ trưởng / Quản đốc SC) nên đi qua
+     * {@code PATCH /{id}/cancel} với @PreAuthorize riêng. Đừng thêm 2 role đó
+     * vào đây để "cho tiện" — họ sẽ mở/khoá được cả phiếu ngày, vì các nhánh
+     * đó không kiểm role lại ở tầng service.
      */
     @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/status")
@@ -156,6 +164,11 @@ public class WorkOrderController {
         return maintenanceService.updateWorkOrderStatus(id, request,
                 principal != null ? principal.getName() : null);
     }
+
+    /**
+     * "Mở phiếu ngày": ghi một dòng nhật ký ngày công tác + status → IN_PROGRESS.
+     * Lần mở ĐẦU TIÊN chính là bắt đầu phiếu. 409 nếu phiếu không đang STOPPED.
+     */
 
     /**
      * Cập nhật trạng thái làm việc của MỘT thiết bị trong PCT thủ công nhiều
@@ -180,31 +193,17 @@ public class WorkOrderController {
      *                    trống thì lấy hôm sau ngày Tổ trưởng gửi duyệt.
      */
     @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
-    @PatchMapping("/{id}/approve-extension")
-    public WorkOrderDTO approveExtension(
-            @PathVariable Integer id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate allowedDate,
-            java.security.Principal principal) {
-        return maintenanceService.approveExtension(id, principal.getName(), allowedDate);
-    }
-
-    /**
-     * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc
-     * APPROVED → IN_PROGRESS (bật lại nút đã tắt hôm trước, sau khi duyệt).
-     */
-    @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
-    @PatchMapping("/{id}/reopen")
-    public WorkOrderDTO reopenWorkOrder(@PathVariable Integer id) {
-        return maintenanceService.reopenWorkOrder(id);
+    @PatchMapping("/{id}/open-day")
+    public WorkOrderDTO openWorkDay(@PathVariable Integer id) {
+        return maintenanceService.openWorkDay(id);
     }
 
     /**
      * Danh sach phieu cong tac, CO PHAN TRANG + TIM KIEM theo 4 bo loc doc lap
      * ket hop AND (bo trong = khong loc).
      * Tham so query: {@code ?page=0&size=20&code=...&description=...&fromDate=2026-07-01&toDate=2026-07-31}
-     * Mac dinh trang 20 dong, sap xep theo TIEN DO: OPEN → dang lam
-     * (APPROVED/IN_PROGRESS/STOPPED) → WAITING_FOR_APPROVAL → COMPLETED →
-     * CANCELLED; cung nhom thi phieu moi tao dung truoc.
+     * Mac dinh trang 20 dong, sap xep theo TIEN DO: dang song (STOPPED /
+     * IN_PROGRESS) → COMPLETED → CANCELLED; cung nhom thi phieu moi tao dung truoc.
      *
      * @param code        tu khoa tim theo id phieu (khi la so) / orderCode / ma
      *                    nhan vien cua nguoi lanh dao — KHONG tim theo

@@ -211,6 +211,9 @@ public class WorkOrderPdfService {
         }
         model.put("memberRows", memberRows);
 
+        // Bảng công tác hàng ngày: in nhật ký ngày đã có (2 cột ký do Người chỉ
+        // huy trực tiếp / Trưởng ca ký TAY), bù thêm dòng trống.
+
         // Bảng danh sách thiết bị (WO thủ công nhiều thiết bị) — mẫu multi.
         List<Map<String, String>> equipmentRows = new ArrayList<>();
         if (workOrder.getEquipments() != null) {
@@ -228,16 +231,17 @@ public class WorkOrderPdfService {
         // Bảng cho phép làm việc hàng ngày: in các gia hạn đã có (2 cột ký do
         // Người chỉ huy trực tiếp / Trưởng ca ký TAY), bù thêm dòng trống.
         List<Map<String, String>> extensionRows = new ArrayList<>();
-        for (WorkOrderExtension extension : extensions) {
+        for (WorkOrderExtension day : extensions) {
             Map<String, String> row = new HashMap<>();
-            row.put("stoppedAt", format(extension.getRequestedAt(), TIME_DATE));
-            row.put("reason", extension.getReason() != null ? extension.getReason() : "");
-            row.put("allowedDate", extension.getAllowedDate() != null
-                    ? extension.getAllowedDate().format(DATE) : "");
+            row.put("allowedDate", day.getAllowedDate() != null
+                    ? day.getAllowedDate().format(DATE) : "");
+            row.put("openedAt", format(day.getRequestedAt(), TIME_DATE));
+            row.put("closedAt", format(day.getClosedAt(), TIME_DATE));
+            row.put("reason", day.getReason() != null ? day.getReason() : "");
             extensionRows.add(row);
         }
         while (extensionRows.size() < MIN_EXTENSION_ROWS) {
-            extensionRows.add(Map.of("stoppedAt", "", "reason", "", "allowedDate", ""));
+            extensionRows.add(Map.of("allowedDate", "", "openedAt", "", "closedAt", "", "reason", ""));
         }
         model.put("extensionRows", extensionRows);
 

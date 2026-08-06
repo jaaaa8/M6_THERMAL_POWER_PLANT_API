@@ -20,8 +20,6 @@ import lombok.Setter;
 public class RepairRequestStatsDTO {
     private long total;
     private long pending;
-    private long approved;
-    private long inProgress;
     private long completed;
     private long emergencyPending;
 }

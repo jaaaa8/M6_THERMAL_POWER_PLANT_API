@@ -40,13 +40,23 @@ public interface RepairRequestRepository extends JpaRepository<RepairRequest, In
 
     long countByStatus(RepairRequestStatus status);
 
+    /**
+     * Thiết bị còn hư hỏng nào ĐÃ BÁO mà CHƯA cấp phiếu công tác không? Dùng khi
+     * khoá phiếu hoàn thành để quyết định có trả thiết bị về ACTIVE.
+     *
+     * CHỈ dùng nó là CHƯA ĐỦ: yêu cầu chuyển COMPLETED ngay lúc tạo PCT nên thiết
+     * bị đang có PCT chạy dở sẽ không lộ ra ở đây — phải kiểm thêm
+     * {@code WorkOrderRepository.existsOtherLiveWorkOrderForEquipment}.
+     * @SQLRestriction tự loại bản ghi đã xoá mềm.
+     */
+    boolean existsByEquipment_IdAndStatus(Integer equipmentId, RepairRequestStatus status);
+
     long countByStatusAndPriority(RepairRequestStatus status, RepairPriority priority);
 
     // ─── Dashboard Queries ───
 
-    /** KPI: đếm yêu cầu đang active (PENDING + APPROVED + IN_PROGRESS) */
-    @Query("SELECT COUNT(r) FROM RepairRequest r WHERE r.status IN (com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus.PENDING, com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus.APPROVED, com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus.IN_PROGRESS)")
-    long countActiveRequests();
+    // KPI "yêu cầu đang active" giờ đồng nghĩa "chưa có phiếu công tác" nên
+    // countByStatus(PENDING) ở trên là đủ — xem DashboardService.getSummary().
 
     /** Area chart: xu hướng sửa chữa N tháng gần nhất */
     @Query(value = """
