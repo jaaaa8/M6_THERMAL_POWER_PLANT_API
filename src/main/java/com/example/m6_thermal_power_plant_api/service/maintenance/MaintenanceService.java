@@ -11,6 +11,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderExtensionDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
+import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
@@ -21,6 +22,7 @@ import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveServic
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -107,23 +109,24 @@ public class MaintenanceService implements IMaintenanceService {
                 .safetySupervisor(safetySupervisor)
                 .startTime(request.getStartTime())
                 .repairDescription(repairDescription)
-                .status(WorkOrderStatus.OPEN)
+                .status(WorkOrderStatus.STOPPED)
                 .createdAt(request.getCreatedAt() != null ? request.getCreatedAt() : LocalDateTime.now())
                 .createdBy(createdBy)
                 .build());
 
         List<WorkOrderMember> members = saveMembers(workOrder, request.getMembers());
 
-        // Yêu cầu đã có phiếu công tác => rời khỏi danh sách "đang chờ xử lý".
-//        repairRequest.setStatus(RepairRequestStatus.IN_PROGRESS);
-//        repairRequestRepository.save(repairRequest);
+        // Yêu cầu đã có phiếu công tác => đóng lại, rời khỏi danh sách "chờ xử lý".
+        // Đường về nằm ở cancelWorkOrder: huỷ hết PCT thì yêu cầu quay lại PENDING.
+        repairRequest.setStatus(RepairRequestStatus.COMPLETED);
+        repairRequestRepository.save(repairRequest);
 
         return WorkOrderDTO.from(workOrder, members);
     }
 
     @Override
     @Transactional
-    public WorkOrderDTO cancelWorkOrder(Integer workOrderId) {
+    public WorkOrderDTO cancelWorkOrder(Integer workOrderId, String username) {
         WorkOrder workOrder = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay phieu cong tac voi id: " + workOrderId));
@@ -131,6 +134,22 @@ public class MaintenanceService implements IMaintenanceService {
         if (workOrder.getStatus() == WorkOrderStatus.COMPLETED) {
             throw new IllegalStateException(
                     "Khong the huy phieu cong tac da hoan thanh (" + workOrder.getOrderCode() + ").");
+        }
+
+        // Phiếu đã chạy dù chỉ 1 ngày là đã có công tác thực tế tại hiện trường —
+        // phải đóng bằng "hoàn thành", không được xoá dấu vết bằng cách huỷ.
+        if (workOrderExtensionRepository.countByWorkOrder_Id(workOrderId) > 0) {
+            throw new IllegalStateException(
+                    "Khong the huy phieu cong tac (" + workOrder.getOrderCode()
+                            + ") da thuc hien it nhat mot ngay cong tac.");
+        }
+
+        // Chỉ NGƯỜI TẠO phiếu được huỷ (role đã chặn ở controller). Không miễn trừ
+        // cho ADMIN — huỷ phiếu là trách nhiệm của người cấp phiếu.
+        Account creator = workOrder.getCreatedBy();
+        if (username == null || creator == null || !username.equals(creator.getUsername())) {
+            throw new AccessDeniedException(
+                    "Chi nguoi tao phieu cong tac (" + workOrder.getOrderCode() + ") moi duoc huy phieu.");
         }
 
         // Idempotent: đã huỷ rồi thì trả về nguyên trạng, không đụng tới yêu cầu.
@@ -310,9 +329,7 @@ public class MaintenanceService implements IMaintenanceService {
         // Không truyền statuses → xét mọi phiếu sống (hành vi cũ); truyền vào thì
         // chỉ xét các trạng thái đó (VD IN_PROGRESS cho ô Người giám sát an toàn).
         List<WorkOrderStatus> liveStatuses = (statuses == null || statuses.isEmpty())
-                ? List.of(WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS,
-                        WorkOrderStatus.WAITING_FOR_APPROVAL, WorkOrderStatus.APPROVED,
-                        WorkOrderStatus.STOPPED)
+                ? List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS)
                 : statuses;
         for (Object[] row : workOrderRepository.findRoleHolderEmployeeIds(liveStatuses, excludeWorkOrderId)) {
             for (Object id : row) {
@@ -382,11 +399,9 @@ public class MaintenanceService implements IMaintenanceService {
             throw new IllegalStateException(
                     "Khong the hoan thanh phieu cong tac da huy (" + workOrder.getOrderCode() + ").");
         }
-        if (workOrder.getStatus() == WorkOrderStatus.WAITING_FOR_APPROVAL) {
-            throw new IllegalStateException(
-                    "Phieu cong tac (" + workOrder.getOrderCode() + ") dang cho Truong ca duyet gia han — "
-                            + "phai duyet (APPROVED) roi tiep tuc lam viec truoc khi hoan thanh.");
-        }
+        // "Khoá phiếu hoàn thành" bấm ngay khi ngày công tác còn đang mở — đóng nốt
+        // dòng ngày đó để nhật ký không bỏ lửng.
+        closeOpenWorkDay(workOrderId, null);
 
         workOrder.setStatus(WorkOrderStatus.COMPLETED);
         // Giờ kết thúc THỰC TẾ của phiếu — chỉ đóng dấu MỘT lần (V13).
@@ -394,6 +409,8 @@ public class MaintenanceService implements IMaintenanceService {
             workOrder.setEndTime(LocalDateTime.now());
         }
         repairHistoryService.createRepairHistory(workOrder);
+        // Sau setStatus(COMPLETED) — để phiếu này không tự tính mình là phiếu sống.
+        restoreEquipmentIfRepaired(workOrder);
         workOrderRepository.save(workOrder);
 
         // Đóng băng bản lưu PDF cuối cùng (PCT + phiếu cấp vật tư) — best-effort,
@@ -405,79 +422,43 @@ public class MaintenanceService implements IMaintenanceService {
 
     @Override
     @Transactional
-    public WorkOrderDTO stopWorkOrder(Integer workOrderId, StopWorkOrderRequest request) {
+    public WorkOrderDTO closeWorkDay(Integer workOrderId, StopWorkOrderRequest request) {
         WorkOrder workOrder = loadWorkOrder(workOrderId);
 
-        // Môi trường làm việc thay đổi liên tục → cho gửi duyệt từ MỌI trạng thái
-        // đang sống (OPEN/IN_PROGRESS/APPROVED). Chỉ chặn phiếu đã kết thúc và
-        // phiếu ĐANG chờ duyệt (đã có dòng gia hạn treo, duyệt xong mới gửi tiếp).
-        if (!isLive(workOrder) || workOrder.getStatus() == WorkOrderStatus.WAITING_FOR_APPROVAL) {
+        if (workOrder.getStatus() != WorkOrderStatus.IN_PROGRESS) {
             throw new IllegalStateException(
-                    "Khong gui duyet duoc phieu cong tac (" + workOrder.getOrderCode()
-                            + ") dang " + workOrder.getStatus() + ".");
-        }
-
-        // Dòng gia hạn CHƯA có người duyệt = bằng chứng "đang chờ Trưởng ca ký bản
-        // giấy" — được in vào mục "Cho phép làm việc và kết thúc công tác hàng ngày"
-        // của bản PDF để đưa tay cho Trưởng ca. requestedAt tự điền lúc insert;
-        // NGÀY cho phép làm tiếp do Trưởng ca chốt lúc duyệt (allowedDate).
-        workOrderExtensionRepository.save(WorkOrderExtension.builder()
-                .workOrder(workOrder)
-                .reason(request.getReason())
-                .build());
-
-        workOrder.setStatus(WorkOrderStatus.WAITING_FOR_APPROVAL);
-        workOrderRepository.save(workOrder);
-        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
-    }
-
-    @Override
-    @Transactional
-    public WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername,
-                                         java.time.LocalDate allowedDate) {
-        WorkOrder workOrder = loadWorkOrder(workOrderId);
-
-        if (workOrder.getStatus() != WorkOrderStatus.WAITING_FOR_APPROVAL) {
-            throw new IllegalStateException(
-                    "Phieu cong tac (" + workOrder.getOrderCode() + ") khong o trang thai cho duyet "
-                            + "(WAITING_FOR_APPROVAL) — dang " + workOrder.getStatus() + ".");
-        }
-
-        Account approvedBy = accountRepository.findAccountByUsername(approvedByUsername)
-                .orElseThrow(() -> new ObjectNotFoundException(
-                        "Khong tim thay tai khoan dang nhap: " + approvedByUsername));
-
-        // Dòng chờ duyệt = dòng MỚI NHẤT chưa có approvedBy. Người bấm xác nhận
-        // online chịu trách nhiệm nhập đúng theo bản giấy Trưởng ca đã ký.
-        WorkOrderExtension pending = workOrderExtensionRepository
-                .findByWorkOrder_IdOrderByRequestedAtAsc(workOrderId).stream()
-                .filter(e -> e.getApprovedBy() == null)
-                .reduce((first, second) -> second)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Phieu cong tac (" + workOrder.getOrderCode()
-                                + ") khong co dong gia han nao dang cho duyet."));
-
-        // Mỗi lần gia hạn kéo dài đúng 1 ngày: không truyền ngày thì mặc định là
-        // hôm sau ngày gửi duyệt — đúng ca làm việc kế tiếp.
-        pending.setAllowedDate(allowedDate != null ? allowedDate : nextDayAfterRequest(pending));
-        pending.setApprovedBy(approvedBy);
-        workOrderExtensionRepository.save(pending);
-
-        workOrder.setStatus(WorkOrderStatus.APPROVED);
-        workOrderRepository.save(workOrder);
-        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
-    }
-
-    @Override
-    @Transactional
-    public WorkOrderDTO reopenWorkOrder(Integer workOrderId) {
-        WorkOrder workOrder = loadWorkOrder(workOrderId);
-
-        if (workOrder.getStatus() != WorkOrderStatus.OPEN
-                && workOrder.getStatus() != WorkOrderStatus.APPROVED) {
-            throw new IllegalStateException(
-                    "Chi mo lam viec duoc phieu moi tao (OPEN) hoac da duyet gia han (APPROVED) — phieu ("
+                    "Chi khoa duoc phieu ngay dang mo (IN_PROGRESS) — phieu ("
                             + workOrder.getOrderCode() + ") dang " + workOrder.getStatus() + ".");
+        }
+
+        closeOpenWorkDay(workOrderId, request != null ? request.getReason() : null);
+
+        workOrder.setStatus(WorkOrderStatus.STOPPED);
+        workOrderRepository.save(workOrder);
+        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO openWorkDay(Integer workOrderId) {
+        WorkOrder workOrder = loadWorkOrder(workOrderId);
+
+        if (workOrder.getStatus() != WorkOrderStatus.STOPPED) {
+            throw new IllegalStateException(
+                    "Chi mo phieu ngay duoc khi phieu dang tam dung (STOPPED) — phieu ("
+                            + workOrder.getOrderCode() + ") dang " + workOrder.getStatus() + ".");
+        }
+
+        // Lần mở đầu tiên CHÍNH LÀ bắt đầu phiếu — không có thao tác riêng.
+        // Idempotent: nếu còn dòng ngày chưa khoá (khoá hụt hôm trước) thì dùng lại,
+        // không đẻ thêm dòng rỗng.
+        if (workOrderExtensionRepository
+                .findFirstByWorkOrder_IdAndClosedAtIsNullOrderByRequestedAtDesc(workOrderId)
+                .isEmpty()) {
+            workOrderExtensionRepository.save(WorkOrderExtension.builder()
+                    .workOrder(workOrder)
+                    .allowedDate(java.time.LocalDate.now())
+                    .build());   // requestedAt = giờ mở, tự điền bởi @CreationTimestamp
         }
 
         workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
@@ -521,14 +502,14 @@ public class MaintenanceService implements IMaintenanceService {
         return WorkOrderDTO.from(workOrder, workOrder.getMembers());
     }
 
-    // cập nhập trạng thái của WO
-    // 1. Sau khi có nguời tạo WO mới, sẽ in ra phiếu này ở trạng thái là OPEN (ONLINE)
-    // 2. Đem phiếu CT này đến SHIFT_LEADER, SHIFT_LEADER đồng ý, trạng thái chuyển sang APPROVED, nhân viên kiểm tra phiếu trạng thái APPROVED, sẽ báo xuống nơi thiết bị sửa chữa để cô lập thiết bị.
-    // 3. Sau khi cô lập thiết bị hoàn tất, cập nhập lại thời gian cho phép trên phiếu (ONLINE và phiếu giấy),-> status thành IN_PROGRESS
-    // 4. Nếu làm đến cuối ngày không xong, TEAM_LEADER cập nhập status thành STOPPED, đem đơn vật lý gửi lại phòng của SHIFT_LEADER
-    // 5. TEAM_LEADER bấm "Gửi duyệt gia hạn" (chỉ nhập lý do) -> tạo dòng WorkOrderExtension, status -> WAITING_FOR_APPROVAL
-    // 6. SHIFT_LEADER duyệt và CHỌN NGÀY cho phép làm tiếp (allowedDate, mặc định hôm sau) -> status APPROVED -> IN_PROGRESS
-    //    Lặp lại 4-6 cho tới khi xong; lúc COMPLETED hệ thống đóng dấu end_time (giờ kết thúc thực tế).
+    // Cập nhật trạng thái WO — không còn vòng phê duyệt nào:
+    // 1. Tổ trưởng / Quản đốc SC tạo phiếu -> STOPPED (chờ được mở ra làm).
+    // 2. Trưởng ca "mở phiếu ngày" -> ghi 1 dòng nhật ký ngày, status IN_PROGRESS.
+    //    Lần mở đầu tiên chính là bắt đầu phiếu.
+    // 3. Hết ngày chưa xong: "khoá phiếu ngày" -> đóng dòng nhật ký, quay về STOPPED.
+    //    Lặp 2-3 cho tới khi xong.
+    // 4. Xong việc: "khoá phiếu hoàn thành" -> COMPLETED, đóng dấu end_time.
+    // 5. Huỷ: chỉ khi CHƯA chạy ngày nào và người bấm đúng là người tạo phiếu.
 
     @Override
     @Transactional
@@ -543,67 +524,67 @@ public class MaintenanceService implements IMaintenanceService {
             return WorkOrderDTO.from(workOrder, workOrder.getMembers());
         }
 
-        switch (target) {
-            case APPROVED -> {
-                // 2 luồng duyệt: phiếu mới (OPEN — duyệt phiếu, không cần dòng gia
-                // hạn) và duyệt gia hạn (WAITING_FOR_APPROVAL — gắn approvedBy vào
-                // dòng gia hạn đang chờ, tái dùng logic sẵn có).
-                if (current == WorkOrderStatus.WAITING_FOR_APPROVAL) {
-                    return approveExtension(workOrderId, username, request.getAllowedDate());
-                }
-                if (current != WorkOrderStatus.OPEN) {
-                    throw new IllegalStateException(
-                            "Chi duyet duoc phieu dang cho duyet (OPEN / WAITING_FOR_APPROVAL) — phieu ("
-                                    + workOrder.getOrderCode() + ") dang " + current + ".");
-                }
-                workOrder.setStatus(WorkOrderStatus.APPROVED);
-            }
-            case IN_PROGRESS -> {
-                // Bắt buộc duyệt trước khi làm việc (quyết định 2026-07-08).
-                if (current != WorkOrderStatus.APPROVED) {
-                    throw new IllegalStateException(
-                            "Phieu (" + workOrder.getOrderCode() + ") phai duoc duyet (APPROVED) truoc khi "
-                                    + "bat dau lam viec — dang " + current + ".");
-                }
-                workOrder.setStatus(WorkOrderStatus.IN_PROGRESS);
-            }
-            case STOPPED -> {
-                if (current != WorkOrderStatus.IN_PROGRESS) {
-                    throw new IllegalStateException(
-                            "Chi tam dung duoc phieu dang thuc hien (IN_PROGRESS) — phieu ("
-                                    + workOrder.getOrderCode() + ") dang " + current + ".");
-                }
-                workOrder.setStatus(WorkOrderStatus.STOPPED);
-            }
-            case WAITING_FOR_APPROVAL -> {
-                // Gửi duyệt gia hạn: chỉ cần lý do (in lên bản giấy) — ngày cho
-                // làm tiếp do Trưởng ca chốt lúc duyệt. Tái dùng stopWorkOrder.
-                if (request.getReason() == null || request.getReason().isBlank()) {
-                    throw new IllegalArgumentException("Gui duyet gia han can ly do (reason).");
-                }
-                return stopWorkOrder(workOrderId, new StopWorkOrderRequest(request.getReason().trim()));
-            }
-            case COMPLETED -> {
-                return completeWorkOrder(workOrderId);// giữ nguyên guard + đóng băng PDF
-            }
-            case CANCELLED -> {
-                return cancelWorkOrder(workOrderId); // giữ nguyên side effect (trả yêu cầu về hàng chờ, archive)
-            }
-            case OPEN -> throw new IllegalStateException(
-                    "Khong the dua phieu (" + workOrder.getOrderCode() + ") ve trang thai moi tao (OPEN).");
-        }
-
-        workOrderRepository.save(workOrder);
-        return WorkOrderDTO.from(workOrder, workOrder.getMembers());
+        // Mọi nhánh uỷ quyền cho method chuyên trách — guard + side effect (nhật ký
+        // ngày, đóng băng PDF, trả yêu cầu về hàng chờ) nằm gọn ở đó, không nhân bản.
+        return switch (target) {
+            case IN_PROGRESS -> openWorkDay(workOrderId);
+            case STOPPED -> closeWorkDay(workOrderId, new StopWorkOrderRequest(request.getReason()));
+            case COMPLETED -> completeWorkOrder(workOrderId);
+            case CANCELLED -> cancelWorkOrder(workOrderId, username);
+        };
     }
 
     /**
-     * Ngày mặc định cho làm tiếp = hôm sau ngày Tổ trưởng gửi duyệt. Dòng gia hạn
-     * cũ (trước V12) không có requestedAt thì lấy hôm sau ngày hiện tại.
+     * Đóng dòng nhật ký ngày đang mở (nếu có) — dùng chung cho "khoá phiếu ngày"
+     * và "khoá phiếu hoàn thành" nên nhật ký không bao giờ bỏ lửng một ngày.
+     * Không có dòng nào đang mở thì không làm gì (dữ liệu cũ trước V20).
+     *
+     * @param note ghi chú tuỳ chọn, chỉ ghi đè khi khác rỗng.
      */
-    private static java.time.LocalDate nextDayAfterRequest(WorkOrderExtension extension) {
-        LocalDateTime requestedAt = extension.getRequestedAt();
-        return (requestedAt != null ? requestedAt.toLocalDate() : java.time.LocalDate.now()).plusDays(1);
+    private void closeOpenWorkDay(Integer workOrderId, String note) {
+        workOrderExtensionRepository
+                .findFirstByWorkOrder_IdAndClosedAtIsNullOrderByRequestedAtDesc(workOrderId)
+                .ifPresent(day -> {
+                    day.setClosedAt(LocalDateTime.now());
+                    if (note != null && !note.isBlank()) {
+                        day.setReason(note.trim());
+                    }
+                    workOrderExtensionRepository.save(day);
+                });
+    }
+
+    /**
+     * Trả thiết bị từ Sự cố (FAILURE) về Hoạt động (ACTIVE) khi phiếu vừa khoá là
+     * hư hỏng CUỐI CÙNG còn mở của thiết bị đó. Nửa đối xứng của
+     * {@code RepairService} — nơi đặt FAILURE lúc tạo yêu cầu sửa chữa.
+     *
+     * Phải kiểm HAI vế cùng lúc, thiếu vế nào cũng sai:
+     *  - Còn yêu cầu PENDING: đã báo hỏng nhưng chưa cấp phiếu công tác.
+     *  - Còn phiếu công tác sống: đang sửa dở. Vế này KHÔNG lộ ra ở vế trên vì yêu
+     *    cầu chuyển COMPLETED ngay lúc tạo phiếu, chứ không phải lúc sửa xong.
+     * Bơm có 2 lỗi, sửa xong 1 lỗi mà báo Hoạt động là nói dối bảng điều khiển.
+     *
+     * CHỈ động vào thiết bị đang FAILURE. MAINTENANCE / STANDBY / RETIRED là quyết
+     * định vận hành khác — khoá một phiếu sửa chữa không đủ tư cách ghi đè chúng.
+     *
+     * Không gọi save: equipment là managed entity trong @Transactional nên
+     * dirty-checking tự flush, giống cách RepairService đặt FAILURE.
+     */
+    private void restoreEquipmentIfRepaired(WorkOrder workOrder) {
+        RepairRequest request = workOrder.getRepairRequest();
+        Equipment equipment = request != null ? request.getEquipment() : null;
+        if (equipment == null || equipment.getStatus() != EquipmentStatus.FAILURE) {
+            return;
+        }
+        boolean conHuHongKhac =
+                repairRequestRepository.existsByEquipment_IdAndStatus(
+                        equipment.getId(), RepairRequestStatus.PENDING)
+                        || workOrderRepository.existsOtherLiveWorkOrderForEquipment(
+                        equipment.getId(), workOrder.getId(),
+                        List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS));
+        if (!conHuHongKhac) {
+            equipment.setStatus(EquipmentStatus.ACTIVE);
+        }
     }
 
     private WorkOrder loadWorkOrder(Integer workOrderId) {
@@ -614,15 +595,12 @@ public class MaintenanceService implements IMaintenanceService {
 
     /**
      * Phieu "song" = dang rang buoc quan he 1-n (chua huy, chua hoan thanh).
-     * WAITING_FOR_APPROVAL / APPROVED / STOPPED (tam dung, cho lam tiep) van la
-     * phieu song: van giu nhan su + khung gio, phai chan phieu moi trung tai nguyen.
+     * STOPPED (tam dung giua 2 ngay cong tac) van la phieu song: van giu nhan su
+     * + khung gio, phai chan phieu moi trung tai nguyen.
      */
     private static boolean isLive(WorkOrder wo) {
-        return wo.getStatus() == WorkOrderStatus.OPEN
-                || wo.getStatus() == WorkOrderStatus.IN_PROGRESS
-                || wo.getStatus() == WorkOrderStatus.WAITING_FOR_APPROVAL
-                || wo.getStatus() == WorkOrderStatus.APPROVED
-                || wo.getStatus() == WorkOrderStatus.STOPPED;
+        return wo.getStatus() == WorkOrderStatus.STOPPED
+                || wo.getStatus() == WorkOrderStatus.IN_PROGRESS;
     }
 
     /**

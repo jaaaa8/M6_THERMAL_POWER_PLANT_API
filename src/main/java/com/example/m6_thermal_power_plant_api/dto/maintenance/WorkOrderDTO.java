@@ -54,6 +54,13 @@ public class WorkOrderDTO {
 
     private LocalDateTime createdAt;
 
+    /**
+     * Tài khoản đã tạo phiếu — FE dùng để bật/tắt nút Huỷ (chỉ người tạo mới huỷ
+     * được). Chỉ trả id: đọc tên phải khởi tạo proxy LAZY, mà from() còn được gọi
+     * ngoài transaction ở luồng danh sách.
+     */
+    private Integer createdById;
+
     private List<WorkOrderMemberDTO> members;
 
     public static WorkOrderDTO from(WorkOrder wo, List<WorkOrderMember> members) {
@@ -64,7 +71,8 @@ public class WorkOrderDTO {
                 .startTime(wo.getStartTime())
                 .endTime(wo.getEndTime())
                 .pdfPath(wo.getPdfPath())
-                .repairDescription(wo.getRepairDescription());
+                .repairDescription(wo.getRepairDescription())
+                .createdById(wo.getCreatedBy() != null ? wo.getCreatedBy().getId() : null);
 
         RepairRequest req = wo.getRepairRequest();
         if (req != null) {

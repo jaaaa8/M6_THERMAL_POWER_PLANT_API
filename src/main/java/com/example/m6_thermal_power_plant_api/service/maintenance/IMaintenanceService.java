@@ -42,11 +42,16 @@ public interface IMaintenanceService {
      *
      * Quy tắc:
      *  - Không huỷ được phiếu đã COMPLETED (ném xung đột 409).
+     *  - Không huỷ được phiếu ĐÃ CHẠY ít nhất một ngày công tác (409) — đã có công
+     *    tác thực tế tại hiện trường thì phải đóng bằng "hoàn thành".
+     *  - Chỉ NGƯỜI TẠO phiếu được huỷ (403), không miễn trừ cho ADMIN.
      *  - Phiếu đã CANCELLED: idempotent (trả về nguyên trạng, không lỗi).
-     *  - Sau khi huỷ, nếu yêu cầu không còn phiếu nào "sống" (OPEN/IN_PROGRESS) thì
-     *    đưa yêu cầu về PENDING để quay lại hàng chờ xử lý.
+     *  - Sau khi huỷ, nếu yêu cầu không còn phiếu nào "sống" thì đưa yêu cầu về
+     *    PENDING để quay lại hàng chờ xử lý.
+     *
+     * @param username tài khoản đang đăng nhập — phải khớp người tạo phiếu.
      */
-    WorkOrderDTO cancelWorkOrder(Integer workOrderId);
+    WorkOrderDTO cancelWorkOrder(Integer workOrderId, String username);
 
     /**
      * User Story #42 (row 46): xem danh sách các phiếu công tác, tìm kiếm theo
@@ -106,26 +111,18 @@ public interface IMaintenanceService {
     WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId);
 
     /**
-     * Cập nhật trạng thái phiếu sang COMPLETED — endpoint cập nhật status DUY NHẤT
-     * cho việc hoàn thành, không sửa trường nào khác.
-     * Idempotent nếu đã COMPLETED; từ chối (409) nếu CANCELLED hoặc đang
-     * WAITING_FOR_APPROVAL (phải xử lý xong thủ tục gia hạn trước).
+     * "Khoá phiếu hoàn thành": status → COMPLETED, đóng dấu giờ kết thúc thực tế
+     * và đóng nốt ngày công tác còn đang mở. Không sửa trường nào khác.
+     * Idempotent nếu đã COMPLETED; từ chối (409) nếu CANCELLED.
      */
     WorkOrderDTO completeWorkOrder(Integer workOrderId);
 
     /**
-     * Tổ trưởng GỬI DUYỆT / TẠM DỪNG phiếu: tạo một dòng work_order_extensions
-     * (chỉ reason, CHƯA có người duyệt và CHƯA có ngày) và chuyển status →
-     * WAITING_FOR_APPROVAL. Dùng cho cả 2 luồng: phiếu MỚI TẠO (OPEN) xin
-     * Trưởng ca duyệt trước khi làm, và phiếu đang chạy tạm dừng cuối ngày.
-     *
-     * Bước duyệt là THỦ CÔNG NGOÀI HỆ THỐNG: bản giấy PCT (mục "Cho phép làm việc
-     * và kết thúc công tác hàng ngày") được đưa tận tay Trưởng ca ký — môi trường
-     * làm việc nguy hiểm nên người duyệt phải chịu trách nhiệm bằng chữ ký thật.
-     * Cho phép từ mọi trạng thái đang sống trừ WAITING_FOR_APPROVAL (đang có
-     * dòng gia hạn treo).
+     * KHOÁ PHIẾU NGÀY khi hết ngày mà chưa xong việc: đóng dòng nhật ký ngày đang
+     * mở (ghi closedAt + ghi chú tuỳ chọn) và đưa status về STOPPED để hôm sau mở
+     * lại. Chỉ cho phép khi phiếu đang IN_PROGRESS (409 nếu không).
      */
-    WorkOrderDTO stopWorkOrder(Integer workOrderId, StopWorkOrderRequest request);
+    WorkOrderDTO closeWorkDay(Integer workOrderId, StopWorkOrderRequest request);
 
     /**
      * Sửa thông tin phiếu công tác đang sống: leader / chỉ huy trực tiếp / giám
@@ -137,31 +134,20 @@ public interface IMaintenanceService {
 
     /**
      * Cập nhật trạng thái phiếu theo máy trạng thái (modal "Cập nhật trạng thái"):
-     * OPEN ─duyệt phiếu─► APPROVED ─bắt đầu─► IN_PROGRESS ─không kịp─► STOPPED
-     * ─gửi duyệt lại (reason, tạo dòng gia hạn)─► WAITING_FOR_APPROVAL
-     * ─duyệt gia hạn (approvedBy = username, allowedDate)─► APPROVED ─► ... ─► COMPLETED;
-     * mọi trạng thái sống ─► CANCELLED (side effect huỷ giữ nguyên).
-     * Idempotent khi target = trạng thái hiện tại; 409 cho bước chuyển không hợp lệ.
+     * STOPPED ─mở phiếu ngày─► IN_PROGRESS ─khoá phiếu ngày─► STOPPED
+     *                               └─khoá phiếu hoàn thành─► COMPLETED;
+     * STOPPED ─huỷ (chưa chạy ngày nào, đúng người tạo)─► CANCELLED.
+     * Mỗi nhánh uỷ quyền cho method chuyên trách nên guard + side effect không bị
+     * nhân bản. Idempotent khi target = trạng thái hiện tại; 409 cho bước chuyển
+     * không hợp lệ.
      */
     WorkOrderDTO updateWorkOrderStatus(Integer workOrderId, UpdateWorkOrderStatusRequest request, String username);
 
     /**
-     * Ghi nhận online việc Trưởng ca ĐÃ ký duyệt bản giấy: gắn tài khoản đang
-     * đăng nhập vào approvedBy của dòng gia hạn đang chờ (người bấm chịu trách
-     * nhiệm nhập đúng theo bản giấy) và chuyển status → APPROVED.
-     * Chỉ cho phép khi phiếu đang WAITING_FOR_APPROVAL.
-     *
-     * @param allowedDate NGÀY Trưởng ca cho phép làm tiếp (in vào cột "Ngày cho
-     *                    phép tiếp tục làm việc" của bản PDF); null = hôm sau
-     *                    ngày Tổ trưởng gửi duyệt.
+     * MỞ PHIẾU NGÀY: ghi một dòng nhật ký ngày công tác (ngày = hôm nay, giờ mở =
+     * bây giờ) và chuyển status → IN_PROGRESS. Lần mở ĐẦU TIÊN chính là bắt đầu
+     * phiếu — không có thao tác "bắt đầu" riêng. Chỉ cho phép khi phiếu đang
+     * STOPPED (409 nếu không). Idempotent với dòng ngày còn bỏ ngỏ chưa khoá.
      */
-    WorkOrderDTO approveExtension(Integer workOrderId, String approvedByUsername,
-                                  java.time.LocalDate allowedDate);
-
-    /**
-     * Mở (lại) phiếu để làm việc: OPEN → IN_PROGRESS (bắt đầu lần đầu) hoặc
-     * APPROVED → IN_PROGRESS (Tổ trưởng bật lại nút đã tắt hôm trước, sau khi
-     * gia hạn được duyệt).
-     */
-    WorkOrderDTO reopenWorkOrder(Integer workOrderId);
+    WorkOrderDTO openWorkDay(Integer workOrderId);
 }

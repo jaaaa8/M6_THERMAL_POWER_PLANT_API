@@ -101,22 +101,22 @@ public class MaintenanceServiceDbTest {
         // 3. Kiểm tra DTO trả về.
         assertThat(created.getId()).isNotNull();
         assertThat(created.getOrderCode()).startsWith("WO-");
-        assertThat(created.getStatus()).isEqualTo(WorkOrderStatus.OPEN);
+        assertThat(created.getStatus()).isEqualTo(WorkOrderStatus.STOPPED);
         assertThat(created.getEquipmentKksCode()).isEqualTo(target.getEquipmentKksCode());
         assertThat(created.getMembers()).hasSize(1);
 
         // 4. Kiểm tra đã ghi xuống DB (đọc lại qua repository).
         WorkOrder saved = workOrderRepository.findById(created.getId())
                 .orElseThrow(() -> new RuntimeException("Work order was not persisted!"));
-        assertThat(saved.getStatus()).isEqualTo(WorkOrderStatus.OPEN);
+        assertThat(saved.getStatus()).isEqualTo(WorkOrderStatus.STOPPED);
 
         List<WorkOrderMember> savedMembers = workOrderMemberRepository.findByWorkOrder_Id(created.getId());
         assertThat(savedMembers).hasSize(1);
 
-        // 5. Request đã rời khỏi danh sách chờ xử lý (PENDING -> IN_PROGRESS).
+        // 5. Request đã rời khỏi danh sách chờ xử lý (PENDING -> COMPLETED "đã đóng").
         RepairRequest movedRequest = repairRequestRepository.findById(target.getId())
                 .orElseThrow(() -> new RuntimeException("Repair request disappeared!"));
-        assertThat(movedRequest.getStatus()).isEqualTo(RepairRequestStatus.IN_PROGRESS);
+        assertThat(movedRequest.getStatus()).isEqualTo(RepairRequestStatus.COMPLETED);
         assertThat(maintenanceService.getPendingRepairRequests(PageRequest.of(0, 50)).getContent())
                 .noneMatch(r -> r.getId().equals(target.getId()));
 

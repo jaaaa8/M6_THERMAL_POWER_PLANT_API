@@ -7,20 +7,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
-
 /**
  * Cập nhật trạng thái phiếu công tác (PATCH /work-orders/{id}/status) — modal
  * "Cập nhật trạng thái" ở danh sách PCT gọi endpoint DUY NHẤT này cho mọi bước:
  *
- *   OPEN (chờ duyệt) ──duyệt phiếu──► APPROVED ──bắt đầu──► IN_PROGRESS
- *   IN_PROGRESS ──hết ngày, không kịp──► STOPPED ──gửi duyệt lại──►
- *   WAITING_FOR_APPROVAL ──duyệt gia hạn──► APPROVED ──► ... ──► COMPLETED
- *   (mọi trạng thái sống ──huỷ──► CANCELLED)
+ *   STOPPED ──mở phiếu ngày──► IN_PROGRESS ──khoá phiếu ngày──► STOPPED
+ *      │                            └──khoá phiếu hoàn thành──► COMPLETED
+ *      └──huỷ (chỉ khi chưa chạy ngày nào, chỉ người tạo)──► CANCELLED
  *
- * reason chỉ bắt buộc khi target = WAITING_FOR_APPROVAL (được in vào mục gia hạn
- * trên bản giấy PCT đưa Trưởng ca ký); allowedDate chỉ dùng khi target =
- * APPROVED từ WAITING_FOR_APPROVAL — Trưởng ca chốt ngày cho làm tiếp.
+ * reason là GHI CHÚ tuỳ chọn khi khoá phiếu ngày (target = STOPPED).
  */
 @Getter
 @Setter
@@ -31,13 +26,6 @@ public class UpdateWorkOrderStatusRequest {
     @NotNull(message = "targetStatus la bat buoc")
     private WorkOrderStatus targetStatus;
 
-    /** Lý do xin gia hạn — bắt buộc khi targetStatus = WAITING_FOR_APPROVAL. */
+    /** Ghi chú lúc khoá phiếu ngày (targetStatus = STOPPED). Tuỳ chọn. */
     private String reason;
-
-    /**
-     * NGÀY Trưởng ca cho phép làm tiếp — chỉ đọc khi duyệt gia hạn (targetStatus
-     * = APPROVED trên phiếu đang WAITING_FOR_APPROVAL). Bỏ trống = ngày hôm sau
-     * ngày gửi duyệt.
-     */
-    private LocalDate allowedDate;
 }

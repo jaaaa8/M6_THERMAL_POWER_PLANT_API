@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.service.dashboard;
 
 import com.example.m6_thermal_power_plant_api.dto.dashboard.DashboardSummaryDTO;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.repository.IToolBorrowLogRepository;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartInventoryRepository;
@@ -57,8 +58,8 @@ public class DashboardService {
         return DashboardSummaryDTO.builder()
                 // KPI Cards
                 .totalEquipment(equipmentRepo.count())
-                .activeRepairRequests(repairRequestRepo.countActiveRequests())
-                .pendingWorkOrders(workOrderRepo.countByStatus(WorkOrderStatus.OPEN))
+                .activeRepairRequests(repairRequestRepo.countByStatus(RepairRequestStatus.PENDING))
+                .pendingWorkOrders(workOrderRepo.countByStatus(WorkOrderStatus.STOPPED))
                 .overdueToolBorrows(toolBorrowRepo.countOverdue())
                 .lowStockItems(sparePartInventoryRepo.countLowStock(LOW_STOCK_THRESHOLD))
                 // Charts & Table
