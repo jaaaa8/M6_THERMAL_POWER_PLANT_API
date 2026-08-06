@@ -55,12 +55,15 @@ public class ParameterCatalogService implements IParameterCatalogService{
     public ParameterCatalogDTO getById(Integer id) {
 
         ParameterCatalog entity = parameterCatalogRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Parameter catalog not found"));
+                .orElseThrow(() -> new RuntimeException("Thông số không tồn tại."));
 
         return convertDTO(entity);
     }
     @Override
     public ParameterCatalogDTO create(ParameterCatalogDTO dto) {
+        if (parameterCatalogRepository.existsByNameIgnoreCase(dto.getName().trim())) {
+            throw new RuntimeException("Thông số đã tồn tại.");
+        }
             ParameterCatalog entity = new ParameterCatalog();
 
             entity.setName(dto.getName());
@@ -78,8 +81,15 @@ public class ParameterCatalogService implements IParameterCatalogService{
 
     @Override
     public ParameterCatalogDTO update(Integer id, ParameterCatalogDTO dto) {
+        if (parameterCatalogRepository.existsByNameIgnoreCaseAndIdNotAndIsDeletedFalse(
+                        dto.getName().trim(),
+                        id
+                )) {
+
+            throw new RuntimeException("Thông số đã tồn tại.");
+        }
         ParameterCatalog entity = parameterCatalogRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Parameter catalog not found"));
+                .orElseThrow(() -> new RuntimeException("Thông số không tồn tại."));
 
         entity.setName(dto.getName());
         entity.setDescription(dto.getDescription());
@@ -97,7 +107,7 @@ public class ParameterCatalogService implements IParameterCatalogService{
     @Override
     public void delete(Integer id) {
         ParameterCatalog entity = parameterCatalogRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Parameter catalog not found"));
+                .orElseThrow(() -> new RuntimeException("Thông số không tồn tại."));
 
         parameterCatalogRepository.delete(entity);
     }

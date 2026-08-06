@@ -7,7 +7,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface ILubricationPlanRepository extends JpaRepository<LubricationPlan, Integer> {
@@ -36,5 +38,40 @@ public interface ILubricationPlanRepository extends JpaRepository<LubricationPla
             String keyword,
             LubricationStatus status,
             Pageable pageable
+    );
+
+    @Query("""
+    SELECT lp
+    FROM LubricationPlan lp
+    JOIN lp.equipment e
+    JOIN e.system s
+    WHERE
+        (
+            :systemId IS NULL
+            OR s.id = :systemId
+        )
+    AND
+        (
+            :status IS NULL
+            OR lp.status = :status
+        )
+    AND
+        lp.nextDueDate <= :dueDate
+    ORDER BY lp.nextDueDate ASC
+""")
+    Page<LubricationPlan> checklist(
+            Integer systemId,
+            LubricationStatus status,
+            LocalDate dueDate,
+            Pageable pageable
+    );
+
+    @Query("""
+    SELECT l 
+    FROM LubricationPlan l
+    WHERE l.nextDueDate <= :maxDate
+""")
+    List<LubricationPlan> findPlansNeedUpdate(
+            @Param("maxDate") LocalDate maxDate
     );
 }

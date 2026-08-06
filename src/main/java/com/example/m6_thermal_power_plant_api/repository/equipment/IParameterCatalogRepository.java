@@ -22,4 +22,8 @@ public interface IParameterCatalogRepository extends JpaRepository<ParameterCata
     @Override
     @EntityGraph(attributePaths = "units")
     Optional<ParameterCatalog> findById(Integer id);
+    boolean existsByNameIgnoreCaseAndIdNotAndIsDeletedFalse(
+            String name,
+            Integer id
+    );
 }

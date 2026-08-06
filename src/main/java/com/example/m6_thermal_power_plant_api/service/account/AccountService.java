@@ -10,6 +10,8 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -72,7 +74,7 @@ public class AccountService implements IAccountService {
     }
 
     public List<AccountResponseDTO> getAllAccounts() {
-        return accountRepository.findAll().stream()
+        return accountRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
                 .filter(a -> !Boolean.TRUE.equals(a.getIsDeleted()))
                 .map(this::mapToResponseDTO)
                 .collect(java.util.stream.Collectors.toList());
@@ -268,7 +270,16 @@ public class AccountService implements IAccountService {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
 
-        return accountRepository.findAll(spec, pageable).map(this::mapToResponseDTO);
+        org.springframework.data.domain.Pageable sortedPageable = pageable;
+        if (pageable.getSort().isUnsorted()) {
+            sortedPageable = PageRequest.of(
+                    pageable.getPageNumber(), 
+                    pageable.getPageSize(), 
+                    Sort.by(Sort.Direction.DESC, "id")
+            );
+        }
+
+        return accountRepository.findAll(spec, sortedPageable).map(this::mapToResponseDTO);
     }
 
     public AccountResponseDTO getAccountById(Integer id) {
