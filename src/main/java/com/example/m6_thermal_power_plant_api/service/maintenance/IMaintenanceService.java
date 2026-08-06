@@ -10,6 +10,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -87,7 +88,7 @@ public interface IMaintenanceService {
      */
     Page<WorkOrderDTO> listWorkOrders(String code, String description,
                                       java.time.LocalDate fromDate, java.time.LocalDate toDate,
-                                      Pageable pageable);
+                                      WorkOrderType type, Pageable pageable);
 
     /**
      * Chi tiết đầy đủ một phiếu công tác: thông tin chung + danh sách thành viên

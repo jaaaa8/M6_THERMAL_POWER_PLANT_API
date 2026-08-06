@@ -9,6 +9,8 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateEquipmentSta
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import com.example.m6_thermal_power_plant_api.service.maintenance.IMaintenanceService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderPdfService;
 import com.example.m6_thermal_power_plant_api.util.UniqueCodeRetryExecutor;
@@ -32,7 +34,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * API cho Quản đốc sửa chữa / Tổ trưởng — Sprint 1 :
@@ -69,7 +73,7 @@ public class WorkOrderController {
     @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PostMapping
     public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request,
-                                                        java.security.Principal principal) {
+                                                        Principal principal) {
         String createdByUsername = principal != null ? principal.getName() : null;
         WorkOrderDTO created = codeRetryExecutor.execute(
                 () -> request.getEquipmentIds() != null && !request.getEquipmentIds().isEmpty()
@@ -107,7 +111,7 @@ public class WorkOrderController {
     @PreAuthorize("hasAnyRole('TEAM_LEADER','MAINTENANCE_FOREMAN')")
     @PatchMapping("/{id}/cancel")
     public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id,
-                                        java.security.Principal principal) {
+                                        Principal principal) {
         return maintenanceService.cancelWorkOrder(id, principal != null ? principal.getName() : null);
     }
 
@@ -160,7 +164,7 @@ public class WorkOrderController {
     @PatchMapping("/{id}/status")
     public WorkOrderDTO updateWorkOrderStatus(@PathVariable Integer id,
                                               @Valid @RequestBody UpdateWorkOrderStatusRequest request,
-                                              java.security.Principal principal) {
+                                              Principal principal) {
         return maintenanceService.updateWorkOrderStatus(id, request,
                 principal != null ? principal.getName() : null);
     }
@@ -189,7 +193,7 @@ public class WorkOrderController {
      * nhập được lưu vào approvedBy (người bấm chịu trách nhiệm nhập đúng theo
      * bản giấy) + status → APPROVED.
      *
-     * @param allowedDate ngày Trưởng ca cho phép làm tiếp (yyyy-MM-dd) — bỏ
+     * @param id ngày Trưởng ca cho phép làm tiếp (yyyy-MM-dd) — bỏ
      *                    trống thì lấy hôm sau ngày Tổ trưởng gửi duyệt.
      */
     @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
@@ -218,8 +222,9 @@ public class WorkOrderController {
             @RequestParam(required = false) String description,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) WorkOrderType type,
             @PageableDefault(size = 20) Pageable pageable) {
-        return new PagedModel<>(maintenanceService.listWorkOrders(code, description, fromDate, toDate, pageable));
+        return new PagedModel<>(maintenanceService.listWorkOrders(code, description, fromDate, toDate, type, pageable));
     }
 
     /**
@@ -233,9 +238,9 @@ public class WorkOrderController {
      *                 không truyền = mọi trạng thái sống.
      */
     @GetMapping("/busy-employees")
-    public java.util.List<Integer> getBusyEmployees(
+    public List<Integer> getBusyEmployees(
             @RequestParam(required = false) Integer excludeWorkOrderId,
-            @RequestParam(required = false) java.util.List<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses) {
+            @RequestParam(required = false) List<WorkOrderStatus> statuses) {
         return maintenanceService.getBusyEmployeeIds(excludeWorkOrderId, statuses);
     }
 

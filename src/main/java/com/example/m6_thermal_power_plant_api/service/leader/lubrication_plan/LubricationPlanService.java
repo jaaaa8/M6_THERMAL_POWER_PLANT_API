@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.dto.Leader.req.LubricationPlanDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.SystemDto;
 import com.example.m6_thermal_power_plant_api.entity.LubricationPlan;
 import com.example.m6_thermal_power_plant_api.entity.enums.LubricationStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.repository.IConsumableRepository;
 import com.example.m6_thermal_power_plant_api.repository.ILubricationPlanRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
@@ -276,6 +277,12 @@ public class LubricationPlanService implements ILubricationPlanService {
         );
         plan.setStatus(LubricationStatus.LUBRICATED);
 
+    }
+
+    @Override
+    public List<Integer> findLockedPlanIds() {
+        return lubricationPlanRepository.findLockedPlanIds(
+                List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS));
     }
 
     @Scheduled(cron = "0 0 0 * * ?")

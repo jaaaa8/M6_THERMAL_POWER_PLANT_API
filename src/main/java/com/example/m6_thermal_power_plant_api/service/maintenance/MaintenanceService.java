@@ -382,7 +382,7 @@ public class MaintenanceService implements IMaintenanceService {
     @Transactional(readOnly = true)
     public Page<WorkOrderDTO> listWorkOrders(String code, String description,
                                              java.time.LocalDate fromDate, java.time.LocalDate toDate,
-                                             Pageable pageable) {
+                                             WorkOrderType type, Pageable pageable) {
         // Luôn đi qua searchWorkOrders (mọi bộ lọc rỗng = lấy tất cả) để danh
         // sách mặc định cũng được sắp theo tiến độ như khi tìm kiếm.
         String codeKeyword = (code == null || code.isBlank()) ? null : code.trim();
@@ -399,7 +399,7 @@ public class MaintenanceService implements IMaintenanceService {
         LocalDateTime startFrom = fromDate == null ? null : fromDate.atStartOfDay();
         LocalDateTime startTo = toDate == null ? null : toDate.plusDays(1).atStartOfDay();
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
-                codeKeyword, searchId, descKeyword, startFrom, startTo, null, pageable);
+                codeKeyword, searchId, descKeyword, startFrom, startTo, type, pageable);
         return page.map(wo -> {
             List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(wo.getId());
             return WorkOrderDTO.from(wo, members);
