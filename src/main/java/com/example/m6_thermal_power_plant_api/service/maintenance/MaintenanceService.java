@@ -27,9 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class MaintenanceService implements IMaintenanceService {
@@ -117,6 +120,66 @@ public class MaintenanceService implements IMaintenanceService {
         // Yêu cầu đã có phiếu công tác => rời khỏi danh sách "đang chờ xử lý".
 //        repairRequest.setStatus(RepairRequestStatus.IN_PROGRESS);
 //        repairRequestRepository.save(repairRequest);
+
+        return WorkOrderDTO.from(workOrder, members);
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderDTO createManualWorkOrder(CreateWorkOrderRequest request, String createdByUsername) {
+        List<Integer> ids = request.getEquipmentIds() == null ? List.of()
+                : new ArrayList<>(new LinkedHashSet<>(request.getEquipmentIds())); // dedupe, giữ thứ tự chọn
+        if (ids.isEmpty()) {
+            throw new IllegalStateException("Khong the tao WO thu cong khi khong co thiet bi nao (equipmentIds).");
+        }
+
+        List<Equipment> equipments = equipmentRepository.findAllById(ids);
+        if (equipments.size() != ids.size()) {
+            List<Integer> found = equipments.stream().map(Equipment::getId).toList();
+            throw new ObjectNotFoundException("Khong tim thay thiet bi voi id: "
+                    + ids.stream().filter(id -> !found.contains(id)).map(String::valueOf)
+                            .collect(Collectors.joining(", ")));
+        }
+
+        // 1 query cho cả danh sách — phủ CẢ WO thủ công lẫn WO sinh từ RepairRequest.
+        List<Object[]> holders = workOrderRepository.findLiveHolders(ids,
+                List.of(WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS,
+                        WorkOrderStatus.WAITING_FOR_APPROVAL, WorkOrderStatus.APPROVED,
+                        WorkOrderStatus.STOPPED));
+        if (!holders.isEmpty()) {
+            Map<Integer, String> kksById = equipments.stream()
+                    .collect(Collectors.toMap(Equipment::getId, Equipment::getKksCode));
+            String detail = holders.stream()
+                    .map(row -> kksById.getOrDefault((Integer) row[0], String.valueOf(row[0])) + " -> " + row[1])
+                    .collect(Collectors.joining("; "));
+            throw new IllegalStateException(
+                    "Thiet bi dang nam trong phieu cong tac dang hoat dong (" + detail
+                            + "). Hay huy phieu cu truoc khi tao phieu moi.");
+        }
+
+        Account createdBy = createdByUsername == null ? null
+                : accountRepository.findAccountByUsername(createdByUsername)
+                        .orElseThrow(() -> new ObjectNotFoundException(
+                                "Khong tim thay tai khoan dang nhap: " + createdByUsername));
+
+        Employee leader = loadEmployee(request.getLeaderId(), "nguoi lanh dao cong viec");
+        Employee directSupervisor = loadEmployeeOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
+        Employee safetySupervisor = loadEmployeeOrNull(request.getSafetySupervisorId(), "nguoi giam sat an toan");
+
+        WorkOrder workOrder = workOrderRepository.save(WorkOrder.builder()
+                .orderCode(generateOrderCode())
+                .leader(leader)
+                .directSupervisor(directSupervisor)
+                .safetySupervisor(safetySupervisor)
+                .startTime(request.getStartTime())
+                .repairDescription(request.getRepairDescription())
+                .status(WorkOrderStatus.OPEN)
+                .createdAt(request.getCreatedAt() != null ? request.getCreatedAt() : LocalDateTime.now())
+                .createdBy(createdBy)
+                .equipments(equipments)
+                .build());
+
+        List<WorkOrderMember> members = saveMembers(workOrder, request.getMembers());
 
         return WorkOrderDTO.from(workOrder, members);
     }

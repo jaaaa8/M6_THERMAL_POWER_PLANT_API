@@ -36,6 +36,22 @@ public interface IMaintenanceService {
     }
 
     /**
+     * Tạo phiếu công tác (PCT) thủ công nhiều thiết bị — KHÔNG cần RepairRequest.
+     * Body truyền equipmentIds (danh sách id thiết bị) thay vì repairRequestId.
+     * Validation: XOR giữa repairRequestId và equipmentIds (xem {@link CreateWorkOrderRequest}).
+     *
+     * @param createdByUsername username tài khoản đăng nhập đang thao tác — lưu vào
+     *                          created_by làm "Người cấp phiếu" trên bản in PCT
+     *                          (null = không ghi nhận người cấp).
+     */
+    WorkOrderDTO createManualWorkOrder(CreateWorkOrderRequest request, String createdByUsername);
+
+    /** Như trên nhưng KHÔNG ghi nhận người cấp phiếu (giữ tương thích test/luồng cũ). */
+    default WorkOrderDTO createManualWorkOrder(CreateWorkOrderRequest request) {
+        return createManualWorkOrder(request, null);
+    }
+
+    /**
      * Huỷ một phiếu công tác: đặt status = CANCELLED (KHÔNG hard-delete vì PCT là
      * chứng từ pháp lý). Dùng cho luồng "kho không cấp được vật tư → tạm đóng phiếu,
      * chờ rồi tạo phiếu mới".
