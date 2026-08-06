@@ -129,6 +129,7 @@ public class EmployeeService implements IEmployeeService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public List<EmployeeResponseDTO> getAllEmployees() {
         return employeeRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
                 .filter(e -> !Boolean.TRUE.equals(e.getIsDeleted()))
@@ -136,6 +137,7 @@ public class EmployeeService implements IEmployeeService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<com.example.m6_thermal_power_plant_api.dto.employee.EmployeeAccountDTO> getAllEmployeeAccounts() {
         return employeeRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
                 .filter(e -> !Boolean.TRUE.equals(e.getIsDeleted()))
@@ -321,6 +323,7 @@ public class EmployeeService implements IEmployeeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EmployeeResponseDTO getEmployeeById(Integer id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new com.example.m6_thermal_power_plant_api.exception.ResourceNotFoundException("Employee not found with id: " + id));
@@ -328,6 +331,7 @@ public class EmployeeService implements IEmployeeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<EmployeeResponseDTO> searchEmployees(
             com.example.m6_thermal_power_plant_api.dto.employee.EmployeeSearchRequestDTO searchRequest,
             org.springframework.data.domain.Pageable pageable
@@ -385,11 +389,31 @@ public class EmployeeService implements IEmployeeService {
         existing.setGmail(dto.getGmail());
         existing.setPhone(dto.getPhone());
         
+        // Đồng bộ email sang Account tương ứng (nếu nhân viên có tài khoản)
+        try {
+            com.example.m6_thermal_power_plant_api.entity.Account account = existing.getAccount();
+            if (account != null && !Boolean.TRUE.equals(account.getIsDeleted())) {
+                account.setEmail(dto.getGmail());
+            }
+        } catch (jakarta.persistence.EntityNotFoundException ex) {
+            // bỏ qua nếu account đã bị xoá mềm
+        }
+        
         // Handle image path (decode and save base64 if needed)
         existing.setImgPath(saveBase64Image(dto.getImgPath()));
 
         if (dto.getIsActive() != null) {
             existing.setIsActive(dto.getIsActive());
+            if ("INACTIVE".equalsIgnoreCase(dto.getIsActive().trim())) {
+                try {
+                    com.example.m6_thermal_power_plant_api.entity.Account account = existing.getAccount();
+                    if (account != null && !Boolean.TRUE.equals(account.getIsDeleted())) {
+                        account.setStatus(com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus.LOCKED);
+                    }
+                } catch (jakarta.persistence.EntityNotFoundException ex) {
+                    // bỏ qua nếu account đã bị xoá mềm
+                }
+            }
         }
 
         if (dto.getDepartmentId() != null) {
