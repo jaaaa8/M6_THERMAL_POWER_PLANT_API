@@ -3,21 +3,17 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
-import com.example.m6_thermal_power_plant_api.entity.Account;
-import com.example.m6_thermal_power_plant_api.entity.Employee;
-import com.example.m6_thermal_power_plant_api.entity.Equipment;
-import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrderExtension;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
+import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +49,8 @@ class MaintenanceServiceTest {
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
     @Mock
+    private com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
+    @Mock
     private com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService workOrderArchiveService;
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.WorkOrderExtensionRepository workOrderExtensionRepository;
@@ -60,6 +58,8 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.repository.AccountRepository accountRepository;
     @Mock
     private com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService repairHistoryService;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.repository.WorkOrderEquipmentRepository workOrderEquipmentRepository;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -413,6 +413,136 @@ class MaintenanceServiceTest {
         assertThat(pending.getAllowedDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 21));
     }
 
+    @Test
+    void workOrderDto_fromManualWorkOrder_mapsEquipmentList() {
+        Equipment e1 = Equipment.builder()
+                .id(1).kksCode("KKS-1").name("Quat gio A")
+                .system(com.example.m6_thermal_power_plant_api.entity.EquipmentSystem.builder()
+                        .id(5).name("He thong nhien lieu").build())
+                .build();
+        Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(7).orderCode("WO-manual").status(WorkOrderStatus.OPEN)
+                .repairDescription("Sua toan bo")
+                .workOrderEquipments(List.of(
+                        WorkOrderEquipment.builder().equipment(e1)
+                                .status(WorkOrderEquipmentStatus.COMPLETED).build(),
+                        WorkOrderEquipment.builder().equipment(e2)
+                                .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+
+        WorkOrderDTO dto = WorkOrderDTO.from(wo, List.of());
+
+        assertThat(dto.getEquipments()).hasSize(2);
+        assertThat(dto.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
+        assertThat(dto.getEquipments().get(0).systemName()).isEqualTo("He thong nhien lieu");
+        assertThat(dto.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.COMPLETED);
+        assertThat(dto.getEquipments().get(1).systemName()).isNull();
+        assertThat(dto.getEquipments().get(1).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
+        assertThat(dto.getRepairRequestId()).isNull();
+        assertThat(dto.getCreatedAt()).isNotNull(); // bug cũ: chỉ set trong nhánh req != null
+    }
+
+    @Test
+    void createManualWorkOrder_createsOrderWithMultipleEquipment() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Employee technician = createEmployee(5, "mechanic.tech", "Hoang Quoc Dat");
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A")
+                .system(com.example.m6_thermal_power_plant_api.entity.EquipmentSystem.builder()
+                        .id(5).name("He thong nhien lieu").build())
+                .build();
+        Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
+
+        when(equipmentRepository.findAllById(List.of(1, 2))).thenReturn(List.of(e1, e2));
+        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(technician));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(200);
+            return wo;
+        });
+        when(workOrderMemberRepository.save(any(WorkOrderMember.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1, 2));
+        req.setLeaderId(2);
+        CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
+        member.setEmployeeId(5);
+        req.setMembers(List.of(member));
+        req.setRepairDescription("Sua toan bo he thong");
+
+        WorkOrderDTO result = maintenanceService.createManualWorkOrder(req, null);
+
+        assertThat(result.getId()).isEqualTo(200);
+        assertThat(result.getOrderCode()).matches("WO-\\d{12}-\\d{3}");
+        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.OPEN);
+        assertThat(result.getRepairRequestId()).isNull();
+        assertThat(result.getEquipments()).hasSize(2);
+        assertThat(result.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
+        assertThat(result.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
+        assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
+        assertThat(result.getMembers()).hasSize(1);
+    }
+
+    /** Id trùng trong payload = bấm nhầm ở UI, không phải xung đột nghiệp vụ → dedupe im lặng. */
+    @Test
+    void createManualWorkOrder_duplicateEquipmentIds_dedupedSilently() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+
+        when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
+        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(201);
+            return wo;
+        });
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1, 1));
+        req.setLeaderId(2);
+
+        WorkOrderDTO result = maintenanceService.createManualWorkOrder(req, null);
+
+        assertThat(result.getEquipments()).hasSize(1);
+        assertThat(result.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void createManualWorkOrder_equipmentNotFound_throws() {
+        when(equipmentRepository.findAllById(List.of(99))).thenReturn(List.of());
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(99));
+        req.setLeaderId(2);
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, null))
+                .isInstanceOf(ObjectNotFoundException.class)
+                .hasMessageContaining("99");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    /** Chặn cả WO thủ công lẫn WO sinh từ RepairRequest — 1 query duy nhất trả [equipmentId, orderCode]. */
+    @Test
+    void createManualWorkOrder_equipmentInOtherLiveWorkOrder_throws() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
+        when(workOrderRepository.findLiveHolders(eq(List.of(1)), any()))
+                .thenReturn(List.<Object[]>of(new Object[]{1, "WO-55"})); // WO-55 dang giu thiet bi 1
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1));
+        req.setLeaderId(2);
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("KKS-1")
+                .hasMessageContaining("WO-55");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
     /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + giờ bắt đầu cho trước. */
     private static WorkOrder liveWorkOrder(int id, Employee directSupervisor, LocalDateTime start) {
         return WorkOrder.builder()
@@ -465,5 +595,144 @@ class MaintenanceServiceTest {
                 .passwordHash("x")
                 .employee(employee)
                 .build();
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_setsCompletedAndReturnsDto() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(7).orderCode("WO-manual").status(WorkOrderStatus.OPEN)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().id(11).equipment(e1)
+                        .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+        when(workOrderRepository.findById(7)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_IdAndEquipment_Id(7, 1))
+                .thenReturn(Optional.of(wo.getWorkOrderEquipments().get(0)));
+        when(workOrderEquipmentRepository.save(any(WorkOrderEquipment.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        WorkOrderDTO result = maintenanceService.updateWorkOrderEquipmentStatus(
+                7, 1, WorkOrderEquipmentStatus.COMPLETED);
+
+        assertThat(result.getEquipments().get(0).status())
+                .isEqualTo(WorkOrderEquipmentStatus.COMPLETED);
+        verify(workOrderEquipmentRepository).save(any(WorkOrderEquipment.class));
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_requestWorkOrder_throws() {
+        RepairRequest req = RepairRequest.builder().id(3).build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(8).orderCode("WO-req").status(WorkOrderStatus.IN_PROGRESS)
+                .repairRequest(req).build();
+        when(workOrderRepository.findById(8)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                8, 1, WorkOrderEquipmentStatus.COMPLETED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("thu cong");
+        verify(workOrderEquipmentRepository, never()).save(any(WorkOrderEquipment.class));
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_completedWorkOrder_throws() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(9).orderCode("WO-done").status(WorkOrderStatus.COMPLETED).build();
+        when(workOrderRepository.findById(9)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                9, 1, WorkOrderEquipmentStatus.COMPLETED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ket thuc");
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_cancelStatus_throws() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().equipment(e1)
+                        .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                10, 1, WorkOrderEquipmentStatus.CANCELED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("huy");
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_equipmentNotInWorkOrder_throws() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(11).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of()).build();
+        when(workOrderRepository.findById(11)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_IdAndEquipment_Id(11, 55))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                11, 55, WorkOrderEquipmentStatus.COMPLETED))
+                .isInstanceOf(ObjectNotFoundException.class)
+                .hasMessageContaining("55");
+    }
+
+    @Test
+    void completeWorkOrder_manualWorkOrder_withPendingEquipment_throws() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat A").build();
+        Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat B").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(20).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(
+                        WorkOrderEquipment.builder().equipment(e1)
+                                .status(WorkOrderEquipmentStatus.COMPLETED).build(),
+                        WorkOrderEquipment.builder().equipment(e2)
+                                .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+        when(workOrderRepository.findById(20)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(20))
+                .thenReturn(wo.getWorkOrderEquipments());
+
+        assertThatThrownBy(() -> maintenanceService.completeWorkOrder(20))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("KKS-2");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void completeWorkOrder_manualWorkOrder_allEquipmentCompleted_succeeds() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(21).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().equipment(e1)
+                        .status(WorkOrderEquipmentStatus.COMPLETED).build()))
+                .build();
+        when(workOrderRepository.findById(21)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(21))
+                .thenReturn(wo.getWorkOrderEquipments());
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkOrderDTO result = maintenanceService.completeWorkOrder(21);
+
+        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+    }
+
+    @Test
+    void cancelWorkOrder_manualWorkOrder_cancelsAllEquipment() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(22).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().equipment(e1)
+                        .status(WorkOrderEquipmentStatus.COMPLETED).build()))
+                .build();
+        when(workOrderRepository.findById(22)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(22))
+                .thenReturn(wo.getWorkOrderEquipments());
+
+        maintenanceService.cancelWorkOrder(22);
+
+        assertThat(wo.getWorkOrderEquipments().get(0).getStatus())
+                .isEqualTo(WorkOrderEquipmentStatus.CANCELED);
+        verify(workOrderEquipmentRepository).saveAll(any());
     }
 }

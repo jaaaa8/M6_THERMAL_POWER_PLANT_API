@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.repository;
 
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -80,4 +81,19 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
 
     /** Dashboard: đếm PCT theo trạng thái */
     long countByStatus(com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus status);
+
+    /**
+     * WO đang "sống" giữ bất kỳ thiết bị nào trong danh sách — phủ CẢ WO thủ công
+     * (wo.workOrderEquipments) lẫn WO sinh từ RepairRequest (wo.repairRequest.equipment).
+     * Trả từng dòng [equipmentId, orderCode].
+     */
+    @Query("SELECT DISTINCT COALESCE(e.id, req.equipment.id), wo.orderCode "
+            + "FROM WorkOrder wo "
+            + "LEFT JOIN wo.workOrderEquipments woe "
+            + "LEFT JOIN woe.equipment e "
+            + "LEFT JOIN wo.repairRequest req "
+            + "WHERE (e.id IN :equipmentIds OR req.equipment.id IN :equipmentIds) "
+            + "AND wo.status IN :statuses")
+    List<Object[]> findLiveHolders(@Param("equipmentIds") List<Integer> equipmentIds,
+                                   @Param("statuses") List<WorkOrderStatus> statuses);
 }

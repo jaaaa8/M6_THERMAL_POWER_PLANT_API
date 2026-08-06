@@ -28,6 +28,7 @@ public class ConsumableIssueDTO {
     private String issueCode;
     private Integer workOrderId;
     private String orderCode;
+    private String kks;
     private String transactionType;
     /** Tổng số lượng của mọi dòng chi tiết. */
     private BigDecimal quantity;
@@ -71,6 +72,9 @@ public class ConsumableIssueDTO {
                 .issueCode(issue.getConsumableCode())
                 .workOrderId(issue.getWorkOrder() != null ? issue.getWorkOrder().getId() : null)
                 .orderCode(issue.getWorkOrder() != null ? issue.getWorkOrder().getOrderCode() : null)
+                .kks(issue.getWorkOrder() != null && issue.getWorkOrder().getRepairRequest() != null
+                        && issue.getWorkOrder().getRepairRequest().getEquipment() != null
+                        ? issue.getWorkOrder().getRepairRequest().getEquipment().getKksCode() : null)
                 .transactionType(issue.getTransactionType())
                 .quantity(issue.getQuantity())
                 .issuedById(issue.getIssuedBy() != null ? issue.getIssuedBy().getId() : null)

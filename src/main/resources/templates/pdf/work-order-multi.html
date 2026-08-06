@@ -71,6 +71,26 @@
 <div class="section">1.4. Địa điểm công tác:
     <span th:text="${location}">..........</span></div>
 
+<div class="section">1.4.1. Danh sách thiết bị trong phạm vi công tác:</div>
+<table class="grid">
+    <thead>
+    <tr>
+        <th style="width: 6%;">STT</th>
+        <th style="width: 24%;">Mã KKS</th>
+        <th style="width: 40%;">Tên thiết bị</th>
+        <th style="width: 30%;">Hệ thống</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="row, it : ${equipmentRows}">
+        <td class="center" th:text="${it.count}">1</td>
+        <td class="center" th:text="${row.kksCode}"></td>
+        <td th:text="${row.name}"></td>
+        <td th:text="${row.systemName}"></td>
+    </tr>
+    </tbody>
+</table>
+
 <div class="section">1.5. Nội dung công tác:
     <span th:text="${description}">..........</span></div>
 
