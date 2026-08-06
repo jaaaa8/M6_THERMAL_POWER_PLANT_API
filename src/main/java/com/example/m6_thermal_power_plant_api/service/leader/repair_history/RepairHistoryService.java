@@ -202,67 +202,42 @@ public class RepairHistoryService implements IRepairHistoryService {
         return dto;
     }
 
-    public void createRepairHistory(
-            WorkOrder workOrder
-    ) {
-
-        if (repairHistoryRepository
-                .existsByWorkOrderId(workOrder.getId())) {
-            // Đã có lịch sử sửa chữa cho phiếu công tác này rồi → không tạo trùng
-            return;
-        }
-
-        RepairHistory history =
-                new RepairHistory();
-
+    private void saveHistoryForEquipment(WorkOrder workOrder, Equipment equipment) {
+        RepairHistory history = new RepairHistory();
         history.setWorkOrder(workOrder);
+        history.setEquipment(equipment);
+        history.setRepairDate(LocalDate.now());
+        history.setRepairContent(workOrder.getRepairDescription());
+        history.setRepairResult("Hoàn thành sửa chữa");
 
-        history.setEquipment(
-                workOrder.getRepairRequest()
-                        .getEquipment()
-        );
-
-        history.setRepairDate(
-                LocalDate.now()
-        );
-
-        history.setRepairContent(
-                workOrder.getRepairDescription()
-        );
-
-        history.setRepairResult(
-                "Hoàn thành sửa chữa"
-        );
-
-        List<RepairHistoryDetail> details =
-                new ArrayList<>();
-
-        for (SparePartsIssue issue :
-                workOrder.getSparePartsIssues()) {
-
-            for (SparePartsIssueDetail detail :
-                    issue.getDetails()) {
-
-                RepairHistoryDetail historyDetail =
-                        new RepairHistoryDetail();
-
-                historyDetail.setRepairHistory(history);
-
-                historyDetail.setSparePart(
-                        detail.getSparePart()
-                );
-
-                historyDetail.setQuantity(
-                        detail.getQuantity()
-                );
-
-                details.add(historyDetail);
+        List<RepairHistoryDetail> details = new ArrayList<>();
+        // Guard null: WO dựng bằng builder (chưa flush/refresh) có collection = null.
+        if (workOrder.getSparePartsIssues() != null) {
+            for (SparePartsIssue issue : workOrder.getSparePartsIssues()) {
+                for (SparePartsIssueDetail detail : issue.getDetails()) {
+                    RepairHistoryDetail historyDetail = new RepairHistoryDetail();
+                    historyDetail.setRepairHistory(history);
+                    historyDetail.setSparePart(detail.getSparePart());
+                    historyDetail.setQuantity(detail.getQuantity());
+                    details.add(historyDetail);
+                }
             }
         }
-
         history.setDetails(details);
-
         repairHistoryRepository.save(history);
+    }
+
+    public void createRepairHistory(WorkOrder workOrder) {
+        if (repairHistoryRepository.existsByWorkOrderId(workOrder.getId())) {
+            return; // Đã có lịch sử sửa chữa cho phiếu công tác này rồi → không tạo trùng
+        }
+        if (workOrder.getRepairRequest() != null) {
+            saveHistoryForEquipment(workOrder, workOrder.getRepairRequest().getEquipment());
+        } else if (workOrder.getEquipments() != null && !workOrder.getEquipments().isEmpty()) {
+            for (Equipment equipment : workOrder.getEquipments()) {
+                saveHistoryForEquipment(workOrder, equipment);
+            }
+        }
     }
 
     @Override
