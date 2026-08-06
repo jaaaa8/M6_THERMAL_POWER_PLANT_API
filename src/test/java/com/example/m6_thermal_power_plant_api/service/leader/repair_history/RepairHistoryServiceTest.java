@@ -4,6 +4,8 @@ import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.RepairHistory;
 import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
+import com.example.m6_thermal_power_plant_api.entity.WorkOrderEquipment;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.repository.IRepairHistoryRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartRepository;
@@ -44,7 +46,9 @@ class RepairHistoryServiceTest {
         WorkOrder wo = WorkOrder.builder()
                 .id(10).orderCode("WO-manual")
                 .repairDescription("Sua toan bo")
-                .equipments(List.of(e1, e2))
+                .workOrderEquipments(List.of(
+                        WorkOrderEquipment.builder().equipment(e1).status(WorkOrderEquipmentStatus.IN_PROGRESS).build(),
+                        WorkOrderEquipment.builder().equipment(e2).status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
                 .build();
         when(repairHistoryRepository.existsByWorkOrderId(10)).thenReturn(false);
         when(repairHistoryRepository.save(any(RepairHistory.class))).thenAnswer(inv -> inv.getArgument(0));

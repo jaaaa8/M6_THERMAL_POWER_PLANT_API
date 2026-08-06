@@ -1,15 +1,19 @@
 package com.example.m6_thermal_power_plant_api.repository;
 
+import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.EquipmentSystem;
 import com.example.m6_thermal_power_plant_api.entity.EquipmentType;
 import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
+import com.example.m6_thermal_power_plant_api.entity.WorkOrderEquipment;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentSystemRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentTypeRepository;
+import com.example.m6_thermal_power_plant_api.service.soft_delete.SoftDeleteCascadeService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 @SpringBootTest
 @Transactional
@@ -41,6 +46,9 @@ class WorkOrderEquipmentTest {
 
     @Autowired
     private EntityManager em;
+
+    @Autowired
+    private SoftDeleteCascadeService softDeleteCascadeService;
 
     private EquipmentSystem saveSystem() {
         return equipmentSystemRepository.save(EquipmentSystem.builder()
@@ -69,12 +77,19 @@ class WorkOrderEquipmentTest {
     }
 
     private WorkOrder saveWo(String marker, WorkOrderStatus status, List<Equipment> equipments) {
-        return workOrderRepository.save(WorkOrder.builder()
+        WorkOrder wo = WorkOrder.builder()
                 .orderCode("WOTE-" + UUID.randomUUID().toString().substring(0, 12))
                 .repairDescription(marker)
                 .status(status)
-                .equipments(equipments)
-                .build());
+                .build();
+        wo.setWorkOrderEquipments(equipments.stream()
+                .<WorkOrderEquipment>map(e -> WorkOrderEquipment.builder()
+                        .workOrder(wo)          // ← thiếu = work_order_id NULL = vi phạm NOT NULL (V19)
+                        .equipment(e)
+                        .status(WorkOrderEquipmentStatus.IN_PROGRESS)
+                        .build())
+                .toList());
+        return workOrderRepository.save(wo);    // cascade = ALL ghi luôn dòng join
     }
 
     @Test
@@ -113,5 +128,36 @@ class WorkOrderEquipmentTest {
         saveWo("done", WorkOrderStatus.COMPLETED, List.of(eq));
 
         assertThat(workOrderRepository.findLiveHolders(List.of(eq.getId()), LIVE)).isEmpty();
+    }
+
+    @Test
+    void workOrderEquipment_savesAndReadsStatus() {
+        Equipment eq = saveEquipment();
+        WorkOrder wo = saveWo("live", WorkOrderStatus.IN_PROGRESS, List.of(eq));
+
+        em.flush();
+        em.clear();
+
+        WorkOrder loaded = workOrderRepository.findById(wo.getId()).orElseThrow();
+        assertThat(loaded.getWorkOrderEquipments()).hasSize(1);
+        assertThat(loaded.getWorkOrderEquipments().get(0).getStatus())
+                .isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
+    }
+
+    /** Quyết định 1: xoá mềm thiết bị phải ẩn luôn dòng join, KHÔNG được ném
+     *  EntityNotFoundException khi đọc lại WO. Đây là check duy nhất chứng minh
+     *  @CascadeSoftDelete hoạt động — thiếu nó thì hồi quy 500 quay lại lặng lẽ. */
+    @Test
+    void softDeletedEquipment_disappearsFromWorkOrder_withoutThrowing() {
+        Equipment eq = saveEquipment();
+        WorkOrder wo = saveWo("cascade", WorkOrderStatus.IN_PROGRESS, List.of(eq));
+        em.flush();
+
+        softDeleteCascadeService.softDelete(eq);
+        em.clear();
+
+        WorkOrder loaded = workOrderRepository.findById(wo.getId()).orElseThrow();
+        assertThat(loaded.getWorkOrderEquipments()).isEmpty();
+        assertThatNoException().isThrownBy(() -> WorkOrderDTO.from(loaded, List.of()));
     }
 }

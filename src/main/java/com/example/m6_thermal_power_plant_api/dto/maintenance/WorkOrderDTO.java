@@ -4,7 +4,9 @@ import com.example.m6_thermal_power_plant_api.entity.Employee;
 import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
+import com.example.m6_thermal_power_plant_api.entity.WorkOrderEquipment;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,10 +62,12 @@ public class WorkOrderDTO {
     private List<WorkOrderMemberDTO> members;
 
     /** Tóm tắt 1 thiết bị trong danh sách equipments của WO thủ công. */
-    public record EquipmentBrief(Integer id, String kksCode, String name, String systemName) {
-        static EquipmentBrief from(Equipment e) {
+    public record EquipmentBrief(Integer id, String kksCode, String name, String systemName,
+                                 WorkOrderEquipmentStatus status) {
+        static EquipmentBrief from(WorkOrderEquipment woe) {
+            Equipment e = woe.getEquipment();
             return new EquipmentBrief(e.getId(), e.getKksCode(), e.getName(),
-                    e.getSystem() != null ? e.getSystem().getName() : null);
+                    e.getSystem() != null ? e.getSystem().getName() : null, woe.getStatus());
         }
     }
 
@@ -97,8 +101,8 @@ public class WorkOrderDTO {
             }
         } else {
             // WO thủ công nhiều thiết bị
-            b.equipments(wo.getEquipments() == null ? List.of()
-                    : wo.getEquipments().stream().map(EquipmentBrief::from).toList());
+            b.equipments(wo.getWorkOrderEquipments() == null ? List.of()
+                    : wo.getWorkOrderEquipments().stream().map(EquipmentBrief::from).toList());
         }
 
         // Sửa bug createdAt: WO thủ công không có req.getCreatedAt() → dùng wo.getCreatedAt()

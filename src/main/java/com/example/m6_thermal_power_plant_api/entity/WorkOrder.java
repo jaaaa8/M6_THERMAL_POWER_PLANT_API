@@ -35,7 +35,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "equipments"})
+@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "workOrderEquipments"})
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class WorkOrder extends BaseSoftDeleteEntity {
 
@@ -69,13 +69,17 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     private Employee safetySupervisor;
 
     /** Thiết bị trong phạm vi phiếu — WO thủ công nhiều thiết bị (không có RepairRequest).
+     *  Mỗi dòng mang trạng thái làm việc RIÊNG (IN_PROGRESS/COMPLETED/CANCELED).
      *  WO từ yêu cầu: danh sách này rỗng, thiết bị lấy qua repairRequest. */
     @JsonIgnore
-    @ManyToMany
-    @JoinTable(name = "work_order_equipments",
-            joinColumns = @JoinColumn(name = "work_order_id"),
-            inverseJoinColumns = @JoinColumn(name = "equipment_id"))
-    private List<Equipment> equipments;
+    @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL)
+    private List<WorkOrderEquipment> workOrderEquipments;
+
+    /** Danh sách Equipment thuần — tương thích ngược cho PDF và lịch sử sửa chữa. */
+    public List<Equipment> getEquipments() {
+        if (workOrderEquipments == null) return List.of();
+        return workOrderEquipments.stream().map(WorkOrderEquipment::getEquipment).toList();
+    }
 
     @Column(name = "start_time")
     private LocalDateTime startTime;

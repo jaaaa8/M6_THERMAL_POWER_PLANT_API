@@ -12,6 +12,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderExtension
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
@@ -166,7 +167,7 @@ public class MaintenanceService implements IMaintenanceService {
         Employee directSupervisor = loadEmployeeOrNull(request.getDirectSupervisorId(), "chi huy truc tiep");
         Employee safetySupervisor = loadEmployeeOrNull(request.getSafetySupervisorId(), "nguoi giam sat an toan");
 
-        WorkOrder workOrder = workOrderRepository.save(WorkOrder.builder()
+        WorkOrder workOrder = WorkOrder.builder()
                 .orderCode(generateOrderCode())
                 .leader(leader)
                 .directSupervisor(directSupervisor)
@@ -176,12 +177,21 @@ public class MaintenanceService implements IMaintenanceService {
                 .status(WorkOrderStatus.OPEN)
                 .createdAt(request.getCreatedAt() != null ? request.getCreatedAt() : LocalDateTime.now())
                 .createdBy(createdBy)
-                .equipments(equipments)
-                .build());
+                .build();
 
-        List<WorkOrderMember> members = saveMembers(workOrder, request.getMembers());
+        workOrder.setWorkOrderEquipments(equipments.stream()
+                .<WorkOrderEquipment>map(e -> WorkOrderEquipment.builder()
+                        .workOrder(workOrder)          // ← thiếu = work_order_id NULL = lỗi NOT NULL
+                        .equipment(e)
+                        .status(WorkOrderEquipmentStatus.IN_PROGRESS)
+                        .build())
+                .toList());
 
-        return WorkOrderDTO.from(workOrder, members);
+        WorkOrder saved = workOrderRepository.save(workOrder);
+
+        List<WorkOrderMember> members = saveMembers(saved, request.getMembers());
+
+        return WorkOrderDTO.from(saved, members);
     }
 
     @Override

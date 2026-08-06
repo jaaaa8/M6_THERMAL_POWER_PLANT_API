@@ -84,12 +84,13 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
 
     /**
      * WO đang "sống" giữ bất kỳ thiết bị nào trong danh sách — phủ CẢ WO thủ công
-     * (wo.equipments) lẫn WO sinh từ RepairRequest (wo.repairRequest.equipment).
+     * (wo.workOrderEquipments) lẫn WO sinh từ RepairRequest (wo.repairRequest.equipment).
      * Trả từng dòng [equipmentId, orderCode].
      */
     @Query("SELECT DISTINCT COALESCE(e.id, req.equipment.id), wo.orderCode "
             + "FROM WorkOrder wo "
-            + "LEFT JOIN wo.equipments e "
+            + "LEFT JOIN wo.workOrderEquipments woe "
+            + "LEFT JOIN woe.equipment e "
             + "LEFT JOIN wo.repairRequest req "
             + "WHERE (e.id IN :equipmentIds OR req.equipment.id IN :equipmentIds) "
             + "AND wo.status IN :statuses")

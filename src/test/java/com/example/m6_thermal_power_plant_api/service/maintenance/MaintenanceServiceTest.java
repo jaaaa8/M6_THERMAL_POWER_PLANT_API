@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
@@ -421,7 +422,11 @@ class MaintenanceServiceTest {
         WorkOrder wo = WorkOrder.builder()
                 .id(7).orderCode("WO-manual").status(WorkOrderStatus.OPEN)
                 .repairDescription("Sua toan bo")
-                .equipments(List.of(e1, e2))
+                .workOrderEquipments(List.of(
+                        WorkOrderEquipment.builder().equipment(e1)
+                                .status(WorkOrderEquipmentStatus.COMPLETED).build(),
+                        WorkOrderEquipment.builder().equipment(e2)
+                                .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
                 .build();
 
         WorkOrderDTO dto = WorkOrderDTO.from(wo, List.of());
@@ -429,7 +434,9 @@ class MaintenanceServiceTest {
         assertThat(dto.getEquipments()).hasSize(2);
         assertThat(dto.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
         assertThat(dto.getEquipments().get(0).systemName()).isEqualTo("He thong nhien lieu");
+        assertThat(dto.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.COMPLETED);
         assertThat(dto.getEquipments().get(1).systemName()).isNull();
+        assertThat(dto.getEquipments().get(1).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
         assertThat(dto.getRepairRequestId()).isNull();
         assertThat(dto.getCreatedAt()).isNotNull(); // bug cũ: chỉ set trong nhánh req != null
     }
@@ -471,6 +478,7 @@ class MaintenanceServiceTest {
         assertThat(result.getRepairRequestId()).isNull();
         assertThat(result.getEquipments()).hasSize(2);
         assertThat(result.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
+        assertThat(result.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
         assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
         assertThat(result.getMembers()).hasSize(1);
     }
@@ -497,6 +505,7 @@ class MaintenanceServiceTest {
         WorkOrderDTO result = maintenanceService.createManualWorkOrder(req, null);
 
         assertThat(result.getEquipments()).hasSize(1);
+        assertThat(result.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
     }
 
     @Test
