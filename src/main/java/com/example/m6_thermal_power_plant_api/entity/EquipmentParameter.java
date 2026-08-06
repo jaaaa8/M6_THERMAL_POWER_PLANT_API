@@ -40,6 +40,10 @@ public class EquipmentParameter extends BaseSoftDeleteEntity {
     @CascadeSoftDelete
     private ParameterCatalog parameter;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id")
+    private Unit unit;
+
 
     /** Giá trị thực tế của thông số */
     @Column(length = 255)

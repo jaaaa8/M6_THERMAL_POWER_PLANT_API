@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface ILubricationHistoryRepository extends JpaRepository<LubricationHistory, Integer> {
     List<LubricationHistory> findByEquipmentIdOrderByPerformedDateDesc(Integer equipmentId);
+
+    LubricationHistory create(LubricationHistory lubricationHistory);
 }

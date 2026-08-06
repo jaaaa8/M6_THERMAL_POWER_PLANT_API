@@ -14,11 +14,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UnitDTO {
     @NotBlank(message = "Vui lòng điền tên đơn vị")
-    @Size(min = 3, max = 255,
-            message = "Tên đơn vị phải từ 3 đến 255 ký tự.")
+    @Size(
+            min = 1,
+            max = 50,
+            message = "Tên đơn vị không được vượt quá 50 ký tự."
+    )
     @Pattern(
-            regexp = "^[A-Za-zÀ-ỹ][A-Za-zÀ-ỹ0-9\\s\\-()]*$",
-            message = "Tên đơn vị phải bắt đầu bằng chữ cái và chỉ chứa chữ, số, khoảng trắng, dấu gạch ngang hoặc ngoặc."
+            regexp = "^[A-Za-z0-9°%μµΩΩÀ-ỹ³²^/().·*_-]+$",
+            message = "Tên đơn vị chứa ký tự không hợp lệ."
     )
     private String name;
     private String description;

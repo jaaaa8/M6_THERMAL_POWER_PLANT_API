@@ -2,13 +2,13 @@ package com.example.m6_thermal_power_plant_api.service.equipment;
 
 import com.example.m6_thermal_power_plant_api.dto.equipment.request.AddEquipmentDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.request.EquipmentUpdateDTO;
+import com.example.m6_thermal_power_plant_api.dto.equipment.request.ParameterCatalogDTO;
 import com.example.m6_thermal_power_plant_api.dto.equipment.response.*;
 import com.example.m6_thermal_power_plant_api.dto.file.FileUploadResult;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.ILubricationHistoryRepository;
-import com.example.m6_thermal_power_plant_api.repository.ILubricationPlanRepository;
 import com.example.m6_thermal_power_plant_api.repository.IRepairHistoryRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentSystemRepository;
@@ -72,7 +72,7 @@ public class EquipmentService implements IEquipmentService {
     @Override
     public EquipmentAddDTO addEquipment(Integer systemId, AddEquipmentDTO dto, List<MultipartFile> images) throws IOException {
         EquipmentSystem system= validateSystem(systemId);
-        EquipmentType type= validateEquipmentType(dto.getEquipmentTypeId());
+        EquipmentType type = validateEquipmentType(dto.getEquipmentTypeId());
         String kksCode= generateKks(system,dto.getName());
         String imagePath= uploadImages(images);
         Equipment equipment = Equipment.builder()
@@ -120,9 +120,7 @@ public class EquipmentService implements IEquipmentService {
                         .orElseThrow(() ->
                                 new RuntimeException("Không tìm thấy thiết bị"));
 
-        EquipmentType type =
-                validateEquipmentType(dto.getEquipmentTypeId());
-
+        EquipmentType type = validateEquipmentType(dto.getEquipmentTypeId());
         equipment.setName(dto.getName());
         equipment.setEquipmentType(type);
         equipment.setStatus(dto.getStatus());
@@ -154,7 +152,6 @@ public class EquipmentService implements IEquipmentService {
         equipment.setDeletedAt(LocalDateTime.now());
         equipmentRepository.save(equipment);
     }
-
     private EquipmentDetailDTO convertToDetailDTO(Equipment equipment
                                                   ) {
         List<EquipmentParamerDTO> technicalParameters =

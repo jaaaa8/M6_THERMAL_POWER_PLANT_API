@@ -25,6 +25,14 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
     @Query(value = "SELECT * FROM equipment ORDER BY id DESC LIMIT 1", nativeQuery = true)
     Optional<Equipment> findLatestIncludingDeleted();
 
+    @EntityGraph(attributePaths = {
+            "system",
+            "equipmentType",
+            "parameters",
+            "parameters.parameter",
+            "parameters.parameter.units"
+    })
+    Optional<Equipment> findPdfById(Integer id);
     @Query(value = """
 
             SELECT e.*
@@ -85,4 +93,6 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
             "parameters.parameter.units"
     })
     Optional<Equipment> findWithDetailById(Integer id);
+
+
 }

@@ -42,16 +42,15 @@ public class EquipmentParameterService implements IEquipmentParameterService{
                 .name(equipmentParameter.getParameter().getName())
                 .value(equipmentParameter.getValue())
                 .description(equipmentParameter.getDescription())
-                .unit(
-                        equipmentParameter.getParameter()
-                                .getUnits()
-                                .stream()
-                                .map(unit -> UnitListDTO.builder()
-                                        .id(unit.getId())
-                                        .name(unit.getName())
-                                        .description(unit.getDescription())
-                                        .build())
-                                .toList()
+                .unitId(
+                        equipmentParameter.getUnit() == null
+                                ? null
+                                : equipmentParameter.getUnit().getId()
+                )
+                .unitName(
+                        equipmentParameter.getUnit() == null
+                                ? null
+                                : equipmentParameter.getUnit().getName()
                 )
                 .build();
     }
@@ -68,8 +67,22 @@ public class EquipmentParameterService implements IEquipmentParameterService{
             ParameterCatalog parameter = parameterCatalogRepository.findById(dto.getParameterId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thông số"));
 
-            EquipmentParameter entity;
+            Unit unit =unitRepository.findById(dto.getUnitId())
+                    .orElseThrow(()-> new RuntimeException("Không tìm thấy đơn vị"));
 
+            boolean exists = parameterRepository
+                    .exists(
+                            equipment.getId(),
+                            parameter.getId(),
+                            unit.getId()
+                    );
+
+            if (exists) {
+                throw new RuntimeException(
+                        "Thông số này đã tồn tại với đơn vị đã chọn."
+                );
+            }
+            EquipmentParameter entity;
             // update
             if (dto.getId() != null) {
 
@@ -86,7 +99,7 @@ public class EquipmentParameterService implements IEquipmentParameterService{
             entity.setParameter(parameter);
             entity.setValue(dto.getValue());
             entity.setDescription(dto.getDescription());
-
+            entity.setUnit(unit);
             result.add(convertDTO(parameterRepository.save(entity)));
 
         }
@@ -107,9 +120,26 @@ public class EquipmentParameterService implements IEquipmentParameterService{
                 .findById(dto.getParameterId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông số"));
 
+        Unit unit =unitRepository.findById(dto.getUnitId())
+                .orElseThrow(()-> new RuntimeException("Không tìm thấy đơn vị"));
+
+        boolean exists = parameterRepository
+                .existsByEquipmentIdAndParameterIdAndUnitIdAndIdNotAndIsDeletedFalse(
+                        entity.getEquipment().getId(),
+                        parameter.getId(),
+                        unit.getId(),
+                        entity.getId()
+                );
+
+        if (exists) {
+            throw new RuntimeException(
+                    "Thông số này đã tồn tại với đơn vị đã chọn."
+            );
+        }
         entity.setValue(dto.getValue());
         entity.setParameter(parameter);
         entity.setDescription(dto.getDescription());
+        entity.setUnit(unit);
 
 
         return convertDTO(
