@@ -35,7 +35,7 @@ import java.util.List;
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor @AllArgsConstructor
-@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues"})
+@ToString(callSuper = true, exclude = {"members", "extensions", "sparePartsIssues", "consumableIssues", "equipments"})
 @EqualsAndHashCode(callSuper = false, of = "id")
 public class WorkOrder extends BaseSoftDeleteEntity {
 
@@ -67,6 +67,15 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "safety_supervisor_id")
     private Employee safetySupervisor;
+
+    /** Thiết bị trong phạm vi phiếu — WO thủ công nhiều thiết bị (không có RepairRequest).
+     *  WO từ yêu cầu: danh sách này rỗng, thiết bị lấy qua repairRequest. */
+    @JsonIgnore
+    @ManyToMany
+    @JoinTable(name = "work_order_equipments",
+            joinColumns = @JoinColumn(name = "work_order_id"),
+            inverseJoinColumns = @JoinColumn(name = "equipment_id"))
+    private List<Equipment> equipments;
 
     @Column(name = "start_time")
     private LocalDateTime startTime;
