@@ -19,6 +19,7 @@ import com.example.m6_thermal_power_plant_api.security.TokenHasher;
 import com.example.m6_thermal_power_plant_api.dto.ChangePasswordRequestDTO;
 import com.example.m6_thermal_power_plant_api.exception.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.example.m6_thermal_power_plant_api.service.auth.PasswordOtpService;
 import com.example.m6_thermal_power_plant_api.service.impl.IAuthService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -48,6 +49,7 @@ public class AuthService implements IAuthService {
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordOtpService passwordOtpService;
 
     @Value("${scms.jwt.refresh-token-expiration}")
     private long refreshExpiration;
@@ -192,6 +194,10 @@ public class AuthService implements IAuthService {
 
     @Override
     public void changePassword(Integer accountId, ChangePasswordRequestDTO request) {
+        // OTP xét TRƯỚC mọi thứ: mã sai thì không cần đụng tới mật khẩu. Đây là
+        // lớp xác nhận thứ hai, KHÔNG thay thế mật khẩu cũ ở dưới.
+        passwordOtpService.verifyAndConsume(accountId, request.getOtp());
+
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tài khoản không tồn tại"));
 

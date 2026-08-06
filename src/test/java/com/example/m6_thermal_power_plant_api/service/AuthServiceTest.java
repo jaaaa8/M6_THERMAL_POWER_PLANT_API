@@ -41,6 +41,15 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    /**
+     * Đổi mật khẩu giờ đòi thêm mã OTP gửi qua email. Ở đây mock nên
+     * verifyAndConsume không làm gì — các test dưới vẫn kiểm đúng phần chúng
+     * quan tâm (mật khẩu cũ, trùng mật khẩu, không tìm thấy tài khoản).
+     * Vòng đời của mã OTP được kiểm riêng ở PasswordOtpServiceTest.
+     */
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.auth.PasswordOtpService passwordOtpService;
+
     @InjectMocks
     private AuthService authService;
 

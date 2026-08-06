@@ -5,6 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
+import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
@@ -883,6 +884,8 @@ class MaintenanceServiceTest {
         Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat A").build();
         WorkOrder wo = WorkOrder.builder()
                 .id(22).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                // Huỷ phiếu đòi ĐÚNG người tạo, nên phiếu phải có createdBy.
+                .createdBy(creator("team.leader"))
                 .workOrderEquipments(List.of(WorkOrderEquipment.builder().equipment(e1)
                         .status(WorkOrderEquipmentStatus.COMPLETED).build()))
                 .build();
@@ -890,7 +893,7 @@ class MaintenanceServiceTest {
         when(workOrderEquipmentRepository.findByWorkOrder_Id(22))
                 .thenReturn(wo.getWorkOrderEquipments());
 
-        maintenanceService.cancelWorkOrder(22);
+        maintenanceService.cancelWorkOrder(22, "team.leader");
 
         assertThat(wo.getWorkOrderEquipments().get(0).getStatus())
                 .isEqualTo(WorkOrderEquipmentStatus.CANCELED);

@@ -12,4 +12,9 @@ public class ChangePasswordRequestDTO {
     @NotBlank(message = "Mật khẩu mới không được để trống")
     @Size(min = 6, message = "Mật khẩu mới phải từ 6 ký tự trở lên")
     private String newPassword;
+
+    /** Mã 6 số gửi qua email, lấy bằng POST /auth/change-password/request-otp. */
+    @NotBlank(message = "Mã xác nhận không được để trống")
+    @Size(min = 6, max = 6, message = "Mã xác nhận gồm 6 chữ số")
+    private String otp;
 }
