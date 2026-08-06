@@ -150,9 +150,7 @@ public class MaintenanceService implements IMaintenanceService {
 
         // 1 query cho cả danh sách — phủ CẢ WO thủ công lẫn WO sinh từ RepairRequest.
         List<Object[]> holders = workOrderRepository.findLiveHolders(ids,
-                List.of(WorkOrderStatus.OPEN, WorkOrderStatus.IN_PROGRESS,
-                        WorkOrderStatus.WAITING_FOR_APPROVAL, WorkOrderStatus.APPROVED,
-                        WorkOrderStatus.STOPPED));
+                List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS));
         if (!holders.isEmpty()) {
             Map<Integer, String> kksById = equipments.stream()
                     .collect(Collectors.toMap(Equipment::getId, Equipment::getKksCode));
@@ -180,7 +178,7 @@ public class MaintenanceService implements IMaintenanceService {
                 .safetySupervisor(safetySupervisor)
                 .startTime(request.getStartTime())
                 .repairDescription(request.getRepairDescription())
-                .status(WorkOrderStatus.OPEN)
+                .status(WorkOrderStatus.STOPPED)
                 .createdAt(request.getCreatedAt() != null ? request.getCreatedAt() : LocalDateTime.now())
                 .createdBy(createdBy)
                 .build();

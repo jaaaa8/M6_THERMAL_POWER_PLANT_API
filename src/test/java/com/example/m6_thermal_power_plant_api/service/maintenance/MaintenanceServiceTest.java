@@ -583,7 +583,7 @@ class MaintenanceServiceTest {
                 .build();
         Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
         WorkOrder wo = WorkOrder.builder()
-                .id(7).orderCode("WO-manual").status(WorkOrderStatus.OPEN)
+                .id(7).orderCode("WO-manual").status(WorkOrderStatus.STOPPED)
                 .repairDescription("Sua toan bo")
                 .workOrderEquipments(List.of(
                         WorkOrderEquipment.builder().equipment(e1)
@@ -637,7 +637,7 @@ class MaintenanceServiceTest {
 
         assertThat(result.getId()).isEqualTo(200);
         assertThat(result.getOrderCode()).matches("WO-\\d{12}-\\d{3}");
-        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.OPEN);
+        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.STOPPED);
         assertThat(result.getRepairRequestId()).isNull();
         assertThat(result.getEquipments()).hasSize(2);
         assertThat(result.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
@@ -762,7 +762,7 @@ class MaintenanceServiceTest {
     void updateWorkOrderEquipmentStatus_setsCompletedAndReturnsDto() {
         Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
         WorkOrder wo = WorkOrder.builder()
-                .id(7).orderCode("WO-manual").status(WorkOrderStatus.OPEN)
+                .id(7).orderCode("WO-manual").status(WorkOrderStatus.STOPPED)
                 .workOrderEquipments(List.of(WorkOrderEquipment.builder().id(11).equipment(e1)
                         .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
                 .build();
