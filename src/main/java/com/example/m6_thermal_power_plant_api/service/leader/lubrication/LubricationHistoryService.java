@@ -32,7 +32,7 @@ public class LubricationHistoryService implements ILubricationHistoryService {
         if (dto == null) {
             throw new IllegalArgumentException("LubricationHistoryDTO cannot be null");
         }
-        lubricationHistoryRepository.create(mapToLubricationHistory(dto));
+        lubricationHistoryRepository.save(mapToLubricationHistory(dto));
     }
 
     private LubricationHistoryDTO mapToDto(
