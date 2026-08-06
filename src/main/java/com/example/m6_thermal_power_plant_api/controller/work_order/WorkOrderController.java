@@ -57,12 +57,13 @@ public class WorkOrderController {
 
 
     /**
-     * Tạo phiếu công tác từ một yêu cầu sửa chữa.
+     * Tạo phiếu công tác: từ yêu cầu sửa chữa (repairRequestId) HOẶC thủ công
+     * nhiều thiết bị (equipmentIds). Dispatch dựa trên trường equipmentIds.
      *
      * Bọc bằng {@link UniqueCodeRetryExecutor}: vì controller KHÔNG @Transactional
-     * nên mỗi lần gọi {@code createWorkOrderFromRequest} (vốn @Transactional) mở
-     * một transaction riêng. Nếu orderCode trùng (hiếm) → constraint DB ném lỗi,
-     * transaction rollback sạch, executor sinh lại mã + chạy lại toàn bộ thao tác.
+     * nên mỗi lần gọi service method (vốn @Transactional) mở một transaction riêng.
+     * Nếu orderCode trùng (hiếm) → constraint DB ném lỗi, transaction rollback sạch,
+     * executor sinh lại mã + chạy lại toàn bộ thao tác.
      */
     @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PostMapping
@@ -70,7 +71,9 @@ public class WorkOrderController {
                                                         java.security.Principal principal) {
         String createdByUsername = principal != null ? principal.getName() : null;
         WorkOrderDTO created = codeRetryExecutor.execute(
-                () -> maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
+                () -> request.getEquipmentIds() != null && !request.getEquipmentIds().isEmpty()
+                        ? maintenanceService.createManualWorkOrder(request, createdByUsername)
+                        : maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
