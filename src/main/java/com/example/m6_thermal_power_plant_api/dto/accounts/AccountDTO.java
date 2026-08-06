@@ -15,20 +15,19 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 public class AccountDTO {
-    @NotBlank(message = "Username cannot be blank")
-    @Size(min = 8, max = 50, message = "Username must be between 8 and 50 characters")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[0-9])[a-z0-9!\"#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~]+$", message = "Username must contain lowercase letters, numbers, and can include special characters")
+    @NotBlank(message = "Tên đăng nhập không được để trống")
+    @Size(min = 8, max = 50, message = "Tên đăng nhập phải từ 8 đến 50 ký tự")
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[0-9])[a-z0-9!\"#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~]+$", message = "Tên đăng nhập phải chứa chữ thường, chữ số và có thể chứa ký tự đặc biệt")
     private String username;
 
-    @jakarta.validation.constraints.Email(message = "Email should be valid")
+    @jakarta.validation.constraints.Email(message = "Email không đúng định dạng")
     private String email;
 
-
-    @Digits(integer = 10, fraction = 0, message = "Employee ID must be a number")
+    @Digits(integer = 10, fraction = 0, message = "Mã nhân viên phải là số")
     private Integer employeeId;
 
-    @NotNull(message = "Roles cannot be empty")
-    @Size(min = 1, message = "At least one role must be selected")
+    @NotNull(message = "Vui lòng chọn vai trò")
+    @Size(min = 1, message = "Phải chọn ít nhất một vai trò")
     @com.fasterxml.jackson.annotation.JsonFormat(with = com.fasterxml.jackson.annotation.JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private java.util.List<Integer> roleIds;
 }
