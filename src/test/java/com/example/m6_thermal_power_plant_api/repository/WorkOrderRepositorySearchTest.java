@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test {@link WorkOrderRepository#searchWorkOrders} trên MySQL thật (rollback
  * sau mỗi test nhờ @Transactional): 4 bộ lọc AND độc lập — code (id / orderCode
  * / mã nhân viên leader), description (repairDescription), khoảng startTime —
- * và thứ tự mặc định theo tiến độ (OPEN → đang làm → chờ duyệt gia hạn → hoàn
- * thành → huỷ; cùng nhóm thì phiếu mới tạo đứng trước).
+ * và thứ tự mặc định theo tiến độ (đang sống → hoàn thành → huỷ; cùng nhóm thì
+ * phiếu mới tạo đứng trước).
  */
 @SpringBootTest
 @Transactional
@@ -66,26 +66,24 @@ class WorkOrderRepositorySearchTest {
 
         WorkOrder cancelled = create(marker, WorkOrderStatus.CANCELLED, base.minusHours(1));
         WorkOrder completed = create(marker, WorkOrderStatus.COMPLETED, base.minusHours(2));
-        WorkOrder waiting = create(marker, WorkOrderStatus.WAITING_FOR_APPROVAL, base.minusHours(3));
         WorkOrder stoppedOld = create(marker, WorkOrderStatus.STOPPED, base.minusHours(5));
         WorkOrder inProgressNew = create(marker, WorkOrderStatus.IN_PROGRESS, base.minusHours(4));
-        WorkOrder open = create(marker, WorkOrderStatus.OPEN, base.minusHours(6));
 
         List<Integer> ids = workOrderRepository
                 .searchWorkOrders(null, null, marker, null, null, PageRequest.of(0, 20))
                 .map(WorkOrder::getId)
                 .getContent();
 
-        // OPEN trước; nhóm đang làm (IN_PROGRESS + STOPPED) trộn chung, mới tạo
-        // trước; rồi WAITING_FOR_APPROVAL → COMPLETED → CANCELLED.
-        assertEquals(List.of(open.getId(), inProgressNew.getId(), stoppedOld.getId(),
-                waiting.getId(), completed.getId(), cancelled.getId()), ids);
+        // Nhóm đang sống (IN_PROGRESS + STOPPED) trộn chung và lên đầu, trong nhóm
+        // thì phiếu mới tạo trước; rồi COMPLETED → CANCELLED.
+        assertEquals(List.of(inProgressNew.getId(), stoppedOld.getId(),
+                completed.getId(), cancelled.getId()), ids);
     }
 
     @Test
     void searchById_findsExactWorkOrder() {
         String marker = "wosearch-" + UUID.randomUUID();
-        WorkOrder wo = create(marker, WorkOrderStatus.OPEN, LocalDateTime.now().withNano(0));
+        WorkOrder wo = create(marker, WorkOrderStatus.STOPPED, LocalDateTime.now().withNano(0));
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
                 String.valueOf(wo.getId()), wo.getId(), null, null, null, PageRequest.of(0, 50));
@@ -100,9 +98,9 @@ class WorkOrderRepositorySearchTest {
         String leaderCode = "EMTEST-" + UUID.randomUUID().toString().substring(0, 8);
         LocalDateTime base = LocalDateTime.now().withNano(0);
 
-        WorkOrder withLeader = create(marker, WorkOrderStatus.OPEN, base,
+        WorkOrder withLeader = create(marker, WorkOrderStatus.STOPPED, base,
                 createLeader(leaderCode), null);
-        create(marker, WorkOrderStatus.OPEN, base, null, null); // phiếu chưa gán leader
+        create(marker, WorkOrderStatus.STOPPED, base, null, null); // phiếu chưa gán leader
 
         List<Integer> ids = workOrderRepository
                 .searchWorkOrders(leaderCode, null, marker, null, null, PageRequest.of(0, 20))
@@ -116,7 +114,7 @@ class WorkOrderRepositorySearchTest {
     @Test
     void searchByOrderCode_keepsWorkOrderWithoutLeader() {
         String marker = "wosearch-" + UUID.randomUUID();
-        WorkOrder noLeader = create(marker, WorkOrderStatus.OPEN, LocalDateTime.now().withNano(0));
+        WorkOrder noLeader = create(marker, WorkOrderStatus.STOPPED, LocalDateTime.now().withNano(0));
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
                 noLeader.getOrderCode(), null, null, null, null, PageRequest.of(0, 50));
@@ -132,9 +130,9 @@ class WorkOrderRepositorySearchTest {
         LocalDateTime base = LocalDateTime.now().withNano(0);
         LocalDate day = LocalDate.now().plusYears(1);
 
-        create(marker, WorkOrderStatus.OPEN, base, null, day.minusDays(1).atTime(10, 0));
-        WorkOrder inRange = create(marker, WorkOrderStatus.OPEN, base, null, day.atTime(10, 0));
-        create(marker, WorkOrderStatus.OPEN, base, null, day.plusDays(1).atTime(10, 0));
+        create(marker, WorkOrderStatus.STOPPED, base, null, day.minusDays(1).atTime(10, 0));
+        WorkOrder inRange = create(marker, WorkOrderStatus.STOPPED, base, null, day.atTime(10, 0));
+        create(marker, WorkOrderStatus.STOPPED, base, null, day.plusDays(1).atTime(10, 0));
 
         // fromDate = toDate = day → chỉ phiếu bắt đầu TRONG ngày đó (cận trên
         // là đầu ngày hôm sau, loại trừ).
@@ -150,7 +148,7 @@ class WorkOrderRepositorySearchTest {
     @Test
     void codeAndDescriptionCombineWithAnd() {
         String marker = "wosearch-" + UUID.randomUUID();
-        WorkOrder wo = create(marker, WorkOrderStatus.OPEN, LocalDateTime.now().withNano(0));
+        WorkOrder wo = create(marker, WorkOrderStatus.STOPPED, LocalDateTime.now().withNano(0));
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
                 wo.getOrderCode(), null, "khong-khop-" + UUID.randomUUID(), null, null,

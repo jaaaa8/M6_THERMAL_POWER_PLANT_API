@@ -47,8 +47,6 @@ public class RepairService implements IRepairService {
         return RepairRequestStatsDTO.builder()
                 .total(repairRequestRepository.count())
                 .pending(repairRequestRepository.countByStatus(RepairRequestStatus.PENDING))
-                .approved(repairRequestRepository.countByStatus(RepairRequestStatus.APPROVED))
-                .inProgress(repairRequestRepository.countByStatus(RepairRequestStatus.IN_PROGRESS))
                 .completed(repairRequestRepository.countByStatus(RepairRequestStatus.COMPLETED))
                 .emergencyPending(repairRequestRepository.countByStatusAndPriority(
                         RepairRequestStatus.PENDING, RepairPriority.EMERGENCY))

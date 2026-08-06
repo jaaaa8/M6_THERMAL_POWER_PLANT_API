@@ -3,6 +3,7 @@ package com.example.m6_thermal_power_plant_api.service.pdf;
 import com.example.m6_thermal_power_plant_api.dto.file.FileUploadResult;
 import com.example.m6_thermal_power_plant_api.entity.Account;
 import com.example.m6_thermal_power_plant_api.entity.Employee;
+import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderExtension;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
@@ -111,7 +112,11 @@ public class WorkOrderPdfService {
         List<WorkOrderMember> members = workOrderMemberRepository.findByWorkOrder_Id(workOrder.getId());
         List<WorkOrderExtension> extensions =
                 workOrderExtensionRepository.findByWorkOrder_IdOrderByRequestedAtAsc(workOrder.getId());
-        return pdfService.renderPdf("pdf/work-order", buildModel(workOrder, members, extensions));
+        Map<String, Object> model = buildModel(workOrder, members, extensions);
+        // WO thủ công nhận diện bằng repairRequest == null, KHÔNG bằng equipments rỗng:
+        // thiết bị bị xoá mềm sẽ làm list rỗng → rơi vào template cũ và NPE trong buildModel.
+        String template = workOrder.getRepairRequest() == null ? "pdf/work-order-multi" : "pdf/work-order";
+        return pdfService.renderPdf(template, model);
     }
 
     /** Upload đè bản cũ cùng orderCode + lưu pdf_path. Trả về URL, hoặc null nếu upload lỗi. */
@@ -148,6 +153,7 @@ public class WorkOrderPdfService {
         model.put("safetySupervisorName", nameOf(workOrder.getSafetySupervisor()));
 
         // Địa điểm công tác: hệ thống thiết bị (kèm tên thiết bị) từ yêu cầu sửa chữa.
+        // WO thủ công (repairRequest == null) → không có location từ request, dùng DOTS.
         String location = DOTS;
         if (workOrder.getRepairRequest() != null && workOrder.getRepairRequest().getEquipment() != null) {
             var equipment = workOrder.getRepairRequest().getEquipment();
@@ -205,19 +211,37 @@ public class WorkOrderPdfService {
         }
         model.put("memberRows", memberRows);
 
+        // Bảng công tác hàng ngày: in nhật ký ngày đã có (2 cột ký do Người chỉ
+        // huy trực tiếp / Trưởng ca ký TAY), bù thêm dòng trống.
+
+        // Bảng danh sách thiết bị (WO thủ công nhiều thiết bị) — mẫu multi.
+        List<Map<String, String>> equipmentRows = new ArrayList<>();
+        if (workOrder.getEquipments() != null) {
+            for (var equipment : workOrder.getEquipments()) {
+                Map<String, String> row = new HashMap<>();
+                row.put("kksCode", equipment.getKksCode() != null ? equipment.getKksCode() : "");
+                row.put("name", equipment.getName() != null ? equipment.getName() : "");
+                row.put("systemName", equipment.getSystem() != null
+                        && equipment.getSystem().getName() != null ? equipment.getSystem().getName() : "");
+                equipmentRows.add(row);
+            }
+        }
+        model.put("equipmentRows", equipmentRows);
+
         // Bảng cho phép làm việc hàng ngày: in các gia hạn đã có (2 cột ký do
         // Người chỉ huy trực tiếp / Trưởng ca ký TAY), bù thêm dòng trống.
         List<Map<String, String>> extensionRows = new ArrayList<>();
-        for (WorkOrderExtension extension : extensions) {
+        for (WorkOrderExtension day : extensions) {
             Map<String, String> row = new HashMap<>();
-            row.put("stoppedAt", format(extension.getRequestedAt(), TIME_DATE));
-            row.put("reason", extension.getReason() != null ? extension.getReason() : "");
-            row.put("allowedDate", extension.getAllowedDate() != null
-                    ? extension.getAllowedDate().format(DATE) : "");
+            row.put("allowedDate", day.getAllowedDate() != null
+                    ? day.getAllowedDate().format(DATE) : "");
+            row.put("openedAt", format(day.getRequestedAt(), TIME_DATE));
+            row.put("closedAt", format(day.getClosedAt(), TIME_DATE));
+            row.put("reason", day.getReason() != null ? day.getReason() : "");
             extensionRows.add(row);
         }
         while (extensionRows.size() < MIN_EXTENSION_ROWS) {
-            extensionRows.add(Map.of("stoppedAt", "", "reason", "", "allowedDate", ""));
+            extensionRows.add(Map.of("allowedDate", "", "openedAt", "", "closedAt", "", "reason", ""));
         }
         model.put("extensionRows", extensionRows);
 

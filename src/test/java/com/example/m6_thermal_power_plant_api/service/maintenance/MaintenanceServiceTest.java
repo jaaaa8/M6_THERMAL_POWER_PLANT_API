@@ -2,28 +2,26 @@ package com.example.m6_thermal_power_plant_api.service.maintenance;
 
 import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
-import com.example.m6_thermal_power_plant_api.entity.Account;
-import com.example.m6_thermal_power_plant_api.entity.Employee;
-import com.example.m6_thermal_power_plant_api.entity.Equipment;
-import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrderExtension;
-import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
+import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderMemberRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
+import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -36,9 +34,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,6 +53,8 @@ class MaintenanceServiceTest {
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.EmployeeRepository employeeRepository;
     @Mock
+    private com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
+    @Mock
     private com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService workOrderArchiveService;
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.WorkOrderExtensionRepository workOrderExtensionRepository;
@@ -60,6 +62,8 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.repository.AccountRepository accountRepository;
     @Mock
     private com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService repairHistoryService;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.repository.WorkOrderEquipmentRepository workOrderEquipmentRepository;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -112,17 +116,17 @@ class MaintenanceServiceTest {
         assertThat(result.getId()).isEqualTo(100);
         // Mã PCT mới: "WO-" + yyMMddHHmmss (12 chữ số) + "-" + SEQ (3 chữ số).
         assertThat(result.getOrderCode()).matches("WO-\\d{12}-\\d{3}");
-        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.OPEN);
+        // Phiếu mới tạo nằm ở Tạm dừng, chờ Trưởng ca mở phiếu ngày.
+        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.STOPPED);
         assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
         assertThat(result.getEquipmentKksCode()).isEqualTo("10LAC10AP001");
         assertThat(result.getMembers()).hasSize(1);
         // MemberInput hiện chỉ nhận employeeId — roleInTask không truyền lúc tạo phiếu.
         assertThat(result.getMembers().get(0).getRoleInTask()).isNull();
 
-        // Chuyển trạng thái PENDING -> IN_PROGRESS đang TẮT trong service
-        // (khối comment ở createWorkOrderFromRequest) — request giữ nguyên trạng thái.
-        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.PENDING);
-        verify(repairRequestRepository, never()).save(request);
+        // Tạo PCT xong thì yêu cầu đóng lại: PENDING -> COMPLETED ("đã đóng").
+        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.COMPLETED);
+        verify(repairRequestRepository).save(request);
 
         ArgumentCaptor<WorkOrder> woCaptor = ArgumentCaptor.forClass(WorkOrder.class);
         verify(workOrderRepository).save(woCaptor.capture());
@@ -146,7 +150,7 @@ class MaintenanceServiceTest {
 
     @Test
     void createWorkOrder_whenActiveWorkOrderHasSameDirectSupervisor_throwsConflict() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         WorkOrder live = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
                 LocalDateTime.of(2026, 7, 1, 8, 0));
@@ -167,7 +171,7 @@ class MaintenanceServiceTest {
 
     @Test
     void createWorkOrder_whenActiveWorkOrderSameLeader_throwsDuplicateHumanResource() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
         WorkOrder live = WorkOrder.builder()
@@ -193,7 +197,7 @@ class MaintenanceServiceTest {
 
     @Test
     void createWorkOrder_whenActiveWorkOrderSameSafetySupervisor_throwsDuplicateHumanResource() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
         when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
         Employee safetySupervisor = createEmployee(4, "safety.officer", "Pham Van Dat");
         WorkOrder live = WorkOrder.builder()
@@ -220,7 +224,7 @@ class MaintenanceServiceTest {
 
     @Test
     void createWorkOrder_secondTeamDifferentSupervisorSameHours_isAllowed() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
         WorkOrder live = liveWorkOrder(1, createEmployee(3, "electric.tech", "Le Minh Cuong"),
                 LocalDateTime.of(2026, 7, 1, 8, 0));
         Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
@@ -252,7 +256,7 @@ class MaintenanceServiceTest {
 
     @Test
     void createWorkOrder_existingCancelledWorkOrderIsIgnored_allowsRecreate() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
         Employee director = createEmployee(1, "shift.leader", "Nguyen Van An");
         // Phiếu CANCELLED: cùng direct supervisor VÀ cùng khung giờ với phiếu mới,
         // nhưng vì đã huỷ nên phải bị BỎ QUA -> cho phép tạo lại.
@@ -285,15 +289,24 @@ class MaintenanceServiceTest {
         verify(workOrderRepository).save(any(WorkOrder.class));
     }
 
+    /** Tài khoản người tạo phiếu — mọi test huỷ đều so khớp với username này. */
+    private static Account creator(String username) {
+        Account account = new Account();
+        account.setId(9);
+        account.setUsername(username);
+        return account;
+    }
+
     @Test
     void cancelWorkOrder_setsCancelledAndRevertsRequestToPending_whenNoOtherLiveWorkOrder() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
         WorkOrder wo = WorkOrder.builder()
-                .id(10).orderCode("WO-x").status(WorkOrderStatus.OPEN).repairRequest(request).build();
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.STOPPED).repairRequest(request)
+                .createdBy(creator("team.leader")).build();
         when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(wo));
 
-        WorkOrderDTO result = maintenanceService.cancelWorkOrder(10);
+        WorkOrderDTO result = maintenanceService.cancelWorkOrder(10, "team.leader");
 
         assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.CANCELLED);
         assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.CANCELLED);
@@ -304,18 +317,19 @@ class MaintenanceServiceTest {
 
     @Test
     void cancelWorkOrder_keepsRequestInProgress_whenAnotherLiveWorkOrderExists() {
-        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.IN_PROGRESS);
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
         WorkOrder target = WorkOrder.builder()
-                .id(10).orderCode("WO-x").status(WorkOrderStatus.OPEN).repairRequest(request).build();
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.STOPPED).repairRequest(request)
+                .createdBy(creator("team.leader")).build();
         WorkOrder otherLive = liveWorkOrder(20, createEmployee(3, "electric.tech", "Le Minh Cuong"),
                 LocalDateTime.of(2026, 7, 5, 8, 0));
         when(workOrderRepository.findById(10)).thenReturn(Optional.of(target));
         when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of(target, otherLive));
 
-        maintenanceService.cancelWorkOrder(10);
+        maintenanceService.cancelWorkOrder(10, "team.leader");
 
         assertThat(target.getStatus()).isEqualTo(WorkOrderStatus.CANCELLED);
-        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.IN_PROGRESS);
+        assertThat(request.getStatus()).isEqualTo(RepairRequestStatus.COMPLETED);
         verify(repairRequestRepository, never()).save(any(RepairRequest.class));
     }
 
@@ -325,8 +339,35 @@ class MaintenanceServiceTest {
                 .id(11).orderCode("WO-done").status(WorkOrderStatus.COMPLETED).build();
         when(workOrderRepository.findById(11)).thenReturn(Optional.of(wo));
 
-        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(11))
+        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(11, "team.leader"))
                 .isInstanceOf(IllegalStateException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void cancelWorkOrder_whenAlreadyRanAWorkDay_throwsConflict() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(12).orderCode("WO-ran").status(WorkOrderStatus.STOPPED)
+                .createdBy(creator("team.leader")).build();
+        when(workOrderRepository.findById(12)).thenReturn(Optional.of(wo));
+        // Đã chạy 1 ngày công tác → phải đóng bằng "hoàn thành", không được huỷ.
+        when(workOrderExtensionRepository.countByWorkOrder_Id(12)).thenReturn(1L);
+
+        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(12, "team.leader"))
+                .isInstanceOf(IllegalStateException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void cancelWorkOrder_whenNotTheCreator_throwsAccessDenied() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(13).orderCode("WO-other").status(WorkOrderStatus.STOPPED)
+                .createdBy(creator("team.leader")).build();
+        when(workOrderRepository.findById(13)).thenReturn(Optional.of(wo));
+
+        // Đúng role (chặn ở controller) nhưng KHÁC người tạo → vẫn phải từ chối.
+        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(13, "other.leader"))
+                .isInstanceOf(AccessDeniedException.class);
         verify(workOrderRepository, never()).save(any(WorkOrder.class));
     }
 
@@ -334,7 +375,7 @@ class MaintenanceServiceTest {
     void cancelWorkOrder_whenNotFound_throws() {
         when(workOrderRepository.findById(999)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(999))
+        assertThatThrownBy(() -> maintenanceService.cancelWorkOrder(999, "team.leader"))
                 .isInstanceOf(ObjectNotFoundException.class);
     }
 
@@ -368,49 +409,299 @@ class MaintenanceServiceTest {
     }
 
     @Test
-    void approveExtension_setsAllowedDateChosenByShiftLeader() {
+    void openWorkDay_writesTodayIntoDayLogAndStartsWork() {
         WorkOrder wo = WorkOrder.builder()
-                .id(10).orderCode("WO-x").status(WorkOrderStatus.WAITING_FOR_APPROVAL).build();
-        WorkOrderExtension pending = WorkOrderExtension.builder()
-                .id(1).workOrder(wo).reason("Chua xong, xin lam tiep")
-                .requestedAt(LocalDateTime.of(2026, 7, 20, 17, 30))
-                .build();
-        Account shiftLeader = new Account();
-        shiftLeader.setId(7);
-        shiftLeader.setUsername("shift.leader");
-
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.STOPPED).build();
         when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
-        when(accountRepository.findAccountByUsername("shift.leader")).thenReturn(Optional.of(shiftLeader));
-        when(workOrderExtensionRepository.findByWorkOrder_IdOrderByRequestedAtAsc(10))
-                .thenReturn(List.of(pending));
+        when(workOrderExtensionRepository
+                .findFirstByWorkOrder_IdAndClosedAtIsNullOrderByRequestedAtDesc(10))
+                .thenReturn(Optional.empty());
 
-        // Trưởng ca lùi sang 22/07 (chưa cô lập xong thiết bị) thay vì mặc định 21/07.
-        maintenanceService.approveExtension(10, "shift.leader", java.time.LocalDate.of(2026, 7, 22));
+        maintenanceService.openWorkDay(10);
 
-        assertThat(pending.getAllowedDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 22));
-        assertThat(pending.getApprovedBy()).isSameAs(shiftLeader);
-        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.APPROVED);
+        ArgumentCaptor<WorkOrderExtension> dayCaptor = ArgumentCaptor.forClass(WorkOrderExtension.class);
+        verify(workOrderExtensionRepository).save(dayCaptor.capture());
+        assertThat(dayCaptor.getValue().getAllowedDate()).isEqualTo(java.time.LocalDate.now());
+        assertThat(dayCaptor.getValue().getClosedAt()).isNull();
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.IN_PROGRESS);
     }
 
     @Test
-    void approveExtension_withoutDate_defaultsToDayAfterRequest() {
+    void openWorkDay_whenPreviousDayLeftOpen_reusesItInsteadOfCreatingAnother() {
         WorkOrder wo = WorkOrder.builder()
-                .id(10).orderCode("WO-x").status(WorkOrderStatus.WAITING_FOR_APPROVAL).build();
-        WorkOrderExtension pending = WorkOrderExtension.builder()
-                .id(1).workOrder(wo)
-                .requestedAt(LocalDateTime.of(2026, 7, 20, 17, 30))
-                .build();
-        Account shiftLeader = new Account();
-        shiftLeader.setUsername("shift.leader");
-
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.STOPPED).build();
         when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
-        when(accountRepository.findAccountByUsername("shift.leader")).thenReturn(Optional.of(shiftLeader));
-        when(workOrderExtensionRepository.findByWorkOrder_IdOrderByRequestedAtAsc(10))
-                .thenReturn(List.of(pending));
+        when(workOrderExtensionRepository
+                .findFirstByWorkOrder_IdAndClosedAtIsNullOrderByRequestedAtDesc(10))
+                .thenReturn(Optional.of(WorkOrderExtension.builder().id(1).workOrder(wo).build()));
 
-        maintenanceService.approveExtension(10, "shift.leader", null);
+        maintenanceService.openWorkDay(10);
 
-        assertThat(pending.getAllowedDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 21));
+        verify(workOrderExtensionRepository, never()).save(any(WorkOrderExtension.class));
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void openWorkDay_whenNotStopped_throwsConflict() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.IN_PROGRESS).build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.openWorkDay(10))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void closeWorkDay_stampsClosedAtWithOptionalNoteAndPausesWorkOrder() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.IN_PROGRESS).build();
+        WorkOrderExtension openDay = WorkOrderExtension.builder().id(1).workOrder(wo).build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        when(workOrderExtensionRepository
+                .findFirstByWorkOrder_IdAndClosedAtIsNullOrderByRequestedAtDesc(10))
+                .thenReturn(Optional.of(openDay));
+
+        LocalDateTime before = LocalDateTime.now();
+        maintenanceService.closeWorkDay(10, new StopWorkOrderRequest("Het gio lam viec"));
+
+        assertThat(openDay.getClosedAt()).isNotNull().isAfterOrEqualTo(before);
+        assertThat(openDay.getReason()).isEqualTo("Het gio lam viec");
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.STOPPED);
+    }
+
+    @Test
+    void closeWorkDay_withoutNote_stillCloses() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.IN_PROGRESS).build();
+        WorkOrderExtension openDay = WorkOrderExtension.builder().id(1).workOrder(wo).build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        when(workOrderExtensionRepository
+                .findFirstByWorkOrder_IdAndClosedAtIsNullOrderByRequestedAtDesc(10))
+                .thenReturn(Optional.of(openDay));
+
+        maintenanceService.closeWorkDay(10, new StopWorkOrderRequest(null));
+
+        assertThat(openDay.getClosedAt()).isNotNull();
+        assertThat(openDay.getReason()).isNull();
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.STOPPED);
+    }
+
+    @Test
+    void completeWorkOrder_closesTheDayStillOpen() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.IN_PROGRESS).build();
+        WorkOrderExtension openDay = WorkOrderExtension.builder().id(1).workOrder(wo).build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        when(workOrderExtensionRepository
+                .findFirstByWorkOrder_IdAndClosedAtIsNullOrderByRequestedAtDesc(10))
+                .thenReturn(Optional.of(openDay));
+
+        maintenanceService.completeWorkOrder(10);
+
+        // Nhật ký ngày không được bỏ lửng khi phiếu đã chốt sổ.
+        assertThat(openDay.getClosedAt()).isNotNull();
+        assertThat(wo.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+    }
+
+    /* ── Khoá phiếu hoàn thành → trả thiết bị Sự cố về Hoạt động ───────────── */
+
+    @Test
+    void completeWorkOrder_restoresEquipmentToActive_whenNoOtherOpenFault() {
+        WorkOrder wo = failureWorkOrder(EquipmentStatus.FAILURE);
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        when(repairRequestRepository.existsByEquipment_IdAndStatus(1, RepairRequestStatus.PENDING))
+                .thenReturn(false);
+        when(workOrderRepository.existsOtherLiveWorkOrderForEquipment(eq(1), eq(10), anyCollection()))
+                .thenReturn(false);
+
+        maintenanceService.completeWorkOrder(10);
+
+        assertThat(equipmentOf(wo).getStatus()).isEqualTo(EquipmentStatus.ACTIVE);
+    }
+
+    @Test
+    void completeWorkOrder_keepsEquipmentInFailure_whenAnotherPendingRequestExists() {
+        WorkOrder wo = failureWorkOrder(EquipmentStatus.FAILURE);
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        // Còn hư hỏng khác đã báo nhưng chưa cấp phiếu → thiết bị chưa lành.
+        when(repairRequestRepository.existsByEquipment_IdAndStatus(1, RepairRequestStatus.PENDING))
+                .thenReturn(true);
+
+        maintenanceService.completeWorkOrder(10);
+
+        assertThat(equipmentOf(wo).getStatus()).isEqualTo(EquipmentStatus.FAILURE);
+    }
+
+    @Test
+    void completeWorkOrder_keepsEquipmentInFailure_whenAnotherLiveWorkOrderExists() {
+        WorkOrder wo = failureWorkOrder(EquipmentStatus.FAILURE);
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+        // Cái bẫy: yêu cầu của phiếu kia đã COMPLETED từ lúc cấp phiếu nên vế
+        // PENDING KHÔNG lộ ra — chỉ vế "còn phiếu sống" bắt được.
+        when(repairRequestRepository.existsByEquipment_IdAndStatus(1, RepairRequestStatus.PENDING))
+                .thenReturn(false);
+        when(workOrderRepository.existsOtherLiveWorkOrderForEquipment(eq(1), eq(10), anyCollection()))
+                .thenReturn(true);
+
+        maintenanceService.completeWorkOrder(10);
+
+        assertThat(equipmentOf(wo).getStatus()).isEqualTo(EquipmentStatus.FAILURE);
+    }
+
+    @Test
+    void completeWorkOrder_doesNotTouchEquipmentNotInFailure() {
+        // STANDBY là quyết định vận hành khác — khoá phiếu sửa chữa không ghi đè nó.
+        WorkOrder wo = failureWorkOrder(EquipmentStatus.STANDBY);
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+
+        maintenanceService.completeWorkOrder(10);
+
+        assertThat(equipmentOf(wo).getStatus()).isEqualTo(EquipmentStatus.STANDBY);
+        // Thiết bị không ở Sự cố thì thoát sớm, khỏi tốn truy vấn nào.
+        verifyNoInteractions(repairRequestRepository);
+    }
+
+    /** Phiếu IN_PROGRESS gắn yêu cầu có thiết bị ở trạng thái cho trước. */
+    private static WorkOrder failureWorkOrder(EquipmentStatus equipmentStatus) {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.COMPLETED);
+        request.getEquipment().setStatus(equipmentStatus);
+        return WorkOrder.builder()
+                .id(10).orderCode("WO-x").status(WorkOrderStatus.IN_PROGRESS)
+                .repairRequest(request).build();
+    }
+
+    private static Equipment equipmentOf(WorkOrder wo) {
+        return wo.getRepairRequest().getEquipment();
+    }
+
+    @Test
+    void workOrderDto_fromManualWorkOrder_mapsEquipmentList() {
+        Equipment e1 = Equipment.builder()
+                .id(1).kksCode("KKS-1").name("Quat gio A")
+                .system(com.example.m6_thermal_power_plant_api.entity.EquipmentSystem.builder()
+                        .id(5).name("He thong nhien lieu").build())
+                .build();
+        Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(7).orderCode("WO-manual").status(WorkOrderStatus.STOPPED)
+                .repairDescription("Sua toan bo")
+                .workOrderEquipments(List.of(
+                        WorkOrderEquipment.builder().equipment(e1)
+                                .status(WorkOrderEquipmentStatus.COMPLETED).build(),
+                        WorkOrderEquipment.builder().equipment(e2)
+                                .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+
+        WorkOrderDTO dto = WorkOrderDTO.from(wo, List.of());
+
+        assertThat(dto.getEquipments()).hasSize(2);
+        assertThat(dto.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
+        assertThat(dto.getEquipments().get(0).systemName()).isEqualTo("He thong nhien lieu");
+        assertThat(dto.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.COMPLETED);
+        assertThat(dto.getEquipments().get(1).systemName()).isNull();
+        assertThat(dto.getEquipments().get(1).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
+        assertThat(dto.getRepairRequestId()).isNull();
+        assertThat(dto.getCreatedAt()).isNotNull(); // bug cũ: chỉ set trong nhánh req != null
+    }
+
+    @Test
+    void createManualWorkOrder_createsOrderWithMultipleEquipment() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Employee technician = createEmployee(5, "mechanic.tech", "Hoang Quoc Dat");
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A")
+                .system(com.example.m6_thermal_power_plant_api.entity.EquipmentSystem.builder()
+                        .id(5).name("He thong nhien lieu").build())
+                .build();
+        Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
+
+        when(equipmentRepository.findAllById(List.of(1, 2))).thenReturn(List.of(e1, e2));
+        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(technician));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(200);
+            return wo;
+        });
+        when(workOrderMemberRepository.save(any(WorkOrderMember.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1, 2));
+        req.setLeaderId(2);
+        CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
+        member.setEmployeeId(5);
+        req.setMembers(List.of(member));
+        req.setRepairDescription("Sua toan bo he thong");
+
+        WorkOrderDTO result = maintenanceService.createManualWorkOrder(req, null);
+
+        assertThat(result.getId()).isEqualTo(200);
+        assertThat(result.getOrderCode()).matches("WO-\\d{12}-\\d{3}");
+        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.STOPPED);
+        assertThat(result.getRepairRequestId()).isNull();
+        assertThat(result.getEquipments()).hasSize(2);
+        assertThat(result.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
+        assertThat(result.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
+        assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
+        assertThat(result.getMembers()).hasSize(1);
+    }
+
+    /** Id trùng trong payload = bấm nhầm ở UI, không phải xung đột nghiệp vụ → dedupe im lặng. */
+    @Test
+    void createManualWorkOrder_duplicateEquipmentIds_dedupedSilently() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+
+        when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
+        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(201);
+            return wo;
+        });
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1, 1));
+        req.setLeaderId(2);
+
+        WorkOrderDTO result = maintenanceService.createManualWorkOrder(req, null);
+
+        assertThat(result.getEquipments()).hasSize(1);
+        assertThat(result.getEquipments().get(0).status()).isEqualTo(WorkOrderEquipmentStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void createManualWorkOrder_equipmentNotFound_throws() {
+        when(equipmentRepository.findAllById(List.of(99))).thenReturn(List.of());
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(99));
+        req.setLeaderId(2);
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, null))
+                .isInstanceOf(ObjectNotFoundException.class)
+                .hasMessageContaining("99");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    /** Chặn cả WO thủ công lẫn WO sinh từ RepairRequest — 1 query duy nhất trả [equipmentId, orderCode]. */
+    @Test
+    void createManualWorkOrder_equipmentInOtherLiveWorkOrder_throws() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
+        when(workOrderRepository.findLiveHolders(eq(List.of(1)), any()))
+                .thenReturn(List.<Object[]>of(new Object[]{1, "WO-55"})); // WO-55 dang giu thiet bi 1
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1));
+        req.setLeaderId(2);
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("KKS-1")
+                .hasMessageContaining("WO-55");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
     }
 
     /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + giờ bắt đầu cho trước. */
@@ -465,5 +756,144 @@ class MaintenanceServiceTest {
                 .passwordHash("x")
                 .employee(employee)
                 .build();
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_setsCompletedAndReturnsDto() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(7).orderCode("WO-manual").status(WorkOrderStatus.STOPPED)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().id(11).equipment(e1)
+                        .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+        when(workOrderRepository.findById(7)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_IdAndEquipment_Id(7, 1))
+                .thenReturn(Optional.of(wo.getWorkOrderEquipments().get(0)));
+        when(workOrderEquipmentRepository.save(any(WorkOrderEquipment.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        WorkOrderDTO result = maintenanceService.updateWorkOrderEquipmentStatus(
+                7, 1, WorkOrderEquipmentStatus.COMPLETED);
+
+        assertThat(result.getEquipments().get(0).status())
+                .isEqualTo(WorkOrderEquipmentStatus.COMPLETED);
+        verify(workOrderEquipmentRepository).save(any(WorkOrderEquipment.class));
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_requestWorkOrder_throws() {
+        RepairRequest req = RepairRequest.builder().id(3).build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(8).orderCode("WO-req").status(WorkOrderStatus.IN_PROGRESS)
+                .repairRequest(req).build();
+        when(workOrderRepository.findById(8)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                8, 1, WorkOrderEquipmentStatus.COMPLETED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("thu cong");
+        verify(workOrderEquipmentRepository, never()).save(any(WorkOrderEquipment.class));
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_completedWorkOrder_throws() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(9).orderCode("WO-done").status(WorkOrderStatus.COMPLETED).build();
+        when(workOrderRepository.findById(9)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                9, 1, WorkOrderEquipmentStatus.COMPLETED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ket thuc");
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_cancelStatus_throws() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(10).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().equipment(e1)
+                        .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+        when(workOrderRepository.findById(10)).thenReturn(Optional.of(wo));
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                10, 1, WorkOrderEquipmentStatus.CANCELED))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("huy");
+    }
+
+    @Test
+    void updateWorkOrderEquipmentStatus_equipmentNotInWorkOrder_throws() {
+        WorkOrder wo = WorkOrder.builder()
+                .id(11).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of()).build();
+        when(workOrderRepository.findById(11)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_IdAndEquipment_Id(11, 55))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> maintenanceService.updateWorkOrderEquipmentStatus(
+                11, 55, WorkOrderEquipmentStatus.COMPLETED))
+                .isInstanceOf(ObjectNotFoundException.class)
+                .hasMessageContaining("55");
+    }
+
+    @Test
+    void completeWorkOrder_manualWorkOrder_withPendingEquipment_throws() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat A").build();
+        Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat B").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(20).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(
+                        WorkOrderEquipment.builder().equipment(e1)
+                                .status(WorkOrderEquipmentStatus.COMPLETED).build(),
+                        WorkOrderEquipment.builder().equipment(e2)
+                                .status(WorkOrderEquipmentStatus.IN_PROGRESS).build()))
+                .build();
+        when(workOrderRepository.findById(20)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(20))
+                .thenReturn(wo.getWorkOrderEquipments());
+
+        assertThatThrownBy(() -> maintenanceService.completeWorkOrder(20))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("KKS-2");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void completeWorkOrder_manualWorkOrder_allEquipmentCompleted_succeeds() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(21).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().equipment(e1)
+                        .status(WorkOrderEquipmentStatus.COMPLETED).build()))
+                .build();
+        when(workOrderRepository.findById(21)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(21))
+                .thenReturn(wo.getWorkOrderEquipments());
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkOrderDTO result = maintenanceService.completeWorkOrder(21);
+
+        assertThat(result.getStatus()).isEqualTo(WorkOrderStatus.COMPLETED);
+    }
+
+    @Test
+    void cancelWorkOrder_manualWorkOrder_cancelsAllEquipment() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat A").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(22).orderCode("WO-manual").status(WorkOrderStatus.IN_PROGRESS)
+                .workOrderEquipments(List.of(WorkOrderEquipment.builder().equipment(e1)
+                        .status(WorkOrderEquipmentStatus.COMPLETED).build()))
+                .build();
+        when(workOrderRepository.findById(22)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(22))
+                .thenReturn(wo.getWorkOrderEquipments());
+
+        maintenanceService.cancelWorkOrder(22);
+
+        assertThat(wo.getWorkOrderEquipments().get(0).getStatus())
+                .isEqualTo(WorkOrderEquipmentStatus.CANCELED);
+        verify(workOrderEquipmentRepository).saveAll(any());
     }
 }

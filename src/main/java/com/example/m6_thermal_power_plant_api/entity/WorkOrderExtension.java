@@ -12,11 +12,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Gia hạn Phiếu Công Tác.
- * Table: work_order_extensions
+ * NHẬT KÝ CÔNG TÁC HÀNG NGÀY của Phiếu Công Tác — mỗi dòng là MỘT ngày.
+ * Table: work_order_extensions (giữ tên cũ; trước V20 bảng này là "đơn xin gia hạn").
  *
- * Không soft-delete: là lịch sử gia hạn, không xoá. Account đã @SQLRestriction
- * nên không cần khai báo lại restriction ở quan hệ approvedBy.
+ * Dòng được tạo lúc Trưởng ca "mở phiếu ngày" và đóng lại lúc "khoá phiếu ngày".
+ * Đây là nguồn dữ liệu cho mục "Cho phép làm việc và kết thúc công tác hàng ngày"
+ * trên bản in PCT, và cho luật huỷ phiếu (chưa có dòng nào = chưa chạy ngày nào).
+ *
+ * Không soft-delete: là lịch sử công tác, không xoá.
  */
 @Entity
 @Table(name = "work_order_extensions")
@@ -36,28 +39,25 @@ public class WorkOrderExtension extends BaseSoftDeleteEntity {
     @CascadeSoftDelete
     private WorkOrder workOrder;
 
+    /** Ghi chú lúc khoá phiếu ngày (tuỳ chọn) — in vào cột lý do trên bản PDF. */
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    /** Người phê duyệt gia hạn (đăng nhập bằng tài khoản) */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approved_by")
-    private Account approvedBy;
-
     /**
-     * Thời điểm Tổ trưởng tạo dòng gia hạn và gửi Trưởng ca (phiếu đang STOPPED
-     * chuyển sang WAITING_FOR_APPROVAL) — in vào cột "Thời gian tạm hoãn" trên
-     * bản PDF. NULL với dữ liệu trước V12.
+     * Giờ MỞ phiếu ngày. Tự điền lúc insert nên luôn khớp thời điểm Trưởng ca bấm mở.
+     * NULL với dữ liệu trước V12.
      */
     @CreationTimestamp
     @Column(name = "requested_at", updatable = false)
     private LocalDateTime requestedAt;
 
+    /** Giờ KHOÁ phiếu ngày — null nghĩa là ngày công tác đang mở (V20). */
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
     /**
-     * NGÀY Trưởng ca cho phép đơn vị công tác làm tiếp — null tới khi duyệt.
-     * Mỗi lần gia hạn chỉ kéo dài 1 ngày; Tổ trưởng mặc định xin "ngày mai"
-     * nhưng Trưởng ca mới là người chốt ngày (có thể lùi xa hơn nếu chưa cô lập
-     * được thiết bị), nên chỉ ngày ĐƯỢC DUYỆT mới đáng lưu (V13).
+     * NGÀY công tác của dòng này. Với dữ liệu gia hạn cũ (trước V20) đây là ngày
+     * Trưởng ca cho phép làm tiếp — cùng ý nghĩa nên đọc lại được.
      */
     @Column(name = "allowed_date")
     private LocalDate allowedDate;
