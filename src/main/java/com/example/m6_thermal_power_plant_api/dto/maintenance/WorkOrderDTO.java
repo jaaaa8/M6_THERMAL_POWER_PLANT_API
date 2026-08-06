@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.dto.maintenance;
 
 import com.example.m6_thermal_power_plant_api.entity.Employee;
+import com.example.m6_thermal_power_plant_api.entity.Equipment;
 import com.example.m6_thermal_power_plant_api.entity.RepairRequest;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
@@ -43,6 +44,8 @@ public class WorkOrderDTO {
     private String equipmentKksCode;
     private String equipmentName;
 
+    /** Danh sách thiết bị cho WO thủ công (không có RepairRequest) — rỗng cho WO từ request. */
+    private List<EquipmentBrief> equipments;
 
     private Integer leaderId;
     private String leaderName;
@@ -55,6 +58,14 @@ public class WorkOrderDTO {
     private LocalDateTime createdAt;
 
     private List<WorkOrderMemberDTO> members;
+
+    /** Tóm tắt 1 thiết bị trong danh sách equipments của WO thủ công. */
+    public record EquipmentBrief(Integer id, String kksCode, String name, String systemName) {
+        static EquipmentBrief from(Equipment e) {
+            return new EquipmentBrief(e.getId(), e.getKksCode(), e.getName(),
+                    e.getSystem() != null ? e.getSystem().getName() : null);
+        }
+    }
 
     public static WorkOrderDTO from(WorkOrder wo, List<WorkOrderMember> members) {
         WorkOrderDTOBuilder b = WorkOrderDTO.builder()
@@ -84,7 +95,15 @@ public class WorkOrderDTO {
             }else{
                 b.createdAt(LocalDateTime.now());
             }
+        } else {
+            // WO thủ công nhiều thiết bị
+            b.equipments(wo.getEquipments() == null ? List.of()
+                    : wo.getEquipments().stream().map(EquipmentBrief::from).toList());
         }
+
+        // Sửa bug createdAt: WO thủ công không có req.getCreatedAt() → dùng wo.getCreatedAt()
+        b.createdAt(wo.getCreatedAt() != null ? wo.getCreatedAt()
+                : (req != null && req.getCreatedAt() != null ? req.getCreatedAt() : LocalDateTime.now()));
 
         b.leaderId(idOf(wo.getLeader())).leaderName(nameOf(wo.getLeader()));
         b.directSupervisorId(idOf(wo.getDirectSupervisor())).directSupervisorName(nameOf(wo.getDirectSupervisor()));

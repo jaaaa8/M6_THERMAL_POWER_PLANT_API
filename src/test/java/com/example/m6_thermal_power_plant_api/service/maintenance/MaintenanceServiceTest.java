@@ -413,6 +413,30 @@ class MaintenanceServiceTest {
         assertThat(pending.getAllowedDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 21));
     }
 
+    @Test
+    void workOrderDto_fromManualWorkOrder_mapsEquipmentList() {
+        Equipment e1 = Equipment.builder()
+                .id(1).kksCode("KKS-1").name("Quat gio A")
+                .system(com.example.m6_thermal_power_plant_api.entity.EquipmentSystem.builder()
+                        .id(5).name("He thong nhien lieu").build())
+                .build();
+        Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
+        WorkOrder wo = WorkOrder.builder()
+                .id(7).orderCode("WO-manual").status(WorkOrderStatus.OPEN)
+                .repairDescription("Sua toan bo")
+                .equipments(List.of(e1, e2))
+                .build();
+
+        WorkOrderDTO dto = WorkOrderDTO.from(wo, List.of());
+
+        assertThat(dto.getEquipments()).hasSize(2);
+        assertThat(dto.getEquipments().get(0).kksCode()).isEqualTo("KKS-1");
+        assertThat(dto.getEquipments().get(0).systemName()).isEqualTo("He thong nhien lieu");
+        assertThat(dto.getEquipments().get(1).systemName()).isNull();
+        assertThat(dto.getRepairRequestId()).isNull();
+        assertThat(dto.getCreatedAt()).isNotNull(); // bug cũ: chỉ set trong nhánh req != null
+    }
+
     /** Một phiếu công tác đang "sống" (IN_PROGRESS) với direct supervisor + giờ bắt đầu cho trước. */
     private static WorkOrder liveWorkOrder(int id, Employee directSupervisor, LocalDateTime start) {
         return WorkOrder.builder()
