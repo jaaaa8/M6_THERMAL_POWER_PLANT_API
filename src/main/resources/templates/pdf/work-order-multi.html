@@ -71,6 +71,26 @@
 <div class="section">1.4. Địa điểm công tác:
     <span th:text="${location}">..........</span></div>
 
+<div class="section">1.4.1. Danh sách thiết bị trong phạm vi công tác:</div>
+<table class="grid">
+    <thead>
+    <tr>
+        <th style="width: 6%;">STT</th>
+        <th style="width: 24%;">Mã KKS</th>
+        <th style="width: 40%;">Tên thiết bị</th>
+        <th style="width: 30%;">Hệ thống</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="row, it : ${equipmentRows}">
+        <td class="center" th:text="${it.count}">1</td>
+        <td class="center" th:text="${row.kksCode}"></td>
+        <td th:text="${row.name}"></td>
+        <td th:text="${row.systemName}"></td>
+    </tr>
+    </tbody>
+</table>
+
 <div class="section">1.5. Nội dung công tác:
     <span th:text="${description}">..........</span></div>
 
@@ -189,21 +209,19 @@
     <thead>
     <tr>
         <th style="width: 5%;">STT</th>
-        <th style="width: 13%;">Ngày công tác</th>
-        <th style="width: 15%;">Giờ bắt đầu</th>
-        <th style="width: 15%;">Giờ kết thúc</th>
-        <th style="width: 20%;">Ghi chú</th>
-        <th style="width: 16%;">Người chỉ huy trực tiếp<br />(Ký/xác nhận điện tử)</th>
-        <th style="width: 16%;">Người cho phép<br />(Ký/xác nhận điện tử hoặc ghi họ tên)</th>
+        <th style="width: 16%;">Thời gian tạm hoãn</th>
+        <th style="width: 25%;">Lý do</th>
+        <th style="width: 15%;">Ngày cho phép tiếp tục làm việc</th>
+        <th style="width: 20%;">Người chỉ huy trực tiếp<br />(Ký/xác nhận điện tử)</th>
+        <th style="width: 19%;">Người cho phép<br />(Ký/xác nhận điện tử hoặc ghi họ tên)</th>
     </tr>
     </thead>
     <tbody>
     <tr th:each="row, it : ${extensionRows}">
         <td class="center" th:text="${it.count}">1</td>
-        <td class="center" th:text="${row.allowedDate}"></td>
-        <td class="center" th:text="${row.openedAt}"></td>
-        <td class="center" th:text="${row.closedAt}"></td>
+        <td class="center" th:text="${row.stoppedAt}"></td>
         <td th:text="${row.reason}"></td>
+        <td class="center" th:text="${row.allowedDate}"></td>
         <td></td>
         <td></td>
     </tr>

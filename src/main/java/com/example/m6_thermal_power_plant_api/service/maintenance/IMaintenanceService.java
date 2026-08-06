@@ -9,6 +9,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderSta
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -33,6 +34,22 @@ public interface IMaintenanceService {
     /** Như trên nhưng KHÔNG ghi nhận người cấp phiếu (giữ tương thích test/luồng cũ). */
     default WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request) {
         return createWorkOrderFromRequest(request, null);
+    }
+
+    /**
+     * Tạo phiếu công tác (PCT) thủ công nhiều thiết bị — KHÔNG cần RepairRequest.
+     * Body truyền equipmentIds (danh sách id thiết bị) thay vì repairRequestId.
+     * Validation: XOR giữa repairRequestId và equipmentIds (xem {@link CreateWorkOrderRequest}).
+     *
+     * @param createdByUsername username tài khoản đăng nhập đang thao tác — lưu vào
+     *                          created_by làm "Người cấp phiếu" trên bản in PCT
+     *                          (null = không ghi nhận người cấp).
+     */
+    WorkOrderDTO createManualWorkOrder(CreateWorkOrderRequest request, String createdByUsername);
+
+    /** Như trên nhưng KHÔNG ghi nhận người cấp phiếu (giữ tương thích test/luồng cũ). */
+    default WorkOrderDTO createManualWorkOrder(CreateWorkOrderRequest request) {
+        return createManualWorkOrder(request, null);
     }
 
     /**
@@ -148,6 +165,26 @@ public interface IMaintenanceService {
      * bây giờ) và chuyển status → IN_PROGRESS. Lần mở ĐẦU TIÊN chính là bắt đầu
      * phiếu — không có thao tác "bắt đầu" riêng. Chỉ cho phép khi phiếu đang
      * STOPPED (409 nếu không). Idempotent với dòng ngày còn bỏ ngỏ chưa khoá.
+     */
+
+    /**
+     * Cập nhật trạng thái làm việc của MỘT thiết bị trong PCT thủ công
+     * (IN_PROGRESS ↔ COMPLETED). Chỉ áp dụng cho WO KHÔNG có RepairRequest.
+     * 404 nếu WO/thiết bị không tồn tại hoặc thiết bị không thuộc phiếu;
+     * 409 nếu phiếu đã kết thúc, WO từ yêu cầu, hoặc status = CANCELED.
+     */
+    WorkOrderDTO updateWorkOrderEquipmentStatus(Integer workOrderId, Integer equipmentId,
+                                                WorkOrderEquipmentStatus status);
+
+    /**
+     * Ghi nhận online việc Trưởng ca ĐÃ ký duyệt bản giấy: gắn tài khoản đang
+     * đăng nhập vào approvedBy của dòng gia hạn đang chờ (người bấm chịu trách
+     * nhiệm nhập đúng theo bản giấy) và chuyển status → APPROVED.
+     * Chỉ cho phép khi phiếu đang WAITING_FOR_APPROVAL.
+     *
+     * @param allowedDate NGÀY Trưởng ca cho phép làm tiếp (in vào cột "Ngày cho
+     *                    phép tiếp tục làm việc" của bản PDF); null = hôm sau
+     *                    ngày Tổ trưởng gửi duyệt.
      */
     WorkOrderDTO openWorkDay(Integer workOrderId);
 }

@@ -5,6 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateWorkOrderStatusRequest;
+import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateEquipmentStatusRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
@@ -57,12 +58,13 @@ public class WorkOrderController {
 
 
     /**
-     * Tạo phiếu công tác từ một yêu cầu sửa chữa.
+     * Tạo phiếu công tác: từ yêu cầu sửa chữa (repairRequestId) HOẶC thủ công
+     * nhiều thiết bị (equipmentIds). Dispatch dựa trên trường equipmentIds.
      *
      * Bọc bằng {@link UniqueCodeRetryExecutor}: vì controller KHÔNG @Transactional
-     * nên mỗi lần gọi {@code createWorkOrderFromRequest} (vốn @Transactional) mở
-     * một transaction riêng. Nếu orderCode trùng (hiếm) → constraint DB ném lỗi,
-     * transaction rollback sạch, executor sinh lại mã + chạy lại toàn bộ thao tác.
+     * nên mỗi lần gọi service method (vốn @Transactional) mở một transaction riêng.
+     * Nếu orderCode trùng (hiếm) → constraint DB ném lỗi, transaction rollback sạch,
+     * executor sinh lại mã + chạy lại toàn bộ thao tác.
      */
     @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PostMapping
@@ -70,7 +72,9 @@ public class WorkOrderController {
                                                         java.security.Principal principal) {
         String createdByUsername = principal != null ? principal.getName() : null;
         WorkOrderDTO created = codeRetryExecutor.execute(
-                () -> maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
+                () -> request.getEquipmentIds() != null && !request.getEquipmentIds().isEmpty()
+                        ? maintenanceService.createManualWorkOrder(request, createdByUsername)
+                        : maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -164,6 +168,29 @@ public class WorkOrderController {
     /**
      * "Mở phiếu ngày": ghi một dòng nhật ký ngày công tác + status → IN_PROGRESS.
      * Lần mở ĐẦU TIÊN chính là bắt đầu phiếu. 409 nếu phiếu không đang STOPPED.
+     */
+
+    /**
+     * Cập nhật trạng thái làm việc của MỘT thiết bị trong PCT thủ công nhiều
+     * thiết bị (IN_PROGRESS ↔ COMPLETED). Chỉ cho phiếu thủ công (không có
+     * RepairRequest) còn sống; phiếu từ yêu cầu / đã kết thúc / status CANCELED
+     * trả 409; thiết bị không thuộc phiếu trả 404.
+     */
+    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
+    @PatchMapping("/{id}/equipment/{equipmentId}/status")
+    public WorkOrderDTO updateEquipmentStatus(@PathVariable Integer id,
+                                              @PathVariable Integer equipmentId,
+                                              @Valid @RequestBody UpdateEquipmentStatusRequest request) {
+        return maintenanceService.updateWorkOrderEquipmentStatus(id, equipmentId, request.getStatus());
+    }
+
+    /**
+     * Ghi nhận online việc Trưởng ca ĐÃ ký duyệt bản giấy: tài khoản đang đăng
+     * nhập được lưu vào approvedBy (người bấm chịu trách nhiệm nhập đúng theo
+     * bản giấy) + status → APPROVED.
+     *
+     * @param allowedDate ngày Trưởng ca cho phép làm tiếp (yyyy-MM-dd) — bỏ
+     *                    trống thì lấy hôm sau ngày Tổ trưởng gửi duyệt.
      */
     @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
     @PatchMapping("/{id}/open-day")

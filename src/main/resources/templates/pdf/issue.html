@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
-    <title>Phiếu Đề Nghị Cấp Phát Vật Tư</title>
+    <title>Giấy Đề Nghị Xuất Kho Vật Tư</title>
     <style>
         @page {
             size: A4 landscape;
@@ -21,21 +21,41 @@
             box-sizing: border-box;
         }
         .header {
-            text-align: center;
+            width: 100%;
             margin-bottom: 10px;
         }
-        .header h1 {
+        .header-left {
+            float: left;
+            text-align: center;
+            width: 45%;
+            font-weight: bold;
+        }
+        .header-right {
+            float: right;
+            text-align: center;
+            width: 45%;
+        }
+        .header-title {
+            clear: both;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .header-title h1 {
             font-size: 16pt;
             text-transform: uppercase;
             margin: 0 0 5px 0;
+            font-weight: bold;
         }
-        .date-row {
+        .header-details {
             text-align: right;
-            margin-bottom: 20px;
+            margin-top: 10px;
+            padding-right: 20px;
+            line-height: 1.5;
         }
         .form-row {
             margin-bottom: 8px;
             line-height: 1.5;
+            display: flex;
         }
         table.data-table {
             width: 100%;
@@ -45,7 +65,7 @@
         }
         table.data-table th, table.data-table td {
             border: 1px solid #000;
-            padding: 8px;
+            padding: 5px;
             text-align: center;
             vertical-align: middle;
         }
@@ -68,55 +88,130 @@
         }
         .sign-cell .role {
             font-weight: bold;
-            margin-bottom: 40px;
+        }
+        .sign-cell .italic {
+            font-style: italic;
+            font-weight: normal;
+        }
+        .signature-dots {
+            margin-top: 60px;
         }
     </style>
 </head>
 <body>
 <div class="header">
-    <h1 th:text="${documentTitle} ?: 'PHIẾU ĐỀ NGHỊ CẤP PHÁT VẬT TƯ, TRANG THIẾT BỊ'">PHIẾU ĐỀ NGHỊ CẤP PHÁT VẬT TƯ, TRANG THIẾT BỊ</h1>
+    <div class="header-left">
+        CÔNG TY CỔ PHẦN DỊCH VỤ KỸ THUẬT<br/>
+        ĐIỆN LỰC DẦU KHÍ VIỆT NAM<br/>
+        CHI NHÁNH HÀ TĨNH<br/>
+        <hr style="width: 60%; border: 0; border-top: 1px solid black; margin: 5px auto;"/>
+    </div>
+    <div class="header-right">
+        Biểu số ....-TT<br/>
+        <i>(Ban hành theo quyết định số 15/2006/QĐ-BTC ngày<br/>
+        20/03/2006 của Bộ Tài Chính)</i>
+    </div>
 </div>
-<div class="date-row">
-    Ngày <span th:text="${issuedDay}">...</span>
-    tháng <span th:text="${issuedMonth}">...</span>
-    năm <span th:text="${issuedYear}">......</span>
+
+<div class="header-title">
+    <h1>GIẤY ĐỀ NGHỊ XUẤT KHO VẬT TƯ</h1>
+    <i>Ngày <span th:text="${issuedDay}">...</span> tháng <span th:text="${issuedMonth}">...</span> năm <span th:text="${issuedYear}">......</span></i>
 </div>
 
-<div class="form-row">Phòng/Bộ phận đề nghị: <span th:text="${requesterDepartment}">[Tên phòng/bộ phận]</span></div>
-<div class="form-row">Kính gửi: <span th:text="${recipientDepartment}">[Phòng/Bộ phận phụ trách cấp phát vật tư]</span></div>
-<div class="form-row">Tên người đề nghị: <span th:text="${requesterName}">[Họ và tên người đề nghị]</span></div>
-<div class="form-row">Chức vụ: <span th:text="${requesterPosition}">[Chức vụ của người đề nghị]</span></div>
-<div class="form-row">Lý do đề nghị: <span th:text="${reason}">[Nêu rõ lý do cần cấp phát vật tư]</span></div>
-<div class="form-row">Phiếu công tác: <span class="font-mono" th:text="${orderCode}">[Mã công tác]</span></div>
-<div class="form-row">Mô tả sơ bộ phiếu công tác: <span th:text="${description}">[Mô tả phiếu công tác]</span></div>
+<div class="header-details">
+    <table style="border: none; margin-left: auto; text-align: left;">
+        <tr>
+            <td style="padding: 0 5px 0 0;">Xuất tại kho:</td>
+            <td style="padding: 0;">......................................................</td>
+        </tr>
+        <tr>
+            <td style="padding: 0 5px 0 0;">Số phiếu xuất:</td>
+            <td style="padding: 0;"><span th:text="${issueCode}">....................................................</span></td>
+        </tr>
+        <tr>
+            <td style="padding: 0 5px 0 0;">Ngày:</td>
+            <td style="padding: 0;">......................................................</td>
+        </tr>
+    </table>
+</div>
 
-<div class="form-row" style="margin-top: 15px;">Danh sách vật tư đề nghị cấp phát:</div>
+<div style="text-align: center; font-weight: bold; margin-top: 15px; margin-bottom: 15px;">
+    Kính gửi: Ông Giám đốc Công ty Điện lực Dầu khí Hà Tĩnh
+</div>
 
-<table class="data-table">
+<table style="width: 100%; border: none; margin-bottom: 10px;">
     <tr>
-        <th style="width: 5%;">STT</th>
-        <th style="width: 25%;">Tên vật tư, thiết bị</th>
-        <th style="width: 10%;">Mã số</th>
-        <th style="width: 10%;">Đơn vị tính</th>
-        <th style="width: 20%;">Số lượng</th>
-
+        <td style="width: 150px; vertical-align: top;">1. Người đề nghị:</td>
+        <td colspan="3" th:text="${requesterName}">[Họ và tên người đề nghị]</td>
     </tr>
-    <tr th:each="row, it : ${itemRows}">
-        <td th:text="${row.name != '' ? it.count : ''}">1</td>
-        <td style="text-align: left;" th:text="${row.name}"></td>
-        <td th:text="${row.code}"></td>
-        <td th:text="${row.unit}"></td>
-        <td th:text="${row.quantity}"></td>
+    <tr>
+        <td style="vertical-align: top;">2. Lý do sử dụng:</td>
+        <td style="width: 50%; vertical-align: top;" th:text="${description}">[Lý do sử dụng]</td>
+        <td style="vertical-align: top; width: 20%; white-space: nowrap;">WO: &#160;&#160;&#160;<span th:text="${orderCode}">[Mã công tác]</span></td>
+        <td style="vertical-align: top; white-space: nowrap;">KKS: &#160;&#160;&#160;<span th:text="${kks}">[KKS]</span></td>
+    </tr>
+    <tr>
+        <td colspan="4" style="padding-top: 10px;">3. Đề nghị lĩnh số vật tư dưới đây:</td>
     </tr>
 </table>
 
-<div class="sign-row">
-    <div class="sign-cell">
-        <div class="role">Người đề nghị</div>
-    </div>
+<table class="data-table">
+    <tr>
+        <th rowspan="2" style="width: 5%;">STT</th>
+        <th rowspan="2" style="width: 15%;">Mã vật tư</th>
+        <th rowspan="2" style="width: 30%;">Tên vật tư và quy cách</th>
+        <th rowspan="2" style="width: 10%;">ĐVT</th>
+        <th colspan="2" style="width: 20%;">Số lượng</th>
+        <th rowspan="2" style="width: 20%;">Ghi chú</th>
+    </tr>
+    <tr>
+        <th>Cần</th>
+        <th>Cấp</th>
+    </tr>
+    <tr th:each="row, it : ${itemRows}" th:if="${row.name != null and row.name != ''}">
+        <td th:text="${it.count}">1</td>
+        <td th:text="${row.code}"></td>
+        <td style="text-align: left;" th:text="${row.name}"></td>
+        <td th:text="${row.unit}"></td>
+        <td th:text="${row.quantity}"></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
 
+<div class="sign-row" style="margin-top: 20px;">
     <div class="sign-cell">
-        <div class="role">Phòng/Bộ phận cấp phát vật tư</div>
+        <div class="role">Người nhận</div>
+        <div class="italic">(Ký, ghi rõ họ tên)</div>
+        <div class="signature-dots">...................................................</div>
+    </div>
+    <div class="sign-cell">
+        <div class="role">Tổ trưởng sản xuất</div>
+        <div class="italic">(Ký, ghi rõ họ tên)</div>
+        <div class="signature-dots">...................................................</div>
+    </div>
+    <div class="sign-cell">
+        <div class="role">CHI NHÁNH PVPSHT</div>
+        <div class="italic">(Ký, ghi rõ họ tên)</div>
+        <div class="signature-dots">...................................................</div>
+    </div>
+</div>
+
+<div class="sign-row" style="margin-top: 30px;">
+    <div class="sign-cell">
+        <div class="role">Phòng Kỹ thuật PVPHT</div>
+        <div class="italic">(Ký, ghi rõ họ tên)</div>
+        <div class="signature-dots">...................................................</div>
+    </div>
+    <div class="sign-cell">
+        <div class="role">Phòng Vật Tư - Vận Tải</div>
+        <div class="italic">(Ký, ghi rõ họ tên)</div>
+        <div class="signature-dots">...................................................</div>
+    </div>
+    <div class="sign-cell">
+        <div class="role">GIÁM ĐỐC PVPHT</div>
+        <div class="italic" style="text-decoration: underline;">Phê duyệt</div>
+        <div class="signature-dots">...................................................</div>
     </div>
 </div>
 </body>
