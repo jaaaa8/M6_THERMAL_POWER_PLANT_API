@@ -236,10 +236,10 @@ public class EmployeeService implements IEmployeeService {
     @Transactional
     public EmployeeResponseDTO createEmployee(EmployeeDTO dto) {
         if (employeeRepository.existsByGmail(dto.getGmail())) {
-            throw new IllegalArgumentException("Gmail already exists: " + dto.getGmail());
+            throw new IllegalArgumentException("Email '" + dto.getGmail() + "' đã được sử dụng.");
         }
         if (employeeRepository.existsByPhone(dto.getPhone())) {
-            throw new IllegalArgumentException("Phone already exists: " + dto.getPhone());
+            throw new IllegalArgumentException("Số điện thoại '" + dto.getPhone() + "' đã được sử dụng.");
         }
 
         Employee employee = new Employee();
@@ -379,10 +379,10 @@ public class EmployeeService implements IEmployeeService {
                 .orElseThrow(() -> new com.example.m6_thermal_power_plant_api.exception.ResourceNotFoundException("Employee not found with id: " + id));
 
         if (employeeRepository.existsByGmailAndIdNot(dto.getGmail(), id)) {
-            throw new IllegalArgumentException("Gmail already exists: " + dto.getGmail());
+            throw new IllegalArgumentException("Email '" + dto.getGmail() + "' đã được sử dụng bởi nhân viên khác.");
         }
         if (employeeRepository.existsByPhoneAndIdNot(dto.getPhone(), id)) {
-            throw new IllegalArgumentException("Phone already exists: " + dto.getPhone());
+            throw new IllegalArgumentException("Số điện thoại '" + dto.getPhone() + "' đã được sử dụng bởi nhân viên khác.");
         }
 
         existing.setFullName(dto.getFullName());

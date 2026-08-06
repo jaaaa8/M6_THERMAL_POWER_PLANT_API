@@ -90,19 +90,19 @@ public class AccountService implements IAccountService {
         }
 
         if (hasEmployeeId && hasEmail) {
-            throw new IllegalArgumentException("Cannot provide both employeeId and email.");
+            throw new IllegalArgumentException("Không thể chọn vừa nhân viên vừa email ngoài.");
         }
 
         if (accountRepository.existsByUsername(dto.getUsername())) {
-            throw new IllegalArgumentException("Username already exists: " + dto.getUsername());
+            throw new IllegalArgumentException("Tên đăng nhập '" + dto.getUsername() + "' đã tồn tại.");
         }
 
         if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
             if (accountRepository.existsByEmail(dto.getEmail().trim())) {
-                throw new IllegalArgumentException("Email already exists in another account.");
+                throw new IllegalArgumentException("Email đã tồn tại trong hệ thống tài khoản.");
             }
             if (employeeRepository.existsByGmail(dto.getEmail().trim())) {
-                throw new IllegalArgumentException("Email already exists in employee records.");
+                throw new IllegalArgumentException("Email đã tồn tại trong danh sách hồ sơ nhân viên.");
             }
         }
 
@@ -115,10 +115,10 @@ public class AccountService implements IAccountService {
         
         if (dto.getEmployeeId() != null) {
             if (accountRepository.existsByEmployeeId(dto.getEmployeeId())) {
-                throw new IllegalArgumentException("Employee already has an account: " + dto.getEmployeeId());
+                throw new IllegalArgumentException("Nhân viên này đã được cấp tài khoản.");
             }
             Employee emp = employeeRepository.findById(dto.getEmployeeId())
-                    .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin nhân viên"));
             account.setEmployee(emp);
             
             // Gán email bằng email của employee
@@ -147,15 +147,15 @@ public class AccountService implements IAccountService {
     @Transactional
     public AccountResponseDTO grantAccount(com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
         if (accountRepository.existsByEmployeeId(request.getEmployeeId())) {
-            throw new IllegalArgumentException("Employee already has an account: " + request.getEmployeeId());
+            throw new IllegalArgumentException("Nhân viên này đã có tài khoản.");
         }
 
         Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new IllegalArgumentException("Employee not found for id: " + request.getEmployeeId()));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên"));
         
         String username = employee.getGmail();
         if (accountRepository.existsByUsername(username)) {
-            throw new IllegalArgumentException("Username (email) already exists: " + username);
+            throw new IllegalArgumentException("Tên đăng nhập (Email) '" + username + "' đã tồn tại.");
         }
 
         com.example.m6_thermal_power_plant_api.entity.Role role = entityManager.getReference(com.example.m6_thermal_power_plant_api.entity.Role.class, request.getRoleId());
@@ -303,10 +303,10 @@ public class AccountService implements IAccountService {
                 newEmail = newEmail.trim();
                 if (!newEmail.equalsIgnoreCase(account.getEmail())) {
                     if (accountRepository.existsByEmail(newEmail)) {
-                        throw new IllegalArgumentException("Email already exists in another account.");
+                        throw new IllegalArgumentException("Email đã tồn tại ở tài khoản khác.");
                     }
                     if (employeeRepository.existsByGmail(newEmail)) {
-                        throw new IllegalArgumentException("Email already exists in employee records.");
+                        throw new IllegalArgumentException("Email đã tồn tại trong danh sách nhân viên.");
                     }
                     account.setEmail(newEmail);
                 }

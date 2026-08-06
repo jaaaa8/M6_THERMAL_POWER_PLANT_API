@@ -16,30 +16,30 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 public class EmployeeDTO {
-    @NotBlank(message = "Full name cannot be blank")
-    @Size(min = 1, max = 50, message = "Full name must be between 1 and 50 characters")
+    @NotBlank(message = "Họ và tên không được để trống")
+    @Size(min = 2, max = 100, message = "Họ tên phải từ 2 đến 100 ký tự")
     private String fullName;
 
-    @NotBlank(message = "Email cannot be blank")
-    @Email(message = "Invalid email format")
+    @NotBlank(message = "Email không được để trống")
+    @Email(message = "Email không đúng định dạng")
     private String gmail;
 
     private String imgPath;
 
-    @NotBlank(message = "Phone cannot be blank")
-    @Pattern(regexp = "^\\d{10,11}$", message = "Invalid phone number format")
+    @NotBlank(message = "Số điện thoại không được để trống")
+    @Pattern(regexp = "^(0|\\+84)[0-9]{9,10}$", message = "Số điện thoại không hợp lệ (VD: 0912345678)")
     private String phone;
 
-    @NotNull(message = "Department ID cannot be null")
-    @Digits(integer = 10, fraction = 0, message = "Department ID must be a number")
+    @NotNull(message = "Vui lòng chọn phòng ban")
+    @Digits(integer = 10, fraction = 0, message = "Mã phòng ban phải là số")
     private Integer departmentId;
 
-    @NotNull(message = "Expertise ID cannot be null")
-    @Digits(integer = 10, fraction = 0, message = "Expertise ID must be a number")
+    @NotNull(message = "Vui lòng chọn chuyên môn")
+    @Digits(integer = 10, fraction = 0, message = "Mã chuyên môn phải là số")
     private Integer expertiseId;
 
-    @NotNull(message = "Position ID cannot be null")
-    @Digits(integer = 10, fraction = 0, message = "Position ID must be a number")
+    @NotNull(message = "Vui lòng chọn chức vụ")
+    @Digits(integer = 10, fraction = 0, message = "Mã chức vụ phải là số")
     private Integer positionId;
 
     private String isActive;
