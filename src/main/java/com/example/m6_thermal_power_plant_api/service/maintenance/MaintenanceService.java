@@ -214,6 +214,13 @@ public class MaintenanceService implements IMaintenanceService {
             workOrder.setStatus(WorkOrderStatus.CANCELLED);
             workOrderRepository.save(workOrder);
 
+            // PCT thủ công: huỷ phiếu → mọi thiết bị (kể cả đã xong) tự động CANCELED.
+            if (workOrder.getRepairRequest() == null) {
+                List<WorkOrderEquipment> items = workOrderEquipmentRepository.findByWorkOrder_Id(workOrderId);
+                items.forEach(woe -> woe.setStatus(WorkOrderEquipmentStatus.CANCELED));
+                workOrderEquipmentRepository.saveAll(items);
+            }
+
             // Không còn phiếu "sống" nào → đưa yêu cầu về PENDING để quay lại hàng chờ.
             // (auto-flush trước SELECT đảm bảo phiếu vừa huỷ đã mang status CANCELLED.)
             RepairRequest repairRequest = workOrder.getRepairRequest();
@@ -462,6 +469,22 @@ public class MaintenanceService implements IMaintenanceService {
             throw new IllegalStateException(
                     "Phieu cong tac (" + workOrder.getOrderCode() + ") dang cho Truong ca duyet gia han — "
                             + "phai duyet (APPROVED) roi tiep tuc lam viec truoc khi hoan thanh.");
+        }
+
+        // PCT thủ công: chỉ hoàn thành khi MỌI thiết bị đã làm xong (COMPLETED).
+        if (workOrder.getRepairRequest() == null) {
+            List<WorkOrderEquipment> pending = workOrderEquipmentRepository
+                    .findByWorkOrder_Id(workOrderId).stream()
+                    .filter(woe -> woe.getStatus() != WorkOrderEquipmentStatus.COMPLETED)
+                    .toList();
+            if (!pending.isEmpty()) {
+                String names = pending.stream()
+                        .map(woe -> woe.getEquipment().getKksCode() + " - " + woe.getEquipment().getName())
+                        .collect(Collectors.joining(", "));
+                throw new IllegalStateException(
+                        "Khong the hoan thanh phieu cong tac (" + workOrder.getOrderCode()
+                                + ") vi con thiet bi chua xong: " + names + ".");
+            }
         }
 
         workOrder.setStatus(WorkOrderStatus.COMPLETED);
