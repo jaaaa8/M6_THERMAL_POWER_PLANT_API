@@ -10,6 +10,7 @@ import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
@@ -65,6 +66,8 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService repairHistoryService;
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.WorkOrderEquipmentRepository workOrderEquipmentRepository;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.repository.ILubricationPlanRepository lubricationPlanRepository;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -898,5 +901,76 @@ class MaintenanceServiceTest {
         assertThat(wo.getWorkOrderEquipments().get(0).getStatus())
                 .isEqualTo(WorkOrderEquipmentStatus.CANCELED);
         verify(workOrderEquipmentRepository).saveAll(any());
+    }
+
+    @Test
+    void createManualWorkOrder_lubrication_requiresPlanPerLine() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setType(WorkOrderType.LUBRICATION);
+        CreateWorkOrderRequest.EquipmentLineInput line = new CreateWorkOrderRequest.EquipmentLineInput();
+        line.setEquipmentId(1);
+        line.setLubricationPlanId(null);
+        req.setEquipmentLines(List.of(line));
+        req.setLeaderId(10);
+        req.setDirectSupervisorId(11);
+        req.setSafetySupervisorId(12);
+        req.setStartTime(LocalDateTime.now());
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, "leader"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("lubricationPlanId");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createManualWorkOrder_lubrication_blockedWhenPlanHasLiveLubricationWoe() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        LubricationPlan plan = LubricationPlan.builder().id(5).lubricationCode("LP-001").equipment(e1).build();
+        when(lubricationPlanRepository.findAllById(List.of(5))).thenReturn(List.of(plan));
+        when(workOrderEquipmentRepository.existsLiveLubricationWoeByPlanId(eq(5), anyCollection()))
+                .thenReturn(true);
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setType(WorkOrderType.LUBRICATION);
+        CreateWorkOrderRequest.EquipmentLineInput line = new CreateWorkOrderRequest.EquipmentLineInput();
+        line.setEquipmentId(1);
+        line.setLubricationPlanId(5);
+        req.setEquipmentLines(List.of(line));
+        req.setLeaderId(10);
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, "leader"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("dang co phieu bao duong");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createManualWorkOrder_lubrication_savesWoeWithPlan() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        LubricationPlan plan = LubricationPlan.builder().id(5).lubricationCode("LP-001").equipment(e1).build();
+        when(lubricationPlanRepository.findAllById(List.of(5))).thenReturn(List.of(plan));
+        when(workOrderEquipmentRepository.existsLiveLubricationWoeByPlanId(eq(5), anyCollection()))
+                .thenReturn(false);
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setType(WorkOrderType.LUBRICATION);
+        CreateWorkOrderRequest.EquipmentLineInput line = new CreateWorkOrderRequest.EquipmentLineInput();
+        line.setEquipmentId(1);
+        line.setLubricationPlanId(5);
+        req.setEquipmentLines(List.of(line));
+        req.setLeaderId(2);
+
+        maintenanceService.createManualWorkOrder(req, null);
+
+        ArgumentCaptor<WorkOrder> captor = ArgumentCaptor.forClass(WorkOrder.class);
+        verify(workOrderRepository).save(captor.capture());
+        WorkOrder saved = captor.getValue();
+        assertThat(saved.getType()).isEqualTo(WorkOrderType.LUBRICATION);
+        assertThat(saved.getWorkOrderEquipments()).hasSize(1);
+        assertThat(saved.getWorkOrderEquipments().get(0).getLubricationPlan().getId()).isEqualTo(5);
+        assertThat(saved.getWorkOrderEquipments().get(0).getEquipment().getId()).isEqualTo(1);
     }
 }

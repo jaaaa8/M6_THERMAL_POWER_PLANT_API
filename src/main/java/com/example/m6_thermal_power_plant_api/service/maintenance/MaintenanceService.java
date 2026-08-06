@@ -21,6 +21,8 @@ import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.*;
 import com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService;
 import com.example.m6_thermal_power_plant_api.service.leader.lubrication.LubricationHistoryService;
+import com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService;
+import com.example.m6_thermal_power_plant_api.service.leader.lubrication.LubricationHistoryService;
 import com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderArchiveService;
 import com.example.m6_thermal_power_plant_api.util.TimeStampCodeGenerator;
@@ -33,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +58,7 @@ public class MaintenanceService implements IMaintenanceService {
     private final ILubricationHistoryService lubricationHistoryService;
 
     private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
+    private final ILubricationPlanRepository lubricationPlanRepository;
 
     public MaintenanceService(WorkOrderRepository workOrderRepository,
                               RepairRequestRepository repairRequestRepository,
@@ -62,6 +66,7 @@ public class MaintenanceService implements IMaintenanceService {
                               WorkOrderExtensionRepository workOrderExtensionRepository,
                               EmployeeRepository employeeRepository,
                               com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository,
+                              ILubricationPlanRepository lubricationPlanRepository,
                               AccountRepository accountRepository,
                               WorkOrderArchiveService workOrderArchiveService, IRepairHistoryService repairHistoryService,
                               WorkOrderEquipmentRepository workOrderEquipmentRepository, ILubricationHistoryService lubricationHistoryService) {
@@ -71,6 +76,7 @@ public class MaintenanceService implements IMaintenanceService {
         this.workOrderExtensionRepository = workOrderExtensionRepository;
         this.employeeRepository = employeeRepository;
         this.equipmentRepository = equipmentRepository;
+        this.lubricationPlanRepository = lubricationPlanRepository;
         this.accountRepository = accountRepository;
         this.workOrderArchiveService = workOrderArchiveService;
         this.repairHistoryService = repairHistoryService;
@@ -139,32 +145,77 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional
     public WorkOrderDTO createManualWorkOrder(CreateWorkOrderRequest request, String createdByUsername) {
-        List<Integer> ids = request.getEquipmentIds() == null ? List.of()
-                : new ArrayList<>(new LinkedHashSet<>(request.getEquipmentIds())); // dedupe, giữ thứ tự chọn
-        if (ids.isEmpty()) {
-            throw new IllegalStateException("Khong the tao WO thu cong khi khong co thiet bi nao (equipmentIds).");
-        }
+        WorkOrderType type = request.getType() == null ? WorkOrderType.REPAIR : request.getType();
 
-        List<Equipment> equipments = equipmentRepository.findAllById(ids);
-        if (equipments.size() != ids.size()) {
-            List<Integer> found = equipments.stream().map(Equipment::getId).toList();
-            throw new ObjectNotFoundException("Khong tim thay thiet bi voi id: "
-                    + ids.stream().filter(id -> !found.contains(id)).map(String::valueOf)
-                            .collect(Collectors.joining(", ")));
-        }
+        List<WorkOrderEquipment> woeLines;
+        if (type == WorkOrderType.LUBRICATION) {
+            List<CreateWorkOrderRequest.EquipmentLineInput> lines = request.getEquipmentLines();
+            if (lines == null || lines.isEmpty()) {
+                throw new IllegalStateException("Khong the tao WO bao duong khi khong co thiet bi nao (equipmentLines).");
+            }
+            List<Integer> planIds = lines.stream().map(l -> l.getLubricationPlanId()).toList();
+            if (planIds.stream().anyMatch(Objects::isNull)) {
+                throw new IllegalStateException("WO bao duong (LUBRICATION) bat buoc co lubricationPlanId cho tung thiet bi.");
+            }
+            List<LubricationPlan> plans = lubricationPlanRepository.findAllById(planIds);
+            if (plans.size() != new HashSet<>(planIds).size()) {
+                throw new ObjectNotFoundException("Khong tim thay ke hoach boi tron (lubrication plan) da chon.");
+            }
+            Map<Integer, LubricationPlan> planById = plans.stream()
+                    .collect(Collectors.toMap(LubricationPlan::getId, p -> p));
+            List<WorkOrderStatus> live = List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS);
+            woeLines = new ArrayList<>();
+            for (CreateWorkOrderRequest.EquipmentLineInput line : lines) {
+                LubricationPlan plan = planById.get(line.getLubricationPlanId());
+                if (!plan.getEquipment().getId().equals(line.getEquipmentId())) {
+                    throw new IllegalStateException("Ke hoach boi tron " + plan.getLubricationCode()
+                            + " khong thuoc thiet bi id " + line.getEquipmentId() + ".");
+                }
+                if (workOrderEquipmentRepository.existsLiveLubricationWoeByPlanId(plan.getId(), live)) {
+                    throw new IllegalStateException("Ke hoach boi tron " + plan.getLubricationCode()
+                            + " dang co phieu bao duong hoat dong. Hay hoan thanh/huy phieu cu truoc.");
+                }
+                woeLines.add(WorkOrderEquipment.builder()
+                        .equipment(plan.getEquipment())
+                        .lubricationPlan(plan)
+                        .status(WorkOrderEquipmentStatus.IN_PROGRESS)
+                        .build());
+            }
+        } else {
+            List<Integer> ids = request.getEquipmentIds() == null ? List.of()
+                    : new ArrayList<>(new LinkedHashSet<>(request.getEquipmentIds())); // dedupe, giữ thứ tự chọn
+            if (ids.isEmpty()) {
+                throw new IllegalStateException("Khong the tao WO thu cong khi khong co thiet bi nao (equipmentIds).");
+            }
 
-        // 1 query cho cả danh sách — phủ CẢ WO thủ công lẫn WO sinh từ RepairRequest.
-        List<Object[]> holders = workOrderRepository.findLiveHolders(ids,
-                List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS), WorkOrderType.REPAIR);
-        if (!holders.isEmpty()) {
-            Map<Integer, String> kksById = equipments.stream()
-                    .collect(Collectors.toMap(Equipment::getId, Equipment::getKksCode));
-            String detail = holders.stream()
-                    .map(row -> kksById.getOrDefault((Integer) row[0], String.valueOf(row[0])) + " -> " + row[1])
-                    .collect(Collectors.joining("; "));
-            throw new IllegalStateException(
-                    "Thiet bi dang nam trong phieu cong tac dang hoat dong (" + detail
-                            + "). Hay huy phieu cu truoc khi tao phieu moi.");
+            List<Equipment> equipments = equipmentRepository.findAllById(ids);
+            if (equipments.size() != ids.size()) {
+                List<Integer> found = equipments.stream().map(Equipment::getId).toList();
+                throw new ObjectNotFoundException("Khong tim thay thiet bi voi id: "
+                        + ids.stream().filter(id -> !found.contains(id)).map(String::valueOf)
+                                .collect(Collectors.joining(", ")));
+            }
+
+            // 1 query cho cả danh sách — phủ CẢ WO thủ công lẫn WO sinh từ RepairRequest.
+            List<Object[]> holders = workOrderRepository.findLiveHolders(ids,
+                    List.of(WorkOrderStatus.STOPPED, WorkOrderStatus.IN_PROGRESS), WorkOrderType.REPAIR);
+            if (!holders.isEmpty()) {
+                Map<Integer, String> kksById = equipments.stream()
+                        .collect(Collectors.toMap(Equipment::getId, Equipment::getKksCode));
+                String detail = holders.stream()
+                        .map(row -> kksById.getOrDefault((Integer) row[0], String.valueOf(row[0])) + " -> " + row[1])
+                        .collect(Collectors.joining("; "));
+                throw new IllegalStateException(
+                        "Thiet bi dang nam trong phieu cong tac dang hoat dong (" + detail
+                                + "). Hay huy phieu cu truoc khi tao phieu moi.");
+            }
+
+            woeLines = equipments.stream()
+                    .<WorkOrderEquipment>map(e -> WorkOrderEquipment.builder()
+                            .equipment(e)
+                            .status(WorkOrderEquipmentStatus.IN_PROGRESS)
+                            .build())
+                    .toList();
         }
 
         Account createdBy = createdByUsername == null ? null
@@ -178,6 +229,7 @@ public class MaintenanceService implements IMaintenanceService {
 
         WorkOrder workOrder = WorkOrder.builder()
                 .orderCode(generateOrderCode())
+                .type(type)
                 .leader(leader)
                 .directSupervisor(directSupervisor)
                 .safetySupervisor(safetySupervisor)
@@ -188,13 +240,8 @@ public class MaintenanceService implements IMaintenanceService {
                 .createdBy(createdBy)
                 .build();
 
-        workOrder.setWorkOrderEquipments(equipments.stream()
-                .<WorkOrderEquipment>map(e -> WorkOrderEquipment.builder()
-                        .workOrder(workOrder)          // ← thiếu = work_order_id NULL = lỗi NOT NULL
-                        .equipment(e)
-                        .status(WorkOrderEquipmentStatus.IN_PROGRESS)
-                        .build())
-                .toList());
+        woeLines.forEach(w -> w.setWorkOrder(workOrder));
+        workOrder.setWorkOrderEquipments(woeLines);
 
         WorkOrder saved = workOrderRepository.save(workOrder);
 
