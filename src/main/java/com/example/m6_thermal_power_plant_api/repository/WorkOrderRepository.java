@@ -48,7 +48,6 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
         ORDER BY CASE
             WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.IN_PROGRESS THEN 0
             WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 1
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 2
             ELSE 2
         END, wo.createdAt DESC
     """)

@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test {@link WorkOrderRepository#searchWorkOrders} trên MySQL thật (rollback
  * sau mỗi test nhờ @Transactional): 4 bộ lọc AND độc lập — code (id / orderCode
  * / mã nhân viên leader), description (repairDescription), khoảng startTime —
- * và thứ tự mặc định theo tiến độ (đang sống → hoàn thành → huỷ; cùng nhóm thì
- * phiếu mới tạo đứng trước).
+ * và thứ tự mặc định theo tiến độ (IN_PROGRESS → STOPPED → COMPLETED/CANCELLED
+ * cùng cấp; trong cùng cấp thì phiếu mới tạo đứng trước).
  */
 @SpringBootTest
 @Transactional
