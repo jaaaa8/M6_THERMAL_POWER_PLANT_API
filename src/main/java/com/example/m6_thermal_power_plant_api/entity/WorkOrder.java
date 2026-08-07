@@ -3,6 +3,7 @@ package com.example.m6_thermal_power_plant_api.entity;
 import com.example.m6_thermal_power_plant_api.entity.base.BaseSoftDeleteEntity;
 import com.example.m6_thermal_power_plant_api.entity.base.CascadeSoftDelete;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -100,6 +101,12 @@ public class WorkOrder extends BaseSoftDeleteEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 100)
     private WorkOrderStatus status;
+
+    /** Loại phiếu: sửa chữa (mặc định) hoặc bảo dưỡng dầu mỡ theo kế hoạch */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private WorkOrderType type = WorkOrderType.REPAIR;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

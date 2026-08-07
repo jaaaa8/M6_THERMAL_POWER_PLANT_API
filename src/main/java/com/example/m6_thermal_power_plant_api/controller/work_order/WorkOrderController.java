@@ -9,6 +9,8 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.UpdateEquipmentSta
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDetailDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderMemberDTO;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import com.example.m6_thermal_power_plant_api.service.maintenance.IMaintenanceService;
 import com.example.m6_thermal_power_plant_api.service.pdf.WorkOrderPdfService;
 import com.example.m6_thermal_power_plant_api.util.UniqueCodeRetryExecutor;
@@ -32,7 +34,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * API cho Quản đốc sửa chữa / Tổ trưởng — Sprint 1 :
@@ -59,7 +64,9 @@ public class WorkOrderController {
 
     /**
      * Tạo phiếu công tác: từ yêu cầu sửa chữa (repairRequestId) HOẶC thủ công
-     * nhiều thiết bị (equipmentIds). Dispatch dựa trên trường equipmentIds.
+     * nhiều thiết bị (equipmentIds) HOẶC bôi trơn (equipmentLines). Dispatch dựa
+     * trên repairRequestId — @AssertTrue của request đã bảo đảm đúng MỘT trong ba
+     * được cung cấp, nên "không có repairRequestId" = phiếu thủ công (cả 2 kiểu).
      *
      * Bọc bằng {@link UniqueCodeRetryExecutor}: vì controller KHÔNG @Transactional
      * nên mỗi lần gọi service method (vốn @Transactional) mở một transaction riêng.
@@ -69,10 +76,10 @@ public class WorkOrderController {
     @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PostMapping
     public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request,
-                                                        java.security.Principal principal) {
+                                                        Principal principal) {
         String createdByUsername = principal != null ? principal.getName() : null;
         WorkOrderDTO created = codeRetryExecutor.execute(
-                () -> request.getEquipmentIds() != null && !request.getEquipmentIds().isEmpty()
+                () -> request.getRepairRequestId() == null
                         ? maintenanceService.createManualWorkOrder(request, createdByUsername)
                         : maintenanceService.createWorkOrderFromRequest(request, createdByUsername));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -107,7 +114,7 @@ public class WorkOrderController {
     @PreAuthorize("hasAnyRole('TEAM_LEADER','MAINTENANCE_FOREMAN')")
     @PatchMapping("/{id}/cancel")
     public WorkOrderDTO cancelWorkOrder(@PathVariable Integer id,
-                                        java.security.Principal principal) {
+                                        Principal principal) {
         return maintenanceService.cancelWorkOrder(id, principal != null ? principal.getName() : null);
     }
 
@@ -160,7 +167,7 @@ public class WorkOrderController {
     @PatchMapping("/{id}/status")
     public WorkOrderDTO updateWorkOrderStatus(@PathVariable Integer id,
                                               @Valid @RequestBody UpdateWorkOrderStatusRequest request,
-                                              java.security.Principal principal) {
+                                              Principal principal) {
         return maintenanceService.updateWorkOrderStatus(id, request,
                 principal != null ? principal.getName() : null);
     }
@@ -189,7 +196,7 @@ public class WorkOrderController {
      * nhập được lưu vào approvedBy (người bấm chịu trách nhiệm nhập đúng theo
      * bản giấy) + status → APPROVED.
      *
-     * @param allowedDate ngày Trưởng ca cho phép làm tiếp (yyyy-MM-dd) — bỏ
+     * @param id ngày Trưởng ca cho phép làm tiếp (yyyy-MM-dd) — bỏ
      *                    trống thì lấy hôm sau ngày Tổ trưởng gửi duyệt.
      */
     @PreAuthorize("hasAnyRole('SHIFT_LEADER','CREW_LEADER')")
@@ -218,8 +225,9 @@ public class WorkOrderController {
             @RequestParam(required = false) String description,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) WorkOrderType type,
             @PageableDefault(size = 20) Pageable pageable) {
-        return new PagedModel<>(maintenanceService.listWorkOrders(code, description, fromDate, toDate, pageable));
+        return new PagedModel<>(maintenanceService.listWorkOrders(code, description, fromDate, toDate, type, pageable));
     }
 
     /**
@@ -233,9 +241,9 @@ public class WorkOrderController {
      *                 không truyền = mọi trạng thái sống.
      */
     @GetMapping("/busy-employees")
-    public java.util.List<Integer> getBusyEmployees(
+    public List<Integer> getBusyEmployees(
             @RequestParam(required = false) Integer excludeWorkOrderId,
-            @RequestParam(required = false) java.util.List<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses) {
+            @RequestParam(required = false) List<WorkOrderStatus> statuses) {
         return maintenanceService.getBusyEmployeeIds(excludeWorkOrderId, statuses);
     }
 
@@ -261,10 +269,13 @@ public class WorkOrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(maintenanceService.addMember(id, input));
     }
 
-    /** Đánh dấu thành viên rời khu vực làm việc (set leftAt = now, idempotent). */
+    /** Đánh dấu thành viên rời khu vực làm việc (leftAt nhập tay, null = now, idempotent). */
     @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PatchMapping("/{id}/members/{memberId}/leave")
-    public WorkOrderMemberDTO leaveMember(@PathVariable Integer id, @PathVariable Integer memberId) {
-        return maintenanceService.leaveMember(id, memberId);
+    public WorkOrderMemberDTO leaveMember(
+            @PathVariable Integer id,
+            @PathVariable Integer memberId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime leftAt) {
+        return maintenanceService.leaveMember(id, memberId, leftAt);
     }
 }

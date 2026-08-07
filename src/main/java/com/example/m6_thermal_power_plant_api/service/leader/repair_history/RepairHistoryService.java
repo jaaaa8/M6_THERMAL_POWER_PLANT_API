@@ -5,6 +5,7 @@ import com.example.m6_thermal_power_plant_api.dto.Leader.res.RepairHistoryDetail
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.RepairHistoryResponseDto;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import com.example.m6_thermal_power_plant_api.repository.IRepairHistoryRepository;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
@@ -228,6 +229,9 @@ public class RepairHistoryService implements IRepairHistoryService {
     }
 
     public void createRepairHistory(WorkOrder workOrder) {
+        if (workOrder.getType() == WorkOrderType.LUBRICATION) {
+            return; // Phiếu bảo dưỡng không sinh lịch sử sửa chữa
+        }
         if (repairHistoryRepository.existsByWorkOrderId(workOrder.getId())) {
             return; // Đã có lịch sử sửa chữa cho phiếu công tác này rồi → không tạo trùng
         }

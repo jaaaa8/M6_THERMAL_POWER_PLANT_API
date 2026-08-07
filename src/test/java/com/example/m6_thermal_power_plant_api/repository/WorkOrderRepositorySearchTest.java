@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test {@link WorkOrderRepository#searchWorkOrders} trên MySQL thật (rollback
  * sau mỗi test nhờ @Transactional): 4 bộ lọc AND độc lập — code (id / orderCode
  * / mã nhân viên leader), description (repairDescription), khoảng startTime —
- * và thứ tự mặc định theo tiến độ (đang sống → hoàn thành → huỷ; cùng nhóm thì
- * phiếu mới tạo đứng trước).
+ * và thứ tự mặc định theo tiến độ (IN_PROGRESS → STOPPED → COMPLETED/CANCELLED
+ * cùng cấp; trong cùng cấp thì phiếu mới tạo đứng trước).
  */
 @SpringBootTest
 @Transactional
@@ -70,14 +70,37 @@ class WorkOrderRepositorySearchTest {
         WorkOrder inProgressNew = create(marker, WorkOrderStatus.IN_PROGRESS, base.minusHours(4));
 
         List<Integer> ids = workOrderRepository
-                .searchWorkOrders(null, null, marker, null, null, PageRequest.of(0, 20))
+                .searchWorkOrders(null, null, marker, null, null, null, PageRequest.of(0, 20))
                 .map(WorkOrder::getId)
                 .getContent();
 
-        // Nhóm đang sống (IN_PROGRESS + STOPPED) trộn chung và lên đầu, trong nhóm
-        // thì phiếu mới tạo trước; rồi COMPLETED → CANCELLED.
+        // Cấp: IN_PROGRESS(0) → STOPPED(1) → COMPLETED(2) = CANCELLED(2); cùng cấp
+        // thì phiếu mới tạo trước. COMPLETED và CANCELLED cùng cấp → cancelled
+        // (-1h, mới hơn completed -2h) đứng trước.
         assertEquals(List.of(inProgressNew.getId(), stoppedOld.getId(),
-                completed.getId(), cancelled.getId()), ids);
+                cancelled.getId(), completed.getId()), ids);
+    }
+
+    /** IN_PROGRESS luôn đứng trước STOPPED kể cả khi STOPPED mới tạo hơn. */
+    @Test
+    void searchByRepairDescription_ordersInProgressBeforeStopped() {
+        String marker = "wosearch-" + UUID.randomUUID();
+        LocalDateTime base = LocalDateTime.now().withNano(0);
+
+        WorkOrder stoppedNew = create(marker, WorkOrderStatus.STOPPED, base.minusHours(1));       // mới hơn nhưng cấp 1
+        WorkOrder inProgressOld = create(marker, WorkOrderStatus.IN_PROGRESS, base.minusHours(9)); // cũ hơn nhưng cấp 0
+        WorkOrder cancelled = create(marker, WorkOrderStatus.CANCELLED, base.minusHours(2));
+        WorkOrder completed = create(marker, WorkOrderStatus.COMPLETED, base.minusHours(3));
+
+        List<Integer> ids = workOrderRepository
+                .searchWorkOrders(null, null, marker, null, null, null, PageRequest.of(0, 20))
+                .map(WorkOrder::getId)
+                .getContent();
+
+        // Cấp 0: inProgressOld; cấp 1: stoppedNew; cấp 2 (cùng cấp, createdAt DESC):
+        // cancelled (-2h) trước completed (-3h).
+        assertEquals(List.of(inProgressOld.getId(), stoppedNew.getId(),
+                cancelled.getId(), completed.getId()), ids);
     }
 
     @Test
@@ -86,7 +109,7 @@ class WorkOrderRepositorySearchTest {
         WorkOrder wo = create(marker, WorkOrderStatus.STOPPED, LocalDateTime.now().withNano(0));
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
-                String.valueOf(wo.getId()), wo.getId(), null, null, null, PageRequest.of(0, 50));
+                String.valueOf(wo.getId()), wo.getId(), null, null, null, null, PageRequest.of(0, 50));
 
         assertTrue(page.getContent().stream().anyMatch(w -> w.getId().equals(wo.getId())),
                 "Tim theo id phai tra ve dung phieu cong tac");
@@ -103,7 +126,7 @@ class WorkOrderRepositorySearchTest {
         create(marker, WorkOrderStatus.STOPPED, base, null, null); // phiếu chưa gán leader
 
         List<Integer> ids = workOrderRepository
-                .searchWorkOrders(leaderCode, null, marker, null, null, PageRequest.of(0, 20))
+                .searchWorkOrders(leaderCode, null, marker, null, null, null, PageRequest.of(0, 20))
                 .map(WorkOrder::getId)
                 .getContent();
 
@@ -117,7 +140,7 @@ class WorkOrderRepositorySearchTest {
         WorkOrder noLeader = create(marker, WorkOrderStatus.STOPPED, LocalDateTime.now().withNano(0));
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
-                noLeader.getOrderCode(), null, null, null, null, PageRequest.of(0, 50));
+                noLeader.getOrderCode(), null, null, null, null, null, PageRequest.of(0, 50));
 
         // LEFT JOIN leader: phiếu chưa gán leader vẫn phải tìm được theo orderCode.
         assertTrue(page.getContent().stream().anyMatch(w -> w.getId().equals(noLeader.getId())),
@@ -138,7 +161,7 @@ class WorkOrderRepositorySearchTest {
         // là đầu ngày hôm sau, loại trừ).
         List<Integer> ids = workOrderRepository
                 .searchWorkOrders(null, null, marker, day.atStartOfDay(),
-                        day.plusDays(1).atStartOfDay(), PageRequest.of(0, 20))
+                        day.plusDays(1).atStartOfDay(), null, PageRequest.of(0, 20))
                 .map(WorkOrder::getId)
                 .getContent();
 
@@ -152,7 +175,7 @@ class WorkOrderRepositorySearchTest {
 
         Page<WorkOrder> page = workOrderRepository.searchWorkOrders(
                 wo.getOrderCode(), null, "khong-khop-" + UUID.randomUUID(), null, null,
-                PageRequest.of(0, 20));
+                null, PageRequest.of(0, 20));
 
         assertEquals(0, page.getTotalElements(),
                 "Code khop nhung description khong khop → AND phai loai phieu");

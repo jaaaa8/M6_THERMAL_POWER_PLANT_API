@@ -42,4 +42,8 @@ public class WorkOrderEquipment extends BaseSoftDeleteEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private WorkOrderEquipmentStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lubrication_plan_id")
+    private LubricationPlan lubricationPlan;
 }

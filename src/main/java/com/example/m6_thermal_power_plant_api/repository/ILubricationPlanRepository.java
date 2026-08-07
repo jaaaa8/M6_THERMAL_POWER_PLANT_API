@@ -74,4 +74,14 @@ public interface ILubricationPlanRepository extends JpaRepository<LubricationPla
     List<LubricationPlan> findPlansNeedUpdate(
             @Param("maxDate") LocalDate maxDate
     );
+
+    @Query("""
+        SELECT DISTINCT woe.lubricationPlan.id
+        FROM WorkOrderEquipment woe
+        JOIN woe.workOrder wo
+        WHERE woe.lubricationPlan.id IS NOT NULL
+          AND wo.status IN :liveStatuses
+    """)
+    List<Integer> findLockedPlanIds(
+            @Param("liveStatuses") java.util.Collection<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> liveStatuses);
 }

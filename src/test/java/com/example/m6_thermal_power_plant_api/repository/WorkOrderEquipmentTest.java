@@ -97,7 +97,7 @@ class WorkOrderEquipmentTest {
         Equipment eq = saveEquipment();
         WorkOrder live = saveWo("live", WorkOrderStatus.IN_PROGRESS, List.of(eq));
 
-        List<Object[]> holders = workOrderRepository.findLiveHolders(List.of(eq.getId()), LIVE);
+        List<Object[]> holders = workOrderRepository.findLiveHolders(List.of(eq.getId()), LIVE, com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType.REPAIR);
 
         assertThat(holders).extracting(row -> row[1]).contains(live.getOrderCode());
     }
@@ -117,7 +117,7 @@ class WorkOrderEquipmentTest {
                 .repairRequest(req)
                 .build());
 
-        List<Object[]> holders = workOrderRepository.findLiveHolders(List.of(eq.getId()), LIVE);
+        List<Object[]> holders = workOrderRepository.findLiveHolders(List.of(eq.getId()), LIVE, com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType.REPAIR);
 
         assertThat(holders).extracting(row -> row[1]).contains(live.getOrderCode());
     }
@@ -127,7 +127,7 @@ class WorkOrderEquipmentTest {
         Equipment eq = saveEquipment();
         saveWo("done", WorkOrderStatus.COMPLETED, List.of(eq));
 
-        assertThat(workOrderRepository.findLiveHolders(List.of(eq.getId()), LIVE)).isEmpty();
+        assertThat(workOrderRepository.findLiveHolders(List.of(eq.getId()), LIVE, com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType.REPAIR)).isEmpty();
     }
 
     @Test

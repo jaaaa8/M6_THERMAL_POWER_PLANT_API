@@ -4,12 +4,14 @@ import com.example.m6_thermal_power_plant_api.dto.maintenance.CreateWorkOrderReq
 import com.example.m6_thermal_power_plant_api.dto.maintenance.RepairRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.StopWorkOrderRequest;
 import com.example.m6_thermal_power_plant_api.dto.maintenance.WorkOrderDTO;
+import com.example.m6_thermal_power_plant_api.dto.equipment.response.LubricationHistoryDTO;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.EquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairPriority;
 import com.example.m6_thermal_power_plant_api.entity.enums.RepairRequestStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import com.example.m6_thermal_power_plant_api.exception.DuplicateHumanResourceException;
 import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
@@ -28,6 +30,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -65,6 +68,12 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.service.leader.repair_history.IRepairHistoryService repairHistoryService;
     @Mock
     private com.example.m6_thermal_power_plant_api.repository.WorkOrderEquipmentRepository workOrderEquipmentRepository;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.repository.ILubricationPlanRepository lubricationPlanRepository;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService lubricationHistoryService;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.leader.lubrication_plan.ILubricationPlanService lubricationPlanService;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -616,7 +625,7 @@ class MaintenanceServiceTest {
         Equipment e2 = Equipment.builder().id(2).kksCode("KKS-2").name("Quat gio B").build();
 
         when(equipmentRepository.findAllById(List.of(1, 2))).thenReturn(List.of(e1, e2));
-        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(workOrderRepository.findLiveHolders(any(), any(), any())).thenReturn(List.of());
         when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
         when(employeeRepository.findById(5)).thenReturn(Optional.of(technician));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
@@ -654,7 +663,7 @@ class MaintenanceServiceTest {
         Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
 
         when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
-        when(workOrderRepository.findLiveHolders(any(), any())).thenReturn(List.of());
+        when(workOrderRepository.findLiveHolders(any(), any(), any())).thenReturn(List.of());
         when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
         when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
             WorkOrder wo = inv.getArgument(0);
@@ -691,7 +700,7 @@ class MaintenanceServiceTest {
     void createManualWorkOrder_equipmentInOtherLiveWorkOrder_throws() {
         Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
         when(equipmentRepository.findAllById(List.of(1))).thenReturn(List.of(e1));
-        when(workOrderRepository.findLiveHolders(eq(List.of(1)), any()))
+        when(workOrderRepository.findLiveHolders(eq(List.of(1)), any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{1, "WO-55"})); // WO-55 dang giu thiet bi 1
 
         CreateWorkOrderRequest req = new CreateWorkOrderRequest();
@@ -898,5 +907,298 @@ class MaintenanceServiceTest {
         assertThat(wo.getWorkOrderEquipments().get(0).getStatus())
                 .isEqualTo(WorkOrderEquipmentStatus.CANCELED);
         verify(workOrderEquipmentRepository).saveAll(any());
+    }
+
+    @Test
+    void createManualWorkOrder_lubrication_requiresPlanPerLine() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setType(WorkOrderType.LUBRICATION);
+        CreateWorkOrderRequest.EquipmentLineInput line = new CreateWorkOrderRequest.EquipmentLineInput();
+        line.setEquipmentId(1);
+        line.setLubricationPlanId(null);
+        req.setEquipmentLines(List.of(line));
+        req.setLeaderId(10);
+        req.setDirectSupervisorId(11);
+        req.setSafetySupervisorId(12);
+        req.setStartTime(LocalDateTime.now());
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, "leader"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("lubricationPlanId");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createManualWorkOrder_lubrication_blockedWhenPlanHasLiveLubricationWoe() {
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        LubricationPlan plan = LubricationPlan.builder().id(5).lubricationCode("LP-001").equipment(e1).build();
+        when(lubricationPlanRepository.findAllById(List.of(5))).thenReturn(List.of(plan));
+        when(workOrderEquipmentRepository.existsLiveLubricationWoeByPlanId(eq(5), anyCollection()))
+                .thenReturn(true);
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setType(WorkOrderType.LUBRICATION);
+        CreateWorkOrderRequest.EquipmentLineInput line = new CreateWorkOrderRequest.EquipmentLineInput();
+        line.setEquipmentId(1);
+        line.setLubricationPlanId(5);
+        req.setEquipmentLines(List.of(line));
+        req.setLeaderId(10);
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, "leader"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("dang co phieu bao duong");
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createManualWorkOrder_lubrication_savesWoeWithPlan() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Equipment e1 = Equipment.builder().id(1).kksCode("KKS-1").name("Quat gio A").build();
+        LubricationPlan plan = LubricationPlan.builder().id(5).lubricationCode("LP-001").equipment(e1).build();
+        when(lubricationPlanRepository.findAllById(List.of(5))).thenReturn(List.of(plan));
+        when(workOrderEquipmentRepository.existsLiveLubricationWoeByPlanId(eq(5), anyCollection()))
+                .thenReturn(false);
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setType(WorkOrderType.LUBRICATION);
+        CreateWorkOrderRequest.EquipmentLineInput line = new CreateWorkOrderRequest.EquipmentLineInput();
+        line.setEquipmentId(1);
+        line.setLubricationPlanId(5);
+        req.setEquipmentLines(List.of(line));
+        req.setLeaderId(2);
+
+        maintenanceService.createManualWorkOrder(req, null);
+
+        ArgumentCaptor<WorkOrder> captor = ArgumentCaptor.forClass(WorkOrder.class);
+        verify(workOrderRepository).save(captor.capture());
+        WorkOrder saved = captor.getValue();
+        assertThat(saved.getType()).isEqualTo(WorkOrderType.LUBRICATION);
+        assertThat(saved.getWorkOrderEquipments()).hasSize(1);
+        assertThat(saved.getWorkOrderEquipments().get(0).getLubricationPlan().getId()).isEqualTo(5);
+        assertThat(saved.getWorkOrderEquipments().get(0).getEquipment().getId()).isEqualTo(1);
+    }
+
+    @Test
+    void completeWorkOrder_lubrication_createsHistoryAndUpdatesPlans() {
+        Equipment eq = Equipment.builder().id(1).kksCode("10LAC10AP001").name("Bom dau").build();
+        LubricationPlan plan = LubricationPlan.builder().id(5).build();
+        WorkOrderEquipment woe = WorkOrderEquipment.builder()
+                .id(20).equipment(eq).lubricationPlan(plan)
+                .status(WorkOrderEquipmentStatus.COMPLETED).build();
+        WorkOrder wo = WorkOrder.builder().id(1).type(WorkOrderType.LUBRICATION)
+                .status(WorkOrderStatus.STOPPED).repairDescription("Boi tron dinh ky")
+                .workOrderEquipments(List.of(woe)).build();
+
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+        when(workOrderEquipmentRepository.findByWorkOrder_Id(1)).thenReturn(List.of(woe));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        maintenanceService.completeWorkOrder(1);
+
+        ArgumentCaptor<LubricationHistoryDTO> captor = ArgumentCaptor.forClass(LubricationHistoryDTO.class);
+        verify(lubricationHistoryService).create(captor.capture());
+        assertThat(captor.getValue().getEquipmentId()).isEqualTo(1);
+        assertThat(captor.getValue().getPerformedDate()).isEqualTo(LocalDate.now());
+        assertThat(captor.getValue().getNotes()).isEqualTo("Boi tron dinh ky");
+        verify(lubricationPlanService).updateNextDueDateAndStatus(5);
+        verify(repairHistoryService, never()).createRepairHistory(any(WorkOrder.class));
+    }
+
+    /* ===== Task 1: ràng buộc trùng nhân sự trong-cùng-request ===== */
+
+    @Test
+    void createWorkOrderFromRequest_safetySupervisorSameAsLeader_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setSafetySupervisorId(2); // GSAT == leader -> chặn
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrderFromRequest_safetySupervisorSameAsDirectSupervisor_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(3); // GSAT == chi huy truc tiep -> chặn
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrderFromRequest_leaderSameAsDirectSupervisor_isAllowed() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.PENDING);
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Employee safety = createEmployee(4, "safety.officer", "Pham Van Dat");
+        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of());
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(employeeRepository.findById(4)).thenReturn(Optional.of(safety));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(101);
+            return wo;
+        });
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(2); // leader == chi huy truc tiep -> CHO PHEP
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+
+        WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
+
+        assertThat(result.getId()).isEqualTo(101);
+        assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
+    }
+
+    @Test
+    void createWorkOrderFromRequest_memberDuplicatesRole_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);           // leader id=2
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+        CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
+        member.setEmployeeId(2);      // member trùng leader -> chặn
+        req.setMembers(List.of(member));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrderFromRequest_duplicateMembers_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+        CreateWorkOrderRequest.MemberInput m1 = new CreateWorkOrderRequest.MemberInput();
+        m1.setEmployeeId(5);
+        CreateWorkOrderRequest.MemberInput m2 = new CreateWorkOrderRequest.MemberInput();
+        m2.setEmployeeId(5);          // trùng member -> chặn
+        req.setMembers(List.of(m1, m2));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createManualWorkOrder_safetySupervisorSameAsLeader_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1));
+        req.setLeaderId(2);
+        req.setSafetySupervisorId(2); // GSAT == leader -> chặn (kiểm tra ngay đầu, chưa cần mock thiết bị)
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, null))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    /* ===== Task 2: nhập tay giờ ra/vào + chặn member trùng vai trò của chính phiếu ===== */
+
+    @Test
+    void addMember_usesProvidedJoinedAt_whenGiven() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        Employee tech = createEmployee(5, "mechanic.tech", "Hoang Quoc Dat");
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(tech));
+        when(workOrderMemberRepository.save(any(WorkOrderMember.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest.MemberInput input = new CreateWorkOrderRequest.MemberInput();
+        input.setEmployeeId(5);
+        input.setJoinedAt(LocalDateTime.of(2026, 7, 1, 7, 45)); // nhập tay, lệch giờ hiện tại
+        maintenanceService.addMember(1, input);
+
+        ArgumentCaptor<WorkOrderMember> captor = ArgumentCaptor.forClass(WorkOrderMember.class);
+        verify(workOrderMemberRepository).save(captor.capture());
+        assertThat(captor.getValue().getJoinedAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 7, 45));
+    }
+
+    @Test
+    void addMember_withoutJoinedAt_defaultsToNow() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        Employee tech = createEmployee(5, "mechanic.tech", "Hoang Quoc Dat");
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(tech));
+        when(workOrderMemberRepository.save(any(WorkOrderMember.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest.MemberInput input = new CreateWorkOrderRequest.MemberInput();
+        input.setEmployeeId(5);
+        maintenanceService.addMember(1, input);
+
+        ArgumentCaptor<WorkOrderMember> captor = ArgumentCaptor.forClass(WorkOrderMember.class);
+        verify(workOrderMemberRepository).save(captor.capture());
+        assertThat(captor.getValue().getJoinedAt()).isNotNull();
+    }
+
+    @Test
+    void addMember_whenEmployeeIsRoleHolderOfWorkOrder_throwsDuplicateHumanResource() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        WorkOrder wo = WorkOrder.builder()
+                .id(1).orderCode("WO-live-1").status(WorkOrderStatus.IN_PROGRESS)
+                .leader(leader)
+                .directSupervisor(createEmployee(1, "shift.leader", "Nguyen Van An"))
+                .safetySupervisor(createEmployee(4, "safety.officer", "Pham Van Dat"))
+                .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .build();
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+
+        CreateWorkOrderRequest.MemberInput input = new CreateWorkOrderRequest.MemberInput();
+        input.setEmployeeId(2); // chính là leader của phiếu này -> chặn
+        assertThatThrownBy(() -> maintenanceService.addMember(1, input))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderMemberRepository, never()).save(any(WorkOrderMember.class));
+    }
+
+    @Test
+    void leaveMember_usesProvidedLeftAt_whenGiven() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        WorkOrderMember member = WorkOrderMember.builder()
+                .id(7).workOrder(wo)
+                .employees(createEmployee(5, "mechanic.tech", "Hoang Quoc Dat"))
+                .joinedAt(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .build();
+        when(workOrderMemberRepository.findByIdAndWorkOrder_Id(7, 1)).thenReturn(Optional.of(member));
+
+        maintenanceService.leaveMember(1, 7, LocalDateTime.of(2026, 7, 1, 12, 30)); // nhập tay
+
+        assertThat(member.getLeftAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 12, 30));
+        verify(workOrderMemberRepository).save(member);
+    }
+
+    @Test
+    void leaveMember_withoutLeftAt_defaultsToNow() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        WorkOrderMember member = WorkOrderMember.builder()
+                .id(7).workOrder(wo)
+                .employees(createEmployee(5, "mechanic.tech", "Hoang Quoc Dat"))
+                .joinedAt(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .build();
+        when(workOrderMemberRepository.findByIdAndWorkOrder_Id(7, 1)).thenReturn(Optional.of(member));
+
+        maintenanceService.leaveMember(1, 7, null);
+
+        assertThat(member.getLeftAt()).isNotNull();
     }
 }

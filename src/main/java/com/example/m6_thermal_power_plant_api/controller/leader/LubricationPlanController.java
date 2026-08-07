@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/lubrication-plan")
 public class LubricationPlanController {
@@ -73,6 +75,12 @@ public class LubricationPlanController {
                         pageable
                 )
         );
+    }
+
+    @PreAuthorize("hasAnyRole('TEAM_LEADER')")
+    @GetMapping("/locked-plan-ids")
+    public ResponseEntity<List<Integer>> getLockedPlanIds() {
+        return ResponseEntity.ok(lubricationPlanService.findLockedPlanIds());
     }
 
 }

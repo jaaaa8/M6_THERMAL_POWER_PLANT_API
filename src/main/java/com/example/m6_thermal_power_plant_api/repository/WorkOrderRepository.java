@@ -2,6 +2,7 @@ package com.example.m6_thermal_power_plant_api.repository;
 
 import com.example.m6_thermal_power_plant_api.entity.WorkOrder;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,8 +30,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
      * KHÔNG tìm theo requestCode / incidentDescription của yêu cầu. KHÔNG phân
      * biệt hoa/thường.
      *
-     * Sắp xếp mặc định theo TIẾN ĐỘ: đang sống (STOPPED / IN_PROGRESS) →
-     * COMPLETED → CANCELLED; trong cùng nhóm phiếu mới tạo đứng trước.
+     * Sắp xếp mặc định theo TIẾN ĐỘ: IN_PROGRESS → STOPPED → COMPLETED/CANCELLED
+     * (hai trạng thái này cùng cấp); trong cùng nhóm phiếu mới tạo đứng trước.
      */
     @Query("""
         SELECT wo FROM WorkOrder wo
@@ -43,10 +44,10 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
                OR LOWER(wo.repairDescription) LIKE LOWER(CONCAT('%', :description, '%')))
           AND (:startFrom IS NULL OR wo.startTime >= :startFrom)
           AND (:startTo IS NULL OR wo.startTime < :startTo)
+          AND (:type IS NULL OR wo.type = :type)
         ORDER BY CASE
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 0
             WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.IN_PROGRESS THEN 0
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 1
             ELSE 2
         END, wo.createdAt DESC
     """)
@@ -55,6 +56,7 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
                                      @Param("description") String description,
                                      @Param("startFrom") java.time.LocalDateTime startFrom,
                                      @Param("startTo") java.time.LocalDateTime startTo,
+                                     @Param("type") WorkOrderType type,
                                      Pageable pageable);
 
     /**
@@ -108,7 +110,9 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
             + "LEFT JOIN woe.equipment e "
             + "LEFT JOIN wo.repairRequest req "
             + "WHERE (e.id IN :equipmentIds OR req.equipment.id IN :equipmentIds) "
-            + "AND wo.status IN :statuses")
+            + "AND wo.status IN :statuses "
+            + "AND wo.type = :type")
     List<Object[]> findLiveHolders(@Param("equipmentIds") List<Integer> equipmentIds,
-                                   @Param("statuses") List<WorkOrderStatus> statuses);
+                                   @Param("statuses") List<WorkOrderStatus> statuses,
+                                   @Param("type") WorkOrderType type);
 }

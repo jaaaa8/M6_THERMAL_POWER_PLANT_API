@@ -16,6 +16,7 @@ import com.example.m6_thermal_power_plant_api.service.util.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
@@ -95,8 +96,14 @@ public class WorkOrderPdfService {
      * snapshot chốt sổ + upload đè + lưu pdf_path (bỏ qua guard chống đè của
      * {@link #render}). Chỉ gọi từ luồng complete/cancel — sau thời điểm này
      * {@link #render} không đụng tới Cloudinary nữa.
+     *
+     * REQUIRES_NEW: việc archive là best-effort — {@code WorkOrderArchiveService}
+     * đã hoãn nó tới afterCommit nên bình thường không còn tx nào để join, nhưng
+     * tx riêng là hàng rào cuối: lỗi render/Cloudinary tuyệt đối không được đánh
+     * dấu rollback-only cho một tx nghiệp vụ nào khác (đúng lỗi cũ — commit ném
+     * {@code UnexpectedRollbackException} "Transaction silently rolled back...").
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void archive(Integer workOrderId) {
         WorkOrder workOrder = loadWorkOrder(workOrderId);
         uploadAndSave(workOrder, renderBytes(workOrder));

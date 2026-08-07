@@ -6,6 +6,8 @@ import com.example.m6_thermal_power_plant_api.entity.enums.LubricationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 public interface ILubricationPlanService {
     Page<LubricationPlanDto> search(String keyword, LubricationStatus status, Pageable pageable);
     LubricationPlanDto create(
@@ -16,4 +18,5 @@ public interface ILubricationPlanService {
     Page<LubricationPlanDto> checklist(Integer systemId, LubricationStatus status, Pageable pageable);
     void loadStatus();
     void updateNextDueDateAndStatus(Integer lubricationPlanId);
+    List<Integer> findLockedPlanIds();
 }

@@ -8,6 +8,7 @@ import com.example.m6_thermal_power_plant_api.entity.WorkOrderEquipment;
 import com.example.m6_thermal_power_plant_api.entity.WorkOrderMember;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderEquipmentStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
+import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,6 +34,7 @@ public class WorkOrderDTO {
     private Integer id;
     private String orderCode;
     private WorkOrderStatus status;
+    private WorkOrderType type;
     private LocalDateTime startTime;
     /** Kết thúc THỰC TẾ — null khi phiếu chưa COMPLETED. */
     private LocalDateTime endTime;
@@ -70,11 +72,12 @@ public class WorkOrderDTO {
 
     /** Tóm tắt 1 thiết bị trong danh sách equipments của WO thủ công. */
     public record EquipmentBrief(Integer id, String kksCode, String name, String systemName,
-                                 WorkOrderEquipmentStatus status) {
+                                 WorkOrderEquipmentStatus status, Integer lubricationPlanId) {
         static EquipmentBrief from(WorkOrderEquipment woe) {
             Equipment e = woe.getEquipment();
             return new EquipmentBrief(e.getId(), e.getKksCode(), e.getName(),
-                    e.getSystem() != null ? e.getSystem().getName() : null, woe.getStatus());
+                    e.getSystem() != null ? e.getSystem().getName() : null, woe.getStatus(),
+                    woe.getLubricationPlan() != null ? woe.getLubricationPlan().getId() : null);
         }
     }
 
@@ -86,6 +89,7 @@ public class WorkOrderDTO {
                 .startTime(wo.getStartTime())
                 .endTime(wo.getEndTime())
                 .pdfPath(wo.getPdfPath())
+                .type(wo.getType())
                 .repairDescription(wo.getRepairDescription())
                 .createdById(wo.getCreatedBy() != null ? wo.getCreatedBy().getId() : null);
 
