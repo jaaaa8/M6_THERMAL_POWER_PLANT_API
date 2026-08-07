@@ -41,6 +41,7 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
             (:systemId IS NULL OR e.system_id = :systemId)
             AND (:kks IS NULL OR e.kks_code LIKE CONCAT('%',:kks,'%'))
             AND (:name IS NULL OR e.name LIKE CONCAT('%',:name,'%'))
+            AND (:kw IS NULL OR e.kks_code LIKE CONCAT('%',:kw,'%') OR e.name LIKE CONCAT('%',:kw,'%'))
             AND (:typeId IS NULL OR e.equipment_type_id=:typeId)
             AND (:status IS NULL OR e.status=:status)
             """,
@@ -51,6 +52,7 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
         (:systemId IS NULL OR e.system_id = :systemId)
         AND (:kks IS NULL OR e.kks_code LIKE CONCAT('%',:kks,'%'))
         AND (:name IS NULL OR e.name LIKE CONCAT('%',:name,'%'))
+        AND (:kw IS NULL OR e.kks_code LIKE CONCAT('%',:kw,'%') OR e.name LIKE CONCAT('%',:kw,'%'))
         AND (:typeId IS NULL OR e.equipment_type_id=:typeId)
         AND (:status IS NULL OR e.status=:status)
         """,
@@ -59,6 +61,7 @@ public interface IEquipmentRepository extends JpaRepository<Equipment, Integer> 
             @Param("systemId") Integer systemId,
             @Param("kks") String kks,
             @Param("name") String name,
+            @Param("kw") String kw,
             @Param("typeId") Integer typeId,
             @Param("status") String status,
             Pageable pageable

@@ -32,6 +32,7 @@ public class EquipmentController {
             @RequestParam (required = false) Integer systemId,
             @RequestParam (required = false) String kks,
             @RequestParam (required = false) String name,
+            @RequestParam (required = false) String kw,
             @RequestParam (required = false) Integer typeId,
             @RequestParam (required = false) String status,
             Pageable pageable
@@ -40,6 +41,7 @@ public class EquipmentController {
                 systemId,
                 kks,
                 name,
+                kw,
                 typeId,
                 status ,
                 pageable

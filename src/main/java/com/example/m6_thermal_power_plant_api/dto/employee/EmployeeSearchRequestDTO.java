@@ -15,4 +15,5 @@ public class EmployeeSearchRequestDTO {
     private String gmail;
     private Integer departmentId;
     private String isActive;
+    private String keyword;
 }
