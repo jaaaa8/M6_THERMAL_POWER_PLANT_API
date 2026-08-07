@@ -115,18 +115,20 @@ public interface IMaintenanceService {
             java.util.List<com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus> statuses);
 
     /**
-     * Thêm nhân viên vào phiếu công tác đang chạy (joinedAt = now, leftAt = null).
-     * Từ chối (409) nếu phiếu đã COMPLETED/CANCELLED hoặc nhân viên đang là thành
-     * viên CHƯA RỜI của chính phiếu này. Nhân viên đã rời trước đó vào lại được —
-     * tạo dòng member MỚI để lịch sử giữ đủ các cặp JOINED/LEFT.
+     * Thêm nhân viên vào phiếu công tác đang chạy (joinedAt nhập tay qua
+     * MemberInput.joinedAt, null = now; leftAt = null). Từ chối (409) nếu phiếu đã
+     * COMPLETED/CANCELLED, nhân viên đang là thành viên CHƯA RỜI của chính phiếu
+     * này, HOẶC đang giữ một trong 3 vai trò phụ trách của phiếu này. Nhân viên đã
+     * rời trước đó vào lại được — tạo dòng member MỚI để lịch sử giữ đủ cặp JOINED/LEFT.
      */
     WorkOrderMemberDTO addMember(Integer workOrderId, CreateWorkOrderRequest.MemberInput input);
 
     /**
-     * Đánh dấu thành viên rời khu vực làm việc (leftAt = now). Idempotent: member
-     * đã rời rồi thì trả về nguyên trạng. 404 nếu member không thuộc phiếu này.
+     * Đánh dấu thành viên rời khu vực làm việc (leftAt nhập tay, null = now).
+     * Idempotent: member đã rời rồi thì trả về nguyên trạng. 404 nếu member không
+     * thuộc phiếu này.
      */
-    WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId);
+    WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId, java.time.LocalDateTime leftAt);
 
     /**
      * "Khoá phiếu hoàn thành": status → COMPLETED, đóng dấu giờ kết thúc thực tế

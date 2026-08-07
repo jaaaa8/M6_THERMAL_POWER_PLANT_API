@@ -77,6 +77,9 @@ public class CreateWorkOrderRequest {
         @NotNull(message = "employeeId của thành viên là bắt buộc")
         private Integer employeeId;
 
+        /** Giờ VÀO khu vực làm việc nhập tay (không truyền = hệ thống lấy now). */
+        private LocalDateTime joinedAt;
+
     }
 
     @Getter

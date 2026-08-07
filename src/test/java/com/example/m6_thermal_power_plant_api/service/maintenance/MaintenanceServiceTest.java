@@ -1110,4 +1110,95 @@ class MaintenanceServiceTest {
                 .isInstanceOf(DuplicateHumanResourceException.class);
         verify(workOrderRepository, never()).save(any(WorkOrder.class));
     }
+
+    /* ===== Task 2: nhập tay giờ ra/vào + chặn member trùng vai trò của chính phiếu ===== */
+
+    @Test
+    void addMember_usesProvidedJoinedAt_whenGiven() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        Employee tech = createEmployee(5, "mechanic.tech", "Hoang Quoc Dat");
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(tech));
+        when(workOrderMemberRepository.save(any(WorkOrderMember.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest.MemberInput input = new CreateWorkOrderRequest.MemberInput();
+        input.setEmployeeId(5);
+        input.setJoinedAt(LocalDateTime.of(2026, 7, 1, 7, 45)); // nhập tay, lệch giờ hiện tại
+        maintenanceService.addMember(1, input);
+
+        ArgumentCaptor<WorkOrderMember> captor = ArgumentCaptor.forClass(WorkOrderMember.class);
+        verify(workOrderMemberRepository).save(captor.capture());
+        assertThat(captor.getValue().getJoinedAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 7, 45));
+    }
+
+    @Test
+    void addMember_withoutJoinedAt_defaultsToNow() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        Employee tech = createEmployee(5, "mechanic.tech", "Hoang Quoc Dat");
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+        when(employeeRepository.findById(5)).thenReturn(Optional.of(tech));
+        when(workOrderMemberRepository.save(any(WorkOrderMember.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CreateWorkOrderRequest.MemberInput input = new CreateWorkOrderRequest.MemberInput();
+        input.setEmployeeId(5);
+        maintenanceService.addMember(1, input);
+
+        ArgumentCaptor<WorkOrderMember> captor = ArgumentCaptor.forClass(WorkOrderMember.class);
+        verify(workOrderMemberRepository).save(captor.capture());
+        assertThat(captor.getValue().getJoinedAt()).isNotNull();
+    }
+
+    @Test
+    void addMember_whenEmployeeIsRoleHolderOfWorkOrder_throwsDuplicateHumanResource() {
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        WorkOrder wo = WorkOrder.builder()
+                .id(1).orderCode("WO-live-1").status(WorkOrderStatus.IN_PROGRESS)
+                .leader(leader)
+                .directSupervisor(createEmployee(1, "shift.leader", "Nguyen Van An"))
+                .safetySupervisor(createEmployee(4, "safety.officer", "Pham Van Dat"))
+                .startTime(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .build();
+        when(workOrderRepository.findById(1)).thenReturn(Optional.of(wo));
+
+        CreateWorkOrderRequest.MemberInput input = new CreateWorkOrderRequest.MemberInput();
+        input.setEmployeeId(2); // chính là leader của phiếu này -> chặn
+        assertThatThrownBy(() -> maintenanceService.addMember(1, input))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderMemberRepository, never()).save(any(WorkOrderMember.class));
+    }
+
+    @Test
+    void leaveMember_usesProvidedLeftAt_whenGiven() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        WorkOrderMember member = WorkOrderMember.builder()
+                .id(7).workOrder(wo)
+                .employees(createEmployee(5, "mechanic.tech", "Hoang Quoc Dat"))
+                .joinedAt(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .build();
+        when(workOrderMemberRepository.findByIdAndWorkOrder_Id(7, 1)).thenReturn(Optional.of(member));
+
+        maintenanceService.leaveMember(1, 7, LocalDateTime.of(2026, 7, 1, 12, 30)); // nhập tay
+
+        assertThat(member.getLeftAt()).isEqualTo(LocalDateTime.of(2026, 7, 1, 12, 30));
+        verify(workOrderMemberRepository).save(member);
+    }
+
+    @Test
+    void leaveMember_withoutLeftAt_defaultsToNow() {
+        WorkOrder wo = liveWorkOrder(1, createEmployee(1, "shift.leader", "Nguyen Van An"),
+                LocalDateTime.of(2026, 7, 1, 8, 0));
+        WorkOrderMember member = WorkOrderMember.builder()
+                .id(7).workOrder(wo)
+                .employees(createEmployee(5, "mechanic.tech", "Hoang Quoc Dat"))
+                .joinedAt(LocalDateTime.of(2026, 7, 1, 8, 0))
+                .build();
+        when(workOrderMemberRepository.findByIdAndWorkOrder_Id(7, 1)).thenReturn(Optional.of(member));
+
+        maintenanceService.leaveMember(1, 7, null);
+
+        assertThat(member.getLeftAt()).isNotNull();
+    }
 }

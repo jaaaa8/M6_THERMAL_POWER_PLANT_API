@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -268,10 +269,13 @@ public class WorkOrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(maintenanceService.addMember(id, input));
     }
 
-    /** Đánh dấu thành viên rời khu vực làm việc (set leftAt = now, idempotent). */
+    /** Đánh dấu thành viên rời khu vực làm việc (leftAt nhập tay, null = now, idempotent). */
     @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
     @PatchMapping("/{id}/members/{memberId}/leave")
-    public WorkOrderMemberDTO leaveMember(@PathVariable Integer id, @PathVariable Integer memberId) {
-        return maintenanceService.leaveMember(id, memberId);
+    public WorkOrderMemberDTO leaveMember(
+            @PathVariable Integer id,
+            @PathVariable Integer memberId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime leftAt) {
+        return maintenanceService.leaveMember(id, memberId, leftAt);
     }
 }

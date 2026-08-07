@@ -322,13 +322,12 @@ public class MaintenanceService implements IMaintenanceService {
         if (inputs == null) {
             return saved;
         }
-        LocalDateTime now = LocalDateTime.now();
         for (CreateWorkOrderRequest.MemberInput input : inputs) {
             Employee employee = loadEmployee(input.getEmployeeId(), "nhan vien lam viec");
             saved.add(workOrderMemberRepository.save(WorkOrderMember.builder()
                     .workOrder(workOrder)
                     .employees(employee)
-                    .joinedAt(now)
+                    .joinedAt(input.getJoinedAt() != null ? input.getJoinedAt() : LocalDateTime.now())
                     .build()));
         }
         return saved;
@@ -541,25 +540,34 @@ public class MaintenanceService implements IMaintenanceService {
                             + workOrder.getOrderCode() + ").");
         }
 
+        Integer empId = input.getEmployeeId();
+        if (Objects.equals(empId, workOrder.getLeader() != null ? workOrder.getLeader().getId() : null)
+                || Objects.equals(empId, workOrder.getDirectSupervisor() != null ? workOrder.getDirectSupervisor().getId() : null)
+                || Objects.equals(empId, workOrder.getSafetySupervisor() != null ? workOrder.getSafetySupervisor().getId() : null)) {
+            throw new DuplicateHumanResourceException(
+                    "Nhan vien dang giu vai tro phu trach cua phieu cong tac (" + workOrder.getOrderCode()
+                            + ") - khong the them lam thanh vien.");
+        }
+
         Employee employee = loadEmployee(input.getEmployeeId(), "nhan vien lam viec");
         WorkOrderMember member = workOrderMemberRepository.save(WorkOrderMember.builder()
                 .workOrder(workOrder)
                 .employees(employee)
-                .joinedAt(LocalDateTime.now())
+                .joinedAt(input.getJoinedAt() != null ? input.getJoinedAt() : LocalDateTime.now())
                 .build());
         return WorkOrderMemberDTO.from(member);
     }
 
     @Override
     @Transactional
-    public WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId) {
+    public WorkOrderMemberDTO leaveMember(Integer workOrderId, Integer memberId, LocalDateTime leftAt) {
         WorkOrderMember member = workOrderMemberRepository.findByIdAndWorkOrder_Id(memberId, workOrderId)
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay thanh vien id " + memberId + " trong phieu cong tac id " + workOrderId));
 
         // Idempotent: đã rời rồi thì trả về nguyên trạng (giống cancelWorkOrder).
         if (member.getLeftAt() == null) {
-            member.setLeftAt(LocalDateTime.now());
+            member.setLeftAt(leftAt != null ? leftAt : LocalDateTime.now());
             workOrderMemberRepository.save(member);
         }
         return WorkOrderMemberDTO.from(member);
