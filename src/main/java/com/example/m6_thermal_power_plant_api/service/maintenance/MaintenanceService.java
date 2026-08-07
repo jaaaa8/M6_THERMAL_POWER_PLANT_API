@@ -41,6 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -101,6 +102,7 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional
     public WorkOrderDTO createWorkOrderFromRequest(CreateWorkOrderRequest request, String createdByUsername) {
+        validateRoleDuplication(request);
         RepairRequest repairRequest = repairRequestRepository.findById(request.getRepairRequestId())
                 .orElseThrow(() -> new ObjectNotFoundException(
                         "Khong tim thay yeu cau sua chua voi id: " + request.getRepairRequestId()));
@@ -149,6 +151,7 @@ public class MaintenanceService implements IMaintenanceService {
     @Override
     @Transactional
     public WorkOrderDTO createManualWorkOrder(CreateWorkOrderRequest request, String createdByUsername) {
+        validateRoleDuplication(request);
         WorkOrderType type = request.getType() == null ? WorkOrderType.REPAIR : request.getType();
 
         List<WorkOrderEquipment> woeLines;
@@ -375,6 +378,45 @@ public class MaintenanceService implements IMaintenanceService {
             throw new DuplicateHumanResourceException(
                     roleLabel + " da duoc phan cong o phieu cong tac dang hoat dong (" + live.getOrderCode() + "). "
                             + "Cac phieu hoat dong song song khong duoc trung " + roleLabel + ", hoac hay huy phieu cu (CANCELLED).");
+        }
+    }
+
+    /**
+     * Ràng buộc NHÂN SỰ TRONG CÙNG 1 phiếu mới — UI đã loại option nhưng API phải
+     * chặn độc lập (tránh gọi thẳng qua Postman/swagger):
+     * - GSAT KHÔNG được trùng leader hoặc chỉ huy trực tiếp (leader == chỉ huy trực
+     *   tiếp thì ĐƯỢC phép — 2 vai trò này có thể là 1 người).
+     * - Members: không trùng lẫn nhau, không trùng 3 vai trò phụ trách.
+     */
+    private void validateRoleDuplication(CreateWorkOrderRequest input) {
+        Integer leaderId = input.getLeaderId();
+        Integer directId = input.getDirectSupervisorId();
+        Integer safetyId = input.getSafetySupervisorId();
+
+        if (safetyId != null && Objects.equals(leaderId, safetyId)) {
+            throw new DuplicateHumanResourceException(
+                    "Nguoi giam sat an toan khong duoc trung voi nguoi lanh dao cong viec.");
+        }
+        if (safetyId != null && Objects.equals(directId, safetyId)) {
+            throw new DuplicateHumanResourceException(
+                    "Nguoi giam sat an toan khong duoc trung voi chi huy truc tiep.");
+        }
+
+        List<CreateWorkOrderRequest.MemberInput> members = input.getMembers();
+        if (members == null) return;
+        Set<Integer> seen = new HashSet<>();
+        for (CreateWorkOrderRequest.MemberInput m : members) {
+            Integer employeeId = m.getEmployeeId();
+            if (!seen.add(employeeId)) {
+                throw new DuplicateHumanResourceException(
+                        "Nhan vien lam viec khong duoc trung lap trong danh sach thanh vien.");
+            }
+            if (Objects.equals(leaderId, employeeId)
+                    || Objects.equals(directId, employeeId)
+                    || Objects.equals(safetyId, employeeId)) {
+                throw new DuplicateHumanResourceException(
+                        "Nhan vien lam viec khong duoc trung voi nguoi phu trach cua phieu cong tac.");
+            }
         }
     }
 

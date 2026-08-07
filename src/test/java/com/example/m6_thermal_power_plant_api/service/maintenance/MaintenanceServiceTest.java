@@ -1005,4 +1005,109 @@ class MaintenanceServiceTest {
         verify(lubricationPlanService).updateNextDueDateAndStatus(5);
         verify(repairHistoryService, never()).createRepairHistory(any(WorkOrder.class));
     }
+
+    /* ===== Task 1: ràng buộc trùng nhân sự trong-cùng-request ===== */
+
+    @Test
+    void createWorkOrderFromRequest_safetySupervisorSameAsLeader_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setSafetySupervisorId(2); // GSAT == leader -> chặn
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrderFromRequest_safetySupervisorSameAsDirectSupervisor_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(3); // GSAT == chi huy truc tiep -> chặn
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrderFromRequest_leaderSameAsDirectSupervisor_isAllowed() {
+        RepairRequest request = createRequest(2, "RR-2026-0002", RepairRequestStatus.PENDING);
+        Employee leader = createEmployee(2, "maintenance.leader", "Tran Thi Binh");
+        Employee safety = createEmployee(4, "safety.officer", "Pham Van Dat");
+        when(repairRequestRepository.findById(2)).thenReturn(Optional.of(request));
+        when(workOrderRepository.findByRepairRequest_Id(2)).thenReturn(List.of());
+        when(employeeRepository.findById(2)).thenReturn(Optional.of(leader));
+        when(employeeRepository.findById(4)).thenReturn(Optional.of(safety));
+        when(workOrderRepository.save(any(WorkOrder.class))).thenAnswer(inv -> {
+            WorkOrder wo = inv.getArgument(0);
+            wo.setId(101);
+            return wo;
+        });
+
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(2); // leader == chi huy truc tiep -> CHO PHEP
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+
+        WorkOrderDTO result = maintenanceService.createWorkOrderFromRequest(req);
+
+        assertThat(result.getId()).isEqualTo(101);
+        assertThat(result.getLeaderName()).isEqualTo("Tran Thi Binh");
+    }
+
+    @Test
+    void createWorkOrderFromRequest_memberDuplicatesRole_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);           // leader id=2
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+        CreateWorkOrderRequest.MemberInput member = new CreateWorkOrderRequest.MemberInput();
+        member.setEmployeeId(2);      // member trùng leader -> chặn
+        req.setMembers(List.of(member));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createWorkOrderFromRequest_duplicateMembers_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setRepairRequestId(2);
+        req.setLeaderId(2);
+        req.setDirectSupervisorId(3);
+        req.setSafetySupervisorId(4);
+        req.setStartTime(LocalDateTime.of(2026, 7, 2, 8, 0));
+        CreateWorkOrderRequest.MemberInput m1 = new CreateWorkOrderRequest.MemberInput();
+        m1.setEmployeeId(5);
+        CreateWorkOrderRequest.MemberInput m2 = new CreateWorkOrderRequest.MemberInput();
+        m2.setEmployeeId(5);          // trùng member -> chặn
+        req.setMembers(List.of(m1, m2));
+
+        assertThatThrownBy(() -> maintenanceService.createWorkOrderFromRequest(req))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
+
+    @Test
+    void createManualWorkOrder_safetySupervisorSameAsLeader_throwsDuplicateHumanResource() {
+        CreateWorkOrderRequest req = new CreateWorkOrderRequest();
+        req.setEquipmentIds(List.of(1));
+        req.setLeaderId(2);
+        req.setSafetySupervisorId(2); // GSAT == leader -> chặn (kiểm tra ngay đầu, chưa cần mock thiết bị)
+
+        assertThatThrownBy(() -> maintenanceService.createManualWorkOrder(req, null))
+                .isInstanceOf(DuplicateHumanResourceException.class);
+        verify(workOrderRepository, never()).save(any(WorkOrder.class));
+    }
 }
