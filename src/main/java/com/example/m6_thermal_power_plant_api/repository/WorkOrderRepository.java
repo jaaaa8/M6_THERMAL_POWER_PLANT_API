@@ -30,8 +30,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
      * KHÔNG tìm theo requestCode / incidentDescription của yêu cầu. KHÔNG phân
      * biệt hoa/thường.
      *
-     * Sắp xếp mặc định theo TIẾN ĐỘ: đang sống (STOPPED / IN_PROGRESS) →
-     * COMPLETED → CANCELLED; trong cùng nhóm phiếu mới tạo đứng trước.
+     * Sắp xếp mặc định theo TIẾN ĐỘ: IN_PROGRESS → STOPPED → COMPLETED/CANCELLED
+     * (hai trạng thái này cùng cấp); trong cùng nhóm phiếu mới tạo đứng trước.
      */
     @Query("""
         SELECT wo FROM WorkOrder wo
@@ -46,9 +46,9 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Integer> {
           AND (:startTo IS NULL OR wo.startTime < :startTo)
           AND (:type IS NULL OR wo.type = :type)
         ORDER BY CASE
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 0
             WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.IN_PROGRESS THEN 0
-            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.STOPPED THEN 1
+            WHEN wo.status = com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus.COMPLETED THEN 2
             ELSE 2
         END, wo.createdAt DESC
     """)

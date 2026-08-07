@@ -74,10 +74,33 @@ class WorkOrderRepositorySearchTest {
                 .map(WorkOrder::getId)
                 .getContent();
 
-        // Nhóm đang sống (IN_PROGRESS + STOPPED) trộn chung và lên đầu, trong nhóm
-        // thì phiếu mới tạo trước; rồi COMPLETED → CANCELLED.
+        // Cấp: IN_PROGRESS(0) → STOPPED(1) → COMPLETED(2) = CANCELLED(2); cùng cấp
+        // thì phiếu mới tạo trước. COMPLETED và CANCELLED cùng cấp → cancelled
+        // (-1h, mới hơn completed -2h) đứng trước.
         assertEquals(List.of(inProgressNew.getId(), stoppedOld.getId(),
-                completed.getId(), cancelled.getId()), ids);
+                cancelled.getId(), completed.getId()), ids);
+    }
+
+    /** IN_PROGRESS luôn đứng trước STOPPED kể cả khi STOPPED mới tạo hơn. */
+    @Test
+    void searchByRepairDescription_ordersInProgressBeforeStopped() {
+        String marker = "wosearch-" + UUID.randomUUID();
+        LocalDateTime base = LocalDateTime.now().withNano(0);
+
+        WorkOrder stoppedNew = create(marker, WorkOrderStatus.STOPPED, base.minusHours(1));       // mới hơn nhưng cấp 1
+        WorkOrder inProgressOld = create(marker, WorkOrderStatus.IN_PROGRESS, base.minusHours(9)); // cũ hơn nhưng cấp 0
+        WorkOrder cancelled = create(marker, WorkOrderStatus.CANCELLED, base.minusHours(2));
+        WorkOrder completed = create(marker, WorkOrderStatus.COMPLETED, base.minusHours(3));
+
+        List<Integer> ids = workOrderRepository
+                .searchWorkOrders(null, null, marker, null, null, null, PageRequest.of(0, 20))
+                .map(WorkOrder::getId)
+                .getContent();
+
+        // Cấp 0: inProgressOld; cấp 1: stoppedNew; cấp 2 (cùng cấp, createdAt DESC):
+        // cancelled (-2h) trước completed (-3h).
+        assertEquals(List.of(inProgressOld.getId(), stoppedNew.getId(),
+                cancelled.getId(), completed.getId()), ids);
     }
 
     @Test
