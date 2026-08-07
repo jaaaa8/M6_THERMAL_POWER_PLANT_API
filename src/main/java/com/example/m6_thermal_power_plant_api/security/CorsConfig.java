@@ -25,7 +25,10 @@ public class CorsConfig {
                         "http://localhost:5173",
                         "http://localhost:5174",
                         "https://ddvn9usdc5uus.cloudfront.net",
-                        "https://*.cloudfront.net"
+                        "https://*.cloudfront.net",
+                        // Demo EC2 (2026-08-07, xem docs/superpowers/specs) — xoá khi
+                        // instance bị terminate sau demo.
+                        "http://52.192.233.235"
                 )
         );
 
