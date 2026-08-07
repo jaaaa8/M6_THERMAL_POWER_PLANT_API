@@ -1,8 +1,11 @@
 package com.example.m6_thermal_power_plant_api.repository;
 
 import com.example.m6_thermal_power_plant_api.entity.Account;
+import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -19,4 +22,8 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
     // để tránh LazyInitializationException ngoài transaction.
     @EntityGraph(attributePaths = {"roles", "employee", "employee.department"})
     Optional<Account> findWithEmployeeById(Integer id);
+
+    @Query("SELECT a.status FROM Account a WHERE a.id = :id")
+    Optional<AccountStatus> findStatusById(@Param("id") Integer id);
 }
+
