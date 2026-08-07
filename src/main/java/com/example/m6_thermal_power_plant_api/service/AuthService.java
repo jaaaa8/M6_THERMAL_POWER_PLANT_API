@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.dto.RefreshTokenRequestDTO;
 import com.example.m6_thermal_power_plant_api.dto.RefreshTokenResponseDTO;
 import com.example.m6_thermal_power_plant_api.dto.UserInfoDTO;
 import com.example.m6_thermal_power_plant_api.entity.Account;
+import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
 import com.example.m6_thermal_power_plant_api.entity.Employee;
 import com.example.m6_thermal_power_plant_api.entity.RefreshToken;
 import com.example.m6_thermal_power_plant_api.exception.InvalidCredentialsException;
@@ -145,6 +146,11 @@ public class AuthService implements IAuthService {
 
         Account account = accountRepository.findAccountByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Tài khoản không tồn tại"));
+
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            refreshTokenRepository.delete(dbToken);
+            throw new InvalidTokenException("Tài khoản của bạn đã bị khoá hoặc ngưng hoạt động. Vui lòng liên hệ quản trị viên!");
+        }
 
         if (!dbToken.getAccount().getId().equals(account.getId())) {
             throw new InvalidTokenException("Cảnh báo bảo mật: Token không khớp với chủ tài khoản!");
