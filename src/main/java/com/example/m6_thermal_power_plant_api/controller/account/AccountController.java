@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,18 +25,21 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getAllAccounts());
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF','TOOLS_STOREKEEPER')")
     @PostMapping
     public ResponseEntity<AccountResponseDTO> createAccount(@Valid @RequestBody AccountDTO accountDTO) {
         AccountResponseDTO createdAccount = accountService.createAccount(accountDTO);
         return new ResponseEntity<>(createdAccount, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('HR_STAFF','TOOLS_STOREKEEPER')")
     @PostMapping("/grant")
     public ResponseEntity<AccountResponseDTO> grantAccount(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountGrantRequestDTO request) {
         AccountResponseDTO createdAccount = accountService.grantAccount(request);
         return new ResponseEntity<>(createdAccount, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasRole('HR_STAFF')")
     @PatchMapping("/status")
     public ResponseEntity<AccountResponseDTO> updateStatus(@Valid @RequestBody com.example.m6_thermal_power_plant_api.dto.accounts.AccountStatusUpdateRequestDTO request) {
         AccountResponseDTO updatedAccount = accountService.updateStatus(request);
@@ -55,6 +59,7 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getAccountById(id));
     }
 
+    @PreAuthorize("hasRole('HR_STAFF')")
     @PutMapping("/{id}")
     public ResponseEntity<AccountResponseDTO> updateAccount(
             @PathVariable Integer id,
@@ -64,6 +69,7 @@ public class AccountController {
         return ResponseEntity.ok(updated);
     }
 
+    @PreAuthorize("hasRole('HR_STAFF')")
     @PostMapping("/{id}/reset-password")
     public ResponseEntity<Void> resetPassword(@PathVariable Integer id) {
         accountService.resetPassword(id);
