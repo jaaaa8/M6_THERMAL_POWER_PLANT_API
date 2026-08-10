@@ -56,7 +56,7 @@ public class ToolBorrowOverdueNotifier {
         int sentCount = 0;
         for (ToolBorrowLog borrowLog : overdueLogs) {
             Account account = borrowLog.getAccount();
-            String email = account.getEmployee() == null ? null : account.getEmployee().getGmail();
+            String email = employeeGmailSafe(account);
             if (email == null || email.isBlank()) {
                 continue;
             }
@@ -85,7 +85,7 @@ public class ToolBorrowOverdueNotifier {
         int sentCount = 0;
         for (ToolBorrowLog borrowLog : dueSoonLogs) {
             Account account = borrowLog.getAccount();
-            String email = account.getEmployee() == null ? null : account.getEmployee().getGmail();
+            String email = employeeGmailSafe(account);
             if (email == null || email.isBlank()) {
                 continue;
             }
@@ -100,6 +100,17 @@ public class ToolBorrowOverdueNotifier {
             }
         }
         return sentCount;
+    }
+
+    private String employeeGmailSafe(Account account) {
+        try {
+            if (account.getEmployee() != null) {
+                return account.getEmployee().getGmail();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // ignore soft-deleted employee
+        }
+        return null;
     }
 
     private MimeMessage buildDueSoonMessage(String toEmail, ToolBorrowLog borrowLog) {

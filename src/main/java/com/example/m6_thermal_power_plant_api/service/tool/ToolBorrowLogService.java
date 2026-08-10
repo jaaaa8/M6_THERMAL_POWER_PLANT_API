@@ -191,7 +191,14 @@ public class ToolBorrowLogService implements IToolBorrowLogService {
     }
 
     private String accountDisplayName(Account account) {
-        return account.getEmployee() == null ? account.getUsername() : account.getEmployee().getFullName();
+        try {
+            if (account.getEmployee() != null) {
+                return account.getEmployee().getFullName();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // ignore soft-deleted employee
+        }
+        return account.getUsername();
     }
 
     private ToolBorrowLogResponse toResponse(ToolBorrowLog log) {
