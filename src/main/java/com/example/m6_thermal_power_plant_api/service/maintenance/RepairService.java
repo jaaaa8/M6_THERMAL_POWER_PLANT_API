@@ -10,10 +10,13 @@ import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
 import com.example.m6_thermal_power_plant_api.repository.RepairRequestRepository;
 import com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository;
+import com.example.m6_thermal_power_plant_api.service.tool.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class RepairService implements IRepairService {
@@ -21,13 +24,16 @@ public class RepairService implements IRepairService {
     private final RepairRequestRepository repairRequestRepository;
     private final IEquipmentRepository equipmentRepository;
     private final AccountRepository accountRepository;
+    private final NotificationService notificationService;
 
     public RepairService(RepairRequestRepository repairRequestRepository,
                          IEquipmentRepository equipmentRepository,
-                         AccountRepository accountRepository) {
+                         AccountRepository accountRepository,
+                         NotificationService notificationService) {
         this.repairRequestRepository = repairRequestRepository;
         this.equipmentRepository = equipmentRepository;
         this.accountRepository = accountRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -74,7 +80,16 @@ public class RepairService implements IRepairService {
         req.setPriority(dto.getPriority());
         req.setStatus(RepairRequestStatus.PENDING);
 
-        return RepairRequestDTO.from(repairRequestRepository.save(req));
+        com.example.m6_thermal_power_plant_api.entity.RepairRequest saved = repairRequestRepository.save(req);
+
+        notificationService.sendToRoles(
+                List.of("SHIFT_LEADER", "CREW_LEADER", "MAINTENANCE_FOREMAN", "ADMIN"),
+                "Yêu cầu sửa chữa mới",
+                "Yêu cầu " + saved.getRequestCode() + " — " + equipment.getName() + " (" + equipment.getKksCode() + ") vừa được tạo",
+                "/repair/yeu-cau",
+                requester.getId());
+
+        return RepairRequestDTO.from(saved);
     }
 
     @Override
