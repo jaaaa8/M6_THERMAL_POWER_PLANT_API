@@ -139,6 +139,20 @@ public class SparePartsIssueService implements ISparePartsIssueService {
         Account account = accountRepository.findByUsername(sparePartsIssueRequestDto.getIssuedBy().getUsername())
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
+        // Cập nhật actualQuantity từ dto.getDetails() nếu truyền lên
+        if (sparePartsIssueRequestDto.getDetails() != null && issue.getDetails() != null) {
+            for (SparePartsIssueDetailRequestDto detailDto : sparePartsIssueRequestDto.getDetails()) {
+                if (detailDto.getSparePartId() != null && detailDto.getActualQuantity() != null) {
+                    for (SparePartsIssueDetail detail : issue.getDetails()) {
+                        if (detail.getSparePart() != null && detailDto.getSparePartId().equals(detail.getSparePart().getId())) {
+                            detail.setActualQuantity(detailDto.getActualQuantity());
+                            sparePartsIssueDetailRepository.save(detail);
+                        }
+                    }
+                }
+            }
+        }
+
         if (newStatus == SparePartsIssueStatus.COMPLETED && oldStatus != SparePartsIssueStatus.COMPLETED) {
             handleCompletion(issue, account);
         }
@@ -326,8 +340,20 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 BigDecimal stock = sparePartRepository.getStockQuantity(detail.getSparePart().getId());
                 int stockInt = stock != null ? stock.intValue() : 0;
 
-                int actualQty = stockInt >= reqQty ? reqQty : (stockInt > 0 ? stockInt : 0);
-                int remainingQty = reqQty - actualQty;
+                // Sử dụng số lượng thực tế cấp do thủ kho nhập thủ công (nếu có)
+                Integer actualQtyObj = detail.getActualQuantity();
+                int actualQty = actualQtyObj != null ? actualQtyObj : Math.min(reqQty, Math.max(0, stockInt));
+
+                if (actualQty < 0) {
+                    throw new IllegalStateException("Số lượng thực tế cấp cho vật tư " + detail.getSparePart().getName() + " không được nhỏ hơn 0.");
+                }
+
+                if (actualQty > stockInt) {
+                    throw new IllegalStateException("Số lượng thực tế cấp của vật tư " + detail.getSparePart().getName()
+                            + " (" + actualQty + ") vượt quá tồn kho khả dụng (" + stockInt + ").");
+                }
+
+                int remainingQty = Math.max(0, reqQty - actualQty);
 
                 if (actualQty > 0) {
                     createInventoryLedgerEntry(detail, account, BigDecimal.valueOf(actualQty));
@@ -335,7 +361,6 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 }
 
                 detail.setActualQuantity(actualQty);
-                detail.setQuantity(actualQty);
                 sparePartsIssueDetailRepository.save(detail);
 
                 if (remainingQty > 0) {
@@ -423,6 +448,7 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                     detail.setIssue(issue);
                     detail.setSparePart(sparePart);
                     detail.setQuantity(detailDto.getQuantity());
+                    detail.setActualQuantity(detailDto.getActualQuantity());
                     return detail;
                 }).toList();
         sparePartsIssueDetailRepository.saveAll(details);
