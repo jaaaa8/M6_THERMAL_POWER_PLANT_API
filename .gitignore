@@ -45,6 +45,7 @@ out/
 
 ### Agent / AI Config ###
 .agents/
+.superpowers/
 .agentignore
 .gitnexus/
 .claude/
