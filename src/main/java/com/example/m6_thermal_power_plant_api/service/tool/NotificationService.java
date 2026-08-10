@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,15 +35,21 @@ public class NotificationService {
                 .createdAt(LocalDateTime.now())
                 .build();
         notificationRepository.save(notif);
-        pushToClient(notif);
+        pushAfterCommit(notif);
+    }
+
+    /** Gửi thông báo đến tất cả tài khoản có 1 trong các role chỉ định, bỏ qua account bị loại trừ (null = không loại trừ). */
+    public void sendToRoles(List<String> roleNames, String title, String message, String link, Integer excludeAccountId) {
+        accountRepository.findByRoleNames(roleNames).forEach(account -> {
+            if (!account.getId().equals(excludeAccountId)) {
+                send(account.getId(), title, message, link);
+            }
+        });
     }
 
     /** Gửi thông báo đến tất cả tài khoản có role TOOLS_STOREKEEPER hoặc ADMIN */
     public void sendToAdmins(String title, String message, String link) {
-        List<String> adminRoles = List.of("TOOLS_STOREKEEPER", "ADMIN");
-        accountRepository.findByRoleNames(adminRoles).forEach(account ->
-                send(account.getId(), title, message, link)
-        );
+        sendToRoles(List.of("TOOLS_STOREKEEPER", "ADMIN"), title, message, link, null);
     }
 
     public List<NotificationResponse> getByAccount(Integer accountId) {
@@ -60,6 +68,19 @@ public class NotificationService {
 
     public void markAllRead(Integer accountId) {
         notificationRepository.markAllAsRead(accountId);
+    }
+
+    private void pushAfterCommit(Notification notif) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            pushToClient(notif);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                pushToClient(notif);
+            }
+        });
     }
 
     private void pushToClient(Notification notif) {
