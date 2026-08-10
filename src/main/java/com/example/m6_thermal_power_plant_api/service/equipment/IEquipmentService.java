@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.List;
 
 public interface IEquipmentService {
-    Page<ListEquipmentDTO> getEquipmentList(Integer systemId,String kks, String name, Integer typeId, String status, Pageable pageable);
+    Page<ListEquipmentDTO> getEquipmentList(Integer systemId,String kks, String name, String kw, Integer typeId, String status, Pageable pageable);
 
     Page<ListEquipmentDTO> getBySystem(Integer systemId, Pageable pageable);
 

@@ -356,6 +356,18 @@ public class EmployeeService implements IEmployeeService {
             if (searchRequest.getIsActive() != null && !searchRequest.getIsActive().trim().isEmpty()) {
                 predicates.add(cb.equal(root.get("isActive"), searchRequest.getIsActive().trim()));
             }
+            if (searchRequest.getKeyword() != null && !searchRequest.getKeyword().trim().isEmpty()) {
+                String kw = "%" + searchRequest.getKeyword().trim().toLowerCase() + "%";
+                // LEFT JOIN: nhân viên chưa có phòng ban / chức vụ vẫn phải tìm ra được.
+                var dept = root.join("department", jakarta.persistence.criteria.JoinType.LEFT);
+                var pos = root.join("position", jakarta.persistence.criteria.JoinType.LEFT);
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("fullName")), kw),
+                        cb.like(cb.lower(root.get("employeeCode")), kw),
+                        cb.like(cb.lower(dept.get("name")), kw),
+                        cb.like(cb.lower(pos.get("name")), kw)
+                ));
+            }
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };

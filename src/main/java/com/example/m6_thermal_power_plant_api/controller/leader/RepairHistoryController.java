@@ -1,6 +1,7 @@
 package com.example.m6_thermal_power_plant_api.controller.leader;
 
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.RepairHistoryCreateRequestDto;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.RepairHistoryUpdateResultRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.RepairHistoryResponseDto;
 import com.example.m6_thermal_power_plant_api.service.leader.repair_history.RepairHistoryService;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,18 @@ public class RepairHistoryController {
                 repairHistoryService.create(dto)
         );
     }
+
+    @PreAuthorize("hasAnyRole('TEAM_LEADER','MAINTENANCE_FOREMAN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<RepairHistoryResponseDto> updateResult(
+            @PathVariable Integer id,
+            @RequestBody RepairHistoryUpdateResultRequestDto dto
+    ) {
+        return ResponseEntity.ok(
+                repairHistoryService.updateResult(id, dto)
+        );
+    }
+
     @GetMapping("/equipment/{equipmentId}")
     public ResponseEntity<?> getByEquipment(
             @PathVariable Integer equipmentId

@@ -39,8 +39,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -74,6 +76,8 @@ class MaintenanceServiceTest {
     private com.example.m6_thermal_power_plant_api.service.leader.lubrication.ILubricationHistoryService lubricationHistoryService;
     @Mock
     private com.example.m6_thermal_power_plant_api.service.leader.lubrication_plan.ILubricationPlanService lubricationPlanService;
+    @Mock
+    private com.example.m6_thermal_power_plant_api.service.tool.NotificationService notificationService;
     @InjectMocks
     private MaintenanceService maintenanceService;
 
@@ -142,6 +146,13 @@ class MaintenanceServiceTest {
         verify(workOrderRepository).save(woCaptor.capture());
         assertThat(woCaptor.getValue().getRepairRequest()).isSameAs(request);
         assertThat(woCaptor.getValue().getLeader()).isSameAs(leader);
+
+        // Requester (account id=1, từ createRequest helper) được báo khi request thành PCT.
+        verify(notificationService, times(1)).send(
+                eq(1),
+                eq("Yêu cầu sửa chữa đã được duyệt"),
+                argThat(msg -> msg.startsWith("Yêu cầu RR-") && msg.contains("Phiếu công tác WO-")),
+                eq("/repair/phieu-cong-tac"));
     }
 
     @Test

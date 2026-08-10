@@ -1,11 +1,13 @@
 package com.example.m6_thermal_power_plant_api.service.leader.repair_history;
 
 import com.example.m6_thermal_power_plant_api.dto.Leader.req.RepairHistoryCreateRequestDto;
+import com.example.m6_thermal_power_plant_api.dto.Leader.req.RepairHistoryUpdateResultRequestDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.RepairHistoryDetailResponseDto;
 import com.example.m6_thermal_power_plant_api.dto.Leader.res.RepairHistoryResponseDto;
 import com.example.m6_thermal_power_plant_api.entity.*;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderStatus;
 import com.example.m6_thermal_power_plant_api.entity.enums.WorkOrderType;
+import com.example.m6_thermal_power_plant_api.exception.ObjectNotFoundException;
 import com.example.m6_thermal_power_plant_api.repository.IRepairHistoryRepository;
 import com.example.m6_thermal_power_plant_api.repository.ISparePartRepository;
 import com.example.m6_thermal_power_plant_api.repository.WorkOrderRepository;
@@ -99,6 +101,18 @@ public class RepairHistoryService implements IRepairHistoryService {
                                 new RuntimeException("Repair history not found"));
 
         return mapToDto(history);
+    }
+
+    @Override
+    public RepairHistoryResponseDto updateResult(
+            Integer id,
+            RepairHistoryUpdateResultRequestDto dto
+    ) {
+        RepairHistory history = repairHistoryRepository.findById(id)
+                .orElseThrow(() -> new ObjectNotFoundException("Repair history not found"));
+
+        history.setRepairResult(dto.getRepairResult());
+        return mapToDto(repairHistoryRepository.save(history));
     }
 
     private RepairHistoryResponseDto mapToDto(

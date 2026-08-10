@@ -42,7 +42,7 @@ public class EquipmentService implements IEquipmentService {
     private  final IRepairHistoryRepository repairHistoryRepository;
     private  final ILubricationHistoryRepository lubricationHistoryRepository;
     @Override
-    public Page<ListEquipmentDTO> getEquipmentList(Integer systemId,String kks, String name, Integer typeId, String status, Pageable pageable) {
+    public Page<ListEquipmentDTO> getEquipmentList(Integer systemId,String kks, String name, String kw, Integer typeId, String status, Pageable pageable) {
 
         Pageable page= PageRequest.of(
                 pageable.getPageNumber(),
@@ -53,6 +53,7 @@ public class EquipmentService implements IEquipmentService {
                 systemId,
                 kks,
                 name,
+                kw,
                 typeId,
                 status,
                 page
