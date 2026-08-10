@@ -62,6 +62,7 @@ public class MaintenanceService implements IMaintenanceService {
 
     private final com.example.m6_thermal_power_plant_api.repository.equipment.IEquipmentRepository equipmentRepository;
     private final ILubricationPlanRepository lubricationPlanRepository;
+    private final com.example.m6_thermal_power_plant_api.service.tool.NotificationService notificationService;
 
     public MaintenanceService(WorkOrderRepository workOrderRepository,
                               RepairRequestRepository repairRequestRepository,
@@ -73,7 +74,8 @@ public class MaintenanceService implements IMaintenanceService {
                               AccountRepository accountRepository,
                               WorkOrderArchiveService workOrderArchiveService, IRepairHistoryService repairHistoryService,
                               WorkOrderEquipmentRepository workOrderEquipmentRepository, ILubricationHistoryService lubricationHistoryService,
-                              ILubricationPlanService lubricationPlanService) {
+                              ILubricationPlanService lubricationPlanService,
+                              com.example.m6_thermal_power_plant_api.service.tool.NotificationService notificationService) {
         this.workOrderRepository = workOrderRepository;
         this.repairRequestRepository = repairRequestRepository;
         this.workOrderMemberRepository = workOrderMemberRepository;
@@ -87,6 +89,7 @@ public class MaintenanceService implements IMaintenanceService {
         this.workOrderEquipmentRepository = workOrderEquipmentRepository;
         this.lubricationHistoryService = lubricationHistoryService;
         this.lubricationPlanService = lubricationPlanService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -144,6 +147,13 @@ public class MaintenanceService implements IMaintenanceService {
         // Đường về nằm ở cancelWorkOrder: huỷ hết PCT thì yêu cầu quay lại PENDING.
         repairRequest.setStatus(RepairRequestStatus.COMPLETED);
         repairRequestRepository.save(repairRequest);
+
+        // Báo cho người yêu cầu (requester) khi request được duyệt thành Phiếu công tác.
+        notificationService.send(
+                repairRequest.getRequester().getId(),
+                "Yêu cầu sửa chữa đã được duyệt",
+                "Yêu cầu " + repairRequest.getRequestCode() + " đã được lập Phiếu công tác " + workOrder.getOrderCode(),
+                "/repair/phieu-cong-tac");
 
         return WorkOrderDTO.from(workOrder, members);
     }
