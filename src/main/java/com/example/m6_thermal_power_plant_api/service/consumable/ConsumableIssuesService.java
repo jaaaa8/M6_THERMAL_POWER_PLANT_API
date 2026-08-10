@@ -148,6 +148,21 @@ public class ConsumableIssuesService implements IConsumableIssuesService {
         Account account = accountRepository.findAccountByUsername(dto.getIssuedByName())
                 .orElseThrow(() -> new ObjectNotFoundException("Không tìm thấy tài khoản: " + dto.getIssuedByName()));
 
+        // Cập nhật actualQuantity từ dto.getDetails() nếu truyền lên
+        if (dto.getDetails() != null) {
+            List<ConsumableIssueDetail> existingDetails = detailRepository.findByIssue_Id(issue.getId());
+            for (ConsumableIssueDTO.LineDTO lineDto : dto.getDetails()) {
+                if (lineDto.getConsumableId() != null && lineDto.getActualQuantity() != null) {
+                    for (ConsumableIssueDetail detail : existingDetails) {
+                        if (detail.getConsumable() != null && lineDto.getConsumableId().equals(detail.getConsumable().getId())) {
+                            detail.setActualQuantity(lineDto.getActualQuantity());
+                            detailRepository.save(detail);
+                        }
+                    }
+                }
+            }
+        }
+
         if (newStatus == ConsumableIssueStatus.COMPLETED && oldStatus != ConsumableIssueStatus.COMPLETED) {
             handleCompletion(issue, account);
         }
@@ -238,8 +253,25 @@ public class ConsumableIssuesService implements IConsumableIssuesService {
             BigDecimal stock = consumableRepository.getStockQuantity(detail.getConsumable().getId());
             if (stock == null) stock = BigDecimal.ZERO;
 
-            BigDecimal actualQty = stock.compareTo(reqQty) >= 0 ? reqQty : (stock.compareTo(BigDecimal.ZERO) > 0 ? stock : BigDecimal.ZERO);
+            // Sử dụng số lượng thực tế cấp do thủ kho nhập thủ công (nếu có)
+            BigDecimal actualQty = detail.getActualQuantity();
+            if (actualQty == null) {
+                actualQty = stock.compareTo(reqQty) >= 0 ? reqQty : (stock.compareTo(BigDecimal.ZERO) > 0 ? stock : BigDecimal.ZERO);
+            }
+
+            if (actualQty.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalStateException("Số lượng thực tế cấp cho vật tư " + detail.getConsumable().getName() + " không được nhỏ hơn 0.");
+            }
+
+            if (actualQty.compareTo(stock) > 0) {
+                throw new IllegalStateException("Số lượng thực tế cấp của vật tư " + detail.getConsumable().getName()
+                        + " (" + actualQty + ") vượt quá tồn kho khả dụng (" + stock + ").");
+            }
+
             BigDecimal remainingQty = reqQty.subtract(actualQty);
+            if (remainingQty.compareTo(BigDecimal.ZERO) < 0) {
+                remainingQty = BigDecimal.ZERO;
+            }
 
             if (actualQty.compareTo(BigDecimal.ZERO) > 0) {
                 createInventoryLedgerEntry(detail, account, actualQty);
@@ -247,7 +279,6 @@ public class ConsumableIssuesService implements IConsumableIssuesService {
             }
 
             detail.setActualQuantity(actualQty);
-            detail.setQuantity(actualQty);
             detailRepository.save(detail);
 
             currentIssueTotalActualQty = currentIssueTotalActualQty.add(actualQty);

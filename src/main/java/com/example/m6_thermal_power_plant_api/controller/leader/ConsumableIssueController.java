@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.service.consumable.IConsumableIssu
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,6 +34,7 @@ public class ConsumableIssueController {
         return ResponseEntity.ok(consumableIssuesService.findById(id));
     }
 
+    @PreAuthorize("hasRole('MATERIALS_STOREKEEPER')")
     @PostMapping("/update")
     public ResponseEntity<?> update(@RequestBody ConsumableIssueDTO dto) {
         try {
@@ -47,6 +49,7 @@ public class ConsumableIssueController {
         }
     }
 
+    @PreAuthorize("hasRole('MATERIALS_STOREKEEPER')")
     @PostMapping("/upload-consumable-issue")
     public ResponseEntity<?> uploadSignedPdf(
             @RequestParam("id") Integer id,

@@ -1,5 +1,7 @@
 package com.example.m6_thermal_power_plant_api.security;
 
+import com.example.m6_thermal_power_plant_api.entity.enums.AccountStatus;
+import com.example.m6_thermal_power_plant_api.repository.AccountRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -17,12 +19,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
+    private final AccountRepository accountRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -50,6 +54,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Number accountIdNum = claims.get("accountId", Number.class);
                 Integer accountId = accountIdNum != null ? accountIdNum.intValue() : null;
 
+                // Kiểm tra trạng thái tài khoản trong DB trước khi cấp quyền xác thực
+                if (accountId != null) {
+                    Optional<AccountStatus> statusOpt = accountRepository.findStatusById(accountId);
+                    if (statusOpt.isEmpty() || statusOpt.get() != AccountStatus.ACTIVE) {
+                        log.warn("Tài khoản ID {} [{}] bị khoá, vô hiệu hoá hoặc không tồn tại.", accountId, username);
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+                }
+
                 CustomUserDetails principal = CustomUserDetails.fromClaims(accountId, username, roles);
 
                 // Đưa thông tin người dùng vào Security Context (Đã đăng nhập thành công)
@@ -67,3 +81,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
+

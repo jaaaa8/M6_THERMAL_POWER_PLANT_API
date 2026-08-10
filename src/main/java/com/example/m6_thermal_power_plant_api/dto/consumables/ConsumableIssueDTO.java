@@ -80,13 +80,23 @@ public class ConsumableIssueDTO {
                 .transactionType(issue.getTransactionType())
                 .quantity(issue.getQuantity())
                 .issuedById(issue.getIssuedBy() != null ? issue.getIssuedBy().getId() : null)
-                .issuedByName(issue.getIssuedBy() != null && issue.getIssuedBy().getEmployee() != null
-                        ? issue.getIssuedBy().getEmployee().getFullName()
-                        : (issue.getIssuedBy() != null ? issue.getIssuedBy().getUsername() : null))
+                .issuedByName(resolveIssuedByName(issue))
                 .issuedAt(issue.getIssuedAt())
                 .status(issue.getStatus() != null ? issue.getStatus().name() : null)
                 .attachmentPath(issue.getAttachmentPath())
                 .details(details != null ? details.stream().map(LineDTO::from).toList() : List.of())
                 .build();
+    }
+
+    private static String resolveIssuedByName(ConsumableIssue issue) {
+        if (issue.getIssuedBy() == null) return null;
+        try {
+            if (issue.getIssuedBy().getEmployee() != null) {
+                return issue.getIssuedBy().getEmployee().getFullName();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            // ignore soft-deleted employee
+        }
+        return issue.getIssuedBy().getUsername();
     }
 }

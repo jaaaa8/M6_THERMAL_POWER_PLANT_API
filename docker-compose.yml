@@ -34,7 +34,7 @@ services:
 
   # ── Spring Boot Backend ────────────────────────────────────────
   backend:
-    image: ${ECR_REGISTRY}/thermal-power-plant-api:latest   # Dùng image từ ECR
+    image: ${DOCKERHUB_USER}/thermal-power-plant-api:latest   # Dùng image từ Docker Hub
     # Hoặc build local: build: .
     container_name: thermal_backend
     restart: unless-stopped
@@ -48,6 +48,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     ports:
       - "8080:8080"
     healthcheck:
@@ -61,8 +64,8 @@ services:
 
   # ── React Frontend (Nginx) ────────────────────────────────────
   frontend:
-    image: ${ECR_REGISTRY}/thermal-power-plant-frontend:latest
-    # Hoặc build local: build: ../M6_THERMAL_POWER_PLANT
+    image: ${DOCKERHUB_USER}/thermal-power-plant-frontend:latest
+    # Hoặc build local: build: ../M6_THERMAL_POWER_PLANT/m6-thermal-power-plant
     container_name: thermal_frontend
     restart: unless-stopped
     depends_on:
