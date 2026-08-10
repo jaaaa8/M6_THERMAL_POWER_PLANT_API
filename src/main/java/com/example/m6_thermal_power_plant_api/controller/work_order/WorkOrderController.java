@@ -73,7 +73,7 @@ public class WorkOrderController {
      * Nếu orderCode trùng (hiếm) → constraint DB ném lỗi, transaction rollback sạch,
      * executor sinh lại mã + chạy lại toàn bộ thao tác.
      */
-    @PreAuthorize("hasAnyRole('MAINTENANCE_FOREMAN','TEAM_LEADER')")
+    @PreAuthorize("hasRole('MAINTENANCE_FOREMAN') or (hasRole('TEAM_LEADER') and #p0.repairRequestId == null)")
     @PostMapping
     public ResponseEntity<WorkOrderDTO> createWorkOrder(@Valid @RequestBody CreateWorkOrderRequest request,
                                                         Principal principal) {

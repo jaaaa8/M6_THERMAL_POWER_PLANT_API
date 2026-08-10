@@ -66,7 +66,7 @@ public class RepairRequestController {
         return repairService.getStats();
     }
 
-    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER', 'TEAM_LEADER')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public RepairRequestDTO createRepairRequest(
@@ -75,7 +75,7 @@ public class RepairRequestController {
         return repairService.createRepairRequest(dto, authentication.getName());
     }
 
-    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER')")
+    @PreAuthorize("hasAnyRole('SHIFT_LEADER', 'CREW_LEADER', 'TEAM_LEADER')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteRepairRequest(@PathVariable Integer id, Authentication authentication) {
