@@ -193,7 +193,7 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                             detail.getSparePart().getSparePartCode(),
                             detail.getSparePart().getName(),
                             detail.getQuantity(),
-                            detail.getSparePart().getUnit().getName(),
+                            detail.getSparePart().getUnit() != null ? detail.getSparePart().getUnit().getName() : null,
                             detail.getSparePart().getImgPath(),
                             sparePartRepository.getStockQuantity(detail.getSparePart().getId())
                     );
@@ -233,15 +233,21 @@ public class SparePartsIssueService implements ISparePartsIssueService {
         dto.setStatus(entity.getStatus().name());
 
         if (entity.getIssuedBy() != null) {
+            EmployeeDto employeeDto = null;
+            try {
+                employeeDto = new EmployeeDto(
+                        entity.getIssuedBy().getEmployee().getId(),
+                        entity.getIssuedBy().getEmployee().getEmployeeCode(),
+                        entity.getIssuedBy().getEmployee().getFullName()
+                );
+            } catch (jakarta.persistence.EntityNotFoundException e) {
+                // ignore soft-deleted employee
+            }
             dto.setIssuedBy(
                     new AccountDto(
                             entity.getIssuedBy().getUsername(),
                             entity.getIssuedBy().getEmail(),
-                            new EmployeeDto(
-                                    entity.getIssuedBy().getEmployee().getId(),
-                                    entity.getIssuedBy().getEmployee().getEmployeeCode(),
-                                    entity.getIssuedBy().getEmployee().getFullName()
-                            )
+                            employeeDto
                     )
             );
         }
@@ -255,7 +261,7 @@ public class SparePartsIssueService implements ISparePartsIssueService {
                 detailDto.setSparePartName(detail.getSparePart().getName());
                 detailDto.setQuantity(detail.getQuantity());
                 detailDto.setActualQuantity(detail.getActualQuantity() != null ? detail.getActualQuantity() : (SparePartsIssueStatus.COMPLETED.equals(entity.getStatus()) ? detail.getQuantity() : null));
-                detailDto.setUnit(detail.getSparePart().getUnit().getName());
+                detailDto.setUnit(detail.getSparePart().getUnit() != null ? detail.getSparePart().getUnit().getName() : null);
                 detailDto.setImgPath(detail.getSparePart().getImgPath());
                 detailDto.setCurrentStock(sparePartRepository.getStockQuantity(detail.getSparePart().getId()));
                 details.add(detailDto);

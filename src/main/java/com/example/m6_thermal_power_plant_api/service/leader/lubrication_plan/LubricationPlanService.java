@@ -82,7 +82,7 @@ public class LubricationPlanService implements ILubricationPlanService {
                     entity.getConsumable().getConsumableCode(),
                     entity.getConsumable().getName(),
                     entity.getConsumable().getImgPath(),
-                    entity.getConsumable().getUnit().getName(),
+                    entity.getConsumable().getUnit() != null ? entity.getConsumable().getUnit().getName() : null,
                     entity.getConsumable().getStatus()
             );
         }
