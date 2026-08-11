@@ -8,6 +8,7 @@ import com.example.m6_thermal_power_plant_api.dto.equipment.response.ListEquipme
 import com.example.m6_thermal_power_plant_api.service.equipment.IEquipmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
@@ -58,6 +59,7 @@ public class EquipmentController {
 
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PostMapping(
             value = "/{systemId}/add",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -87,6 +89,7 @@ public class EquipmentController {
                 .body(response);
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteById(@PathVariable (name="id") Integer id ){
         equipmentService.deleteById(id);
@@ -101,6 +104,7 @@ public class EquipmentController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PutMapping(
             value = "/{id}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE

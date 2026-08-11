@@ -6,6 +6,7 @@ import com.example.m6_thermal_power_plant_api.entity.EquipmentType;
 import com.example.m6_thermal_power_plant_api.service.equipment.IEquipmentTypeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ public class EquipmentTypeController {
     ){
         return  ResponseEntity.ok(equipmentTypeService.getById(id));
     }
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PostMapping
     public ResponseEntity<TypeEquipmentDTO> create(
             @Valid @RequestBody TypeEquipmentDTO dto) {
