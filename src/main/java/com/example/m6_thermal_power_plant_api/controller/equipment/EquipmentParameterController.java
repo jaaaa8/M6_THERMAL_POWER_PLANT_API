@@ -4,6 +4,7 @@ import com.example.m6_thermal_power_plant_api.dto.equipment.request.ParameterDTO
 import com.example.m6_thermal_power_plant_api.service.equipment.IEquipmentParameterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class EquipmentParameterController {
         return ResponseEntity.ok(parameterService.getByEquipment(equipmentId));
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PostMapping
     public ResponseEntity<List<ParameterDTO>> create(
             @RequestBody List<ParameterDTO> dtos
@@ -29,6 +31,7 @@ public class EquipmentParameterController {
         return ResponseEntity.ok(parameterService.create(dtos));
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PutMapping("/{id}")
     public  ResponseEntity<ParameterDTO> update(
             @PathVariable Integer id,
@@ -36,6 +39,7 @@ public class EquipmentParameterController {
     ){
         return  ResponseEntity.ok(parameterService.update(id,dto));
     }
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @DeleteMapping("/{id}")
     public  ResponseEntity<Void> delete(
             @PathVariable Integer id

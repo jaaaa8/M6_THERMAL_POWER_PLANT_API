@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,6 +27,7 @@ public class ParameterCatalogController {
         return ResponseEntity.ok(parameterCatalogService.getById(id));
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PostMapping
     public ResponseEntity<ParameterCatalogDTO> create(
             @RequestBody ParameterCatalogDTO dto) {
@@ -34,6 +36,7 @@ public class ParameterCatalogController {
                 .body(parameterCatalogService.create(dto));
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @PutMapping("/{id}")
     public ResponseEntity<ParameterCatalogDTO> update(
             @PathVariable Integer id,
@@ -42,6 +45,7 @@ public class ParameterCatalogController {
         return ResponseEntity.ok(parameterCatalogService.update(id, dto));
     }
 
+    @PreAuthorize("hasAnyRole('WORKSHOP_FOREMAN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
 
