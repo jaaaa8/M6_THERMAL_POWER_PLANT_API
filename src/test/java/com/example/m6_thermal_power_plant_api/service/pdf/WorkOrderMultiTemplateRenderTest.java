@@ -73,11 +73,11 @@ class WorkOrderMultiTemplateRenderTest {
                 Map.of("name", "", "joinedAt", "", "leftAt", ""),
                 Map.of("name", "", "joinedAt", "", "leftAt", "")));
         model.put("extensionRows", List.of(
-                Map.of("stoppedAt", "", "reason", "", "allowedDate", ""),
-                Map.of("stoppedAt", "", "reason", "", "allowedDate", ""),
-                Map.of("stoppedAt", "", "reason", "", "allowedDate", ""),
-                Map.of("stoppedAt", "", "reason", "", "allowedDate", ""),
-                Map.of("stoppedAt", "", "reason", "", "allowedDate", "")));
+                Map.of("openedAt", "", "closedAt", "", "reason", "", "allowedDate", ""),
+                Map.of("openedAt", "", "closedAt", "", "reason", "", "allowedDate", ""),
+                Map.of("openedAt", "", "closedAt", "", "reason", "", "allowedDate", ""),
+                Map.of("openedAt", "", "closedAt", "", "reason", "", "allowedDate", ""),
+                Map.of("openedAt", "", "closedAt", "", "reason", "", "allowedDate", "")));
         model.put("equipmentRows", List.of(
                 Map.of("kksCode", "KKS-1", "name", "Quat gio A", "systemName", "He thong nhien lieu"),
                 Map.of("kksCode", "KKS-2", "name", "Quat gio B", "systemName", "")));
